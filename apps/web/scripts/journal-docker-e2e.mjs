@@ -66,10 +66,11 @@ const payload={
  excerpt:"Bài viết thử nghiệm kiểm tra quá trình xuất bản vào PostgreSQL và hiển thị SSR thực.",
  content_json:{type:"doc",content:[
   {type:"heading",attrs:{level:2},content:[{type:"text",text:"Nội dung thử nghiệm từ database"}]},
+  {type:"image",attrs:{src:media.url,alt:"Ảnh JPG PNG WebP từ máy"}},
   {type:"paragraph",content:[{type:"text",text:"Đoạn bài thử nghiệm xác thực dữ liệu động từ PostgreSQL đến Next.js trong Docker."}]},
  ]},
- category_slug:"",tag_slugs:[],cover_image_url:"",cover_image_alt:"",
- seo_title:"SEO Sprint 4 SQL fixture",seo_description:"Đoạn kiểm thử SEO của bài đã xuất bản.",og_image_url:"",status:"DRAFT",
+ category_slug:"",tag_slugs:[],cover_image_url:media.url,cover_image_alt:"Ảnh bìa từ máy",
+ seo_title:"SEO Sprint 4 SQL fixture",seo_description:"Đoạn kiểm thử SEO của bài đã xuất bản.",og_image_url:media.url,status:"DRAFT",
 };
 const created=await call("/api/store/admin/blog/articles",{method:"POST",cookie,body:payload});
 ensure(created.status===201,"Creating draft failed "+created.status+" "+created.text);
@@ -83,7 +84,7 @@ const published=await call("/api/store/admin/blog/articles/"+id+"/status",{metho
 ensure(published.status===200,"Publish API failed "+published.status+" "+published.text);
 const detail=await call("/blog/"+slug);
 ensure(detail.status===200,"Published article not found on Next.js: "+detail.status);
-for(const snippet of [payload.title,"Nội dung thử nghiệm từ database","BlogPosting","SEO Sprint 4 SQL fixture"]){
+for(const snippet of [payload.title,"Nội dung thử nghiệm từ database","BlogPosting","SEO Sprint 4 SQL fixture",media.url,"Ảnh bìa từ máy"]){
  ensure(detail.text.includes(snippet),"Missing on published article: "+snippet);
 }
 const listing=await call("/blog");
