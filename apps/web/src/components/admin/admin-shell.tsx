@@ -1,8 +1,8 @@
 "use client";
 import Link from "next/link";
 import {usePathname,useRouter} from "next/navigation";
-import {LayoutDashboard,ClipboardList,Package,Boxes,Users,BarChart3,Newspaper,LogOut,ArrowUpRight} from "lucide-react";
-const nav=[{href:"/admin",label:"Tổng quan",icon:LayoutDashboard},{href:"/admin/orders",label:"Đơn hàng",icon:ClipboardList},{href:"/admin/products",label:"Sản phẩm",icon:Package},{href:"/admin/inventory",label:"Kho hàng",icon:Boxes},{href:"/admin/customers",label:"Khách hàng",icon:Users},{href:"/admin/reports",label:"Báo cáo",icon:BarChart3},{href:"/admin/blog",label:"Enjoy Journal",icon:Newspaper}];
+import {LayoutDashboard,ClipboardList,Package,Boxes,Users,BarChart3,Newspaper,Images,Palette,LogOut,ArrowUpRight} from "lucide-react";
+const nav=[{href:"/admin",label:"Tổng quan",icon:LayoutDashboard},{href:"/admin/orders",label:"Đơn hàng",icon:ClipboardList},{href:"/admin/products",label:"Sản phẩm",icon:Package},{href:"/admin/inventory",label:"Kho hàng",icon:Boxes},{href:"/admin/customers",label:"Khách hàng",icon:Users},{href:"/admin/reports",label:"Báo cáo",icon:BarChart3},{href:"/admin/blog",label:"Enjoy Journal",icon:Newspaper},{href:"/admin/media",label:"Thư viện ảnh",icon:Images},{href:"/admin/site",label:"Giao diện website",icon:Palette}];
 export function AdminShell({children,name}:{children:React.ReactNode;name:string}){
  const pathname=usePathname();const router=useRouter();
  async function logout(){await fetch("/api/store/auth/logout",{method:"POST"});router.replace("/account");router.refresh()}
