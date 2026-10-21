@@ -28,6 +28,12 @@ jobs:
           API_INTERNAL_URL: http://localhost:8081
           NEXT_TELEMETRY_DISABLED: '1'
         run: npm run build
+      - name: Same-origin auth regression smoke test
+        run: |
+          npm run start -- -p 3399 > /tmp/enjoy-next.log 2>&1 &
+          WEB_PID=$!
+          trap 'kill $WEB_PID 2>/dev/null || true' EXIT
+          node scripts/check-origin.mjs
   backend:
     name: Go tests and vet
     runs-on: ubuntu-latest

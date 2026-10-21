@@ -10,8 +10,19 @@ async function forward(req:NextRequest,params:Promise<{path:string[]}>,method:"G
  const {path:segments}=await params;const path=segments.join("/");
  if(!allowed(path,method))return NextResponse.json({error:"Route not allowed"},{status:404});
  if(method!=="GET"){
+  // nextUrl.origin may describe Next.js' internal Docker address (0.0.0.0:3000)
+  // rather than the public Host sent by the browser. Compare the Origin host
+  // against the incoming Host, never against the internal runtime URL.
   const origin=req.headers.get("origin");
-  if(origin&&origin!==req.nextUrl.origin)return NextResponse.json({error:"Cross-origin request refused"},{status:403});
+  if(origin){
+   const host=req.headers.get("host");
+   let allowedOrigin=false;
+   try{
+    const parsed=new URL(origin);
+    allowedOrigin=!!host && (parsed.protocol==="http:"||parsed.protocol==="https:") && parsed.host.toLowerCase()===host.toLowerCase();
+   }catch{}
+   if(!allowedOrigin)return NextResponse.json({error:"Cross-origin request refused"},{status:403});
+  }
   const site=req.headers.get("sec-fetch-site");
   if(site&&site!=="same-origin"&&site!=="none")return NextResponse.json({error:"Cross-site request refused"},{status:403});
  }
