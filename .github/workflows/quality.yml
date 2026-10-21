@@ -100,3 +100,12 @@ jobs:
             sh scripts/ensure-deps.sh
             node -e "require.resolve(\"@tiptap/extension-image\")"
           '
+      - name: Boot full development Compose stack and wait for health
+        run: |
+          docker compose up -d --build --wait --wait-timeout 300
+          docker compose ps
+          curl --fail --silent --show-error --max-time 15 http://127.0.0.1:3000/api/health | grep '"status":"ok"'
+          docker compose exec -T web node -p 'require.resolve("@tiptap/extension-image")'
+      - name: Show container logs on failure
+        if: failure()
+        run: docker compose logs --tail=180 web api db
