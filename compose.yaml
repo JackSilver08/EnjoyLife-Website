@@ -70,11 +70,13 @@ services:
     # Always verify dependencies inside the named volume; --build alone does not refresh it.
     command: ["sh", "-ec", "sh scripts/ensure-deps.sh && exec npm run dev -- --hostname 0.0.0.0"]
     healthcheck:
-      test: ["CMD-SHELL", "node -e \"require('http').get('http://127.0.0.1:3000/', r => process.exit(r.statusCode === 200 ? 0 : 1)).on('error', () => process.exit(1))\""]
-      interval: 5s
-      timeout: 5s
-      retries: 12
-      start_period: 15s
+      # Do not compile the full SSR homepage just to check Next.js readiness.
+      # The first local start may install npm packages into an older named volume.
+      test: ["CMD-SHELL", "node -e \"require('http').get('http://127.0.0.1:3000/api/health', r => {r.resume();process.exit(r.statusCode===200?0:1)}).on('error', () => process.exit(1))\""]
+      interval: 10s
+      timeout: 8s
+      retries: 18
+      start_period: 90s
 volumes:
   postgres_data:
   go_mod_cache:

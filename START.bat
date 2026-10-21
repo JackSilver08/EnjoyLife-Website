@@ -25,9 +25,11 @@ if errorlevel 1 (
   exit /b 1
 )
 echo [INFO] Building and starting Enjoy Life...
-docker compose up --build --wait --wait-timeout 120
+docker compose up --build --wait --wait-timeout 300
 if errorlevel 1 (
-  echo [ERROR] Compose failed. Inspect using: docker compose logs --tail=100
+  echo [ERROR] Compose failed. Container status and web startup log follow:
+  docker compose ps
+  docker compose logs --tail=120 web
   pause
   exit /b 1
 )
