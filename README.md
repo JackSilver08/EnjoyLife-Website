@@ -1,3 +1,7 @@
+## Enjoy Journal — Sprint 4 Dynamic Storefront
+
+Homepage and `/blog` now render **only real published posts** fetched from PostgreSQL via Go (no JavaScript seed content). `/blog/[slug]` renders TipTap JSON safely, returns 404 for drafts, and generates per-post SEO metadata. Robots and sitemap are production-domain gated. [Sprint 4 guide](docs/JOURNAL_SPRINT4.md).
+
 ## Windows Docker startup fix
 
 The `web` container now accepts Windows CRLF bind mounts for the dependency startup script. See [CRLF troubleshooting](docs/WINDOWS_CRLF_DOCKER.md). Do not delete Docker volumes to fix shell errors.
