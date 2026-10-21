@@ -1,3 +1,7 @@
+## Sprint 5 — Media and Dynamic Store Content
+
+Admin can now upload images directly from their computer via `/admin/media`, select those images in product and Journal editors, bulk-import unpublished products from CSV, and edit Hero/Story from `/admin/site`. Uploaded images persist in the Docker `media_data` volume; the existing four demo products are archived from the public catalog without deleting any order or stock history. See [Sprint 5 operations and backup guide](docs/SPRINT5_MEDIA.md).
+
 ## Enjoy Journal — Sprint 4 Dynamic Storefront
 
 Homepage and `/blog` now render **only real published posts** fetched from PostgreSQL via Go (no JavaScript seed content). `/blog/[slug]` renders TipTap JSON safely, returns 404 for drafts, and generates per-post SEO metadata. Robots and sitemap are production-domain gated. [Sprint 4 guide](docs/JOURNAL_SPRINT4.md).
