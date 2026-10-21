@@ -4,6 +4,7 @@ import (
  "bytes"
  "encoding/json"
  "errors"
+ "io"
  "net/url"
  "regexp"
  "strings"
@@ -61,17 +62,65 @@ func validBlogURL(s string) bool {
 }
 
 func validBlogDoc(doc json.RawMessage) bool {
- if len(doc)<2 || len(doc)>200_000 { return false }
+ if len(doc)<2 || len(doc)>200_000 {return false}
  dec:=json.NewDecoder(bytes.NewReader(doc))
- var root map[string]json.RawMessage
- if err:=dec.Decode(&root);err!=nil {return false}
- if len(root)==0 {return false}
- var kind string
- if json.Unmarshal(root["type"],&kind)!=nil || kind!="doc" {return false}
- var content []json.RawMessage
- if err:=json.Unmarshal(root["content"],&content);err!=nil{return false}
- // Only structured JSON is accepted. HTML is never used as a serialization format.
- return len(content)<=200
+ var root struct {
+  Type string `json:"type"`
+  Content []json.RawMessage `json:"content"`
+ }
+ if err:=dec.Decode(&root);err!=nil{return false}
+ var trailing any
+ if err:=dec.Decode(&trailing);err!=io.EOF{return false}
+ if root.Type!="doc"||root.Content==nil||len(root.Content)>200{return false}
+ count:=0
+ for _,node:=range root.Content{if !validBlogNode(node,0,&count){return false}}
+ return true
+}
+
+// Only allow structured TipTap-compatible nodes. Never store arbitrary HTML nodes
+// or unsafe URL schemes. The web renderer must apply its own allowlist as well.
+func validBlogNode(raw json.RawMessage,depth int,count *int)bool{
+ (*count)++
+ if depth>20||*count>1200{return false}
+ var node struct{
+  Type string `json:"type"`
+  Text string `json:"text"`
+  Content []json.RawMessage `json:"content"`
+  Attrs map[string]json.RawMessage `json:"attrs"`
+  Marks []struct{
+   Type string `json:"type"`
+   Attrs map[string]json.RawMessage `json:"attrs"`
+  } `json:"marks"`
+ }
+ if json.Unmarshal(raw,&node)!=nil{return false}
+ allowed:=map[string]bool{"paragraph":true,"heading":true,"blockquote":true,"bulletList":true,"orderedList":true,"listItem":true,"codeBlock":true,"text":true,"hardBreak":true,"horizontalRule":true,"image":true}
+ if !allowed[node.Type]{return false}
+ if node.Type=="text" && len(node.Text)>20000{return false}
+ if node.Type=="image" {
+  var src,alt string
+  if json.Unmarshal(node.Attrs["src"],&src)!=nil||!validBlogURL(src)||src==""{return false}
+  if json.Unmarshal(node.Attrs["alt"],&alt)!=nil||strings.TrimSpace(alt)==""||utf8.RuneCountInString(alt)>200{return false}
+ }
+ if node.Type=="heading" {
+  var level int
+  if json.Unmarshal(node.Attrs["level"],&level)!=nil||level<2||level>4{return false}
+ }
+ for key:=range node.Attrs{
+  allowedKey:=(node.Type=="image"&&(key=="src"||key=="alt"||key=="title"))||(node.Type=="heading"&&key=="level")||(node.Type=="orderedList"&&key=="start")
+  if !allowedKey{return false}
+ }
+ for _,mark:=range node.Marks{
+  if mark.Type!="bold"&&mark.Type!="italic"&&mark.Type!="underline"&&mark.Type!="strike"&&mark.Type!="code"&&mark.Type!="link"{return false}
+  if mark.Type=="link"{
+   var href string
+   if json.Unmarshal(mark.Attrs["href"],&href)!=nil{return false}
+   if !(validBlogURL(href)&&href!="" || (strings.HasPrefix(href,"/")&&!strings.HasPrefix(href,"//")&&!strings.Contains(href,"\\")&&len(href)<=800)){return false}
+  }
+  for k:=range mark.Attrs{if mark.Type!="link"||k!="href"{return false}}
+ }
+ if len(node.Content)>200{return false}
+ for _,child:=range node.Content{if !validBlogNode(child,depth+1,count){return false}}
+ return true
 }
 
 func blogDocHasText(doc json.RawMessage) bool {
