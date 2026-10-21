@@ -14,20 +14,7 @@ import (
 // A CSV image_url may contain the original image filename, as long as the admin
 // previously uploaded that file into the Media Manager. The database resolves
 // it to a safely generated local media URL; no filesystem paths are accepted.
-var importImageName = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9._() -]{0,190}\\.(?i:jpg|jpeg|png|webp)package handlers
-
-import (
- "context"
- "net/http"
- "errors"
- "regexp"
- "strings"
- "time"
- "github.com/gin-gonic/gin"
- "github.com/jackc/pgx/v5"
-)
-
-)
+var importImageName = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9._() -]{0,190}\.(?i:jpg|jpeg|png|webp)$`)
 
 // Batch import is atomic. Imported products always start unpublished so pricing
 // and stock can be reviewed before the customer can purchase them.
