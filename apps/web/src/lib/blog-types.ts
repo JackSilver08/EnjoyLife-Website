@@ -53,7 +53,7 @@ export function asSlug(value:string){
     .replace(/đ/g,"d").replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,"").slice(0,140);
 }
 export function isApprovedUrl(url:string){
-  if(/^\\/media\\/[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}\\.(?:jpg|png|webp)$/.test(url))return true;
+  if(/^\/media\/[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}\.(?:jpg|png|webp)$/.test(url))return true;
   if(!url) return true;
   try {const parsed=new URL(url);return parsed.protocol==="https:"&&!parsed.username&&!parsed.password}
   catch {return false}
