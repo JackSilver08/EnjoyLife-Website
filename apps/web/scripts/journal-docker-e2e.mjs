@@ -25,7 +25,7 @@ const form=new FormData();form.set("file",new Blob([png],{type:"image/png"}),"sp
 const upload=await fetch(origin+"/api/store/admin/media",{method:"POST",headers:{Cookie:cookie,Origin:origin,"Sec-Fetch-Site":"same-origin"},body:form});
 const media=await upload.json().catch(()=>null);
 ensure(upload.status===201,"Multipart upload failed "+upload.status+" "+JSON.stringify(media));
-ensure(/^\\/media\\/[a-f0-9-]+\\.png$/.test(media?.url),"Upload returned invalid media URL "+media?.url);
+ensure(/^\/media\/[a-f0-9-]+\.png$/.test(media?.url),"Upload returned invalid media URL "+media?.url);
 const image=await fetch(origin+media.url);
 ensure(image.status===200,"Media image not served through Next route "+image.status);
 ensure(image.headers.get("content-type")?.includes("image/png"),"Media content-type wrong");
