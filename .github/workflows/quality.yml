@@ -69,3 +69,32 @@ jobs:
             docker exec -i enjoy-ci-postgres psql -v ON_ERROR_STOP=1 -U enjoylife -d enjoylife < "$file"
           done
           INTEGRATION_DATABASE_URL="postgres://enjoylife:ci_password@localhost:55433/enjoylife?sslmode=disable" go test ./internal/handlers -run 'Test(AdminIntegration|BlogIntegration)' -count=1 -v
+
+  docker_dev_dependencies:
+    name: Docker dev dependency volume regression
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Configure local Compose development
+        run: cp .env.example .env
+      - name: Build web development image
+        run: docker compose build web
+      - name: Simulate a stale node_modules named volume
+        run: |
+          docker compose run --rm --no-deps --entrypoint sh web -ec '
+            rm -rf node_modules/@tiptap/extension-image node_modules/.enjoy-package-sha256
+            test ! -e node_modules/@tiptap/extension-image
+          '
+      - name: Restore dependency from manifest using actual Compose volume
+        run: |
+          docker compose run --rm --no-deps --entrypoint sh web -ec '
+            sh scripts/ensure-deps.sh
+            node -e "require.resolve(\"@tiptap/extension-image\"); require.resolve(\"@tiptap/react\")"
+            test -s node_modules/.enjoy-package-sha256
+          '
+      - name: Verify repeat start preserves installed dependencies
+        run: |
+          docker compose run --rm --no-deps --entrypoint sh web -ec '
+            sh scripts/ensure-deps.sh
+            node -e "require.resolve(\"@tiptap/extension-image\")"
+          '
