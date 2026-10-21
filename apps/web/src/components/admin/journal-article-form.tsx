@@ -6,6 +6,7 @@ import {useRouter} from "next/navigation";
 import {ArrowLeft,Eye,EyeOff,Save,Send,RotateCcw,ExternalLink} from "lucide-react";
 import type {JSONContent} from "@tiptap/core";
 import {JournalRichTextEditor} from "@/components/admin/journal-rich-text-editor";
+import {MediaPicker} from "@/components/admin/media-picker";
 import {BlogContentPreview} from "@/components/admin/blog-content-preview";
 import {journalApi} from "@/lib/blog-api";
 import {asSlug,blankBlogArticle,inputFromArticle,isApprovedUrl,
@@ -79,7 +80,7 @@ export function JournalArticleForm({initial}:{initial?:BlogArticle}){
       setVersion(response.version);setArticleId(id);
       setData(v=>({...v,status:next,expected_version:response.version}));
       setDirty(false);
-      setNotice(next==="PUBLISHED"?"Đã xuất bản trong database. Trang blog công khai sẽ được nối dữ liệu ở Sprint 4.":"Đã lưu bản nháp vào PostgreSQL.");
+      setNotice(next==="PUBLISHED"?"Đã xuất bản; bài viết được cập nhật trên trang Journal công khai.":"Đã lưu bản nháp vào PostgreSQL.");
       if(!articleId)router.replace("/admin/blog/"+id+"/edit");
     }catch(e){setError(e instanceof Error?e.message:"Lỗi lưu bài viết.")}
     finally{setStatus("idle")}
@@ -146,8 +147,9 @@ export function JournalArticleForm({initial}:{initial?:BlogArticle}){
             <textarea id="blog-seo-description" rows={3} maxLength={180} value={data.seo_description}
               onChange={e=>change("seo_description",e.target.value)} placeholder="Đoạn mô tả ngắn xuất hiện trên kết quả tìm kiếm."/>
             <div className="cms-hint">{data.seo_description.length}/180</div>
-            <label className="cms-label" htmlFor="blog-og-url">Ảnh Open Graph (HTTPS)</label>
-            <input id="blog-og-url" type="url" placeholder="https://..." value={data.og_image_url} onChange={e=>change("og_image_url",e.target.value)}/>
+            <label className="cms-label" htmlFor="blog-og-url">Ảnh Open Graph (HTTPS hoặc thư viện)</label>
+            <input id="blog-og-url" placeholder="https://... hoặc /media/..." value={data.og_image_url} onChange={e=>change("og_image_url",e.target.value)}/>
+            <MediaPicker compact label="Chọn ảnh SEO từ máy / thư viện" value={data.og_image_url} onSelect={url=>change("og_image_url",url)}/>
             <div className="cms-google-preview">
               <span>enjoylife.com / blog / {data.slug||"slug-bai-viet"}</span>
               <strong>{data.seo_title||data.title||"Tiêu đề bài viết"}</strong>
@@ -176,14 +178,15 @@ export function JournalArticleForm({initial}:{initial?:BlogArticle}){
         </section>
         <section className="cms-panel">
           <span className="eyebrow">ẢNH BÌA</span>
-          <label className="cms-label" htmlFor="blog-cover-url">URL ảnh HTTPS</label>
-          <input id="blog-cover-url" type="url" value={data.cover_image_url} onChange={e=>change("cover_image_url",e.target.value)} placeholder="https://..."/>
+          <label className="cms-label" htmlFor="blog-cover-url">Ảnh bìa từ thư viện</label>
+          <MediaPicker compact label="Ảnh bìa bài viết" value={data.cover_image_url} onSelect={url=>change("cover_image_url",url)} onUpload={asset=>{if(!data.cover_image_alt)change("cover_image_alt",asset.original_name.replace(/\\.[^.]+$/,""))}}/>
+          <input id="blog-cover-url" value={data.cover_image_url} onChange={e=>change("cover_image_url",e.target.value)} placeholder="https://... hoặc /media/..."/>
           <label className="cms-label" htmlFor="blog-cover-alt">Alt text cho ảnh</label>
           <input id="blog-cover-alt" value={data.cover_image_alt} maxLength={200} onChange={e=>change("cover_image_alt",e.target.value)} placeholder="Mô tả ảnh bìa"/>
           {data.cover_image_url&&isApprovedUrl(data.cover_image_url)&&
             // eslint-disable-next-line @next/next/no-img-element
             <img className="cms-cover-thumbnail" alt={data.cover_image_alt||"Ảnh bìa thử nghiệm"} src={data.cover_image_url}/>}
-          <p className="cms-editor-hint">Sprint 3 dùng URL ảnh hợp lệ. Upload ảnh và thư viện media sẽ được triển khai sau.</p>
+          <p className="cms-editor-hint">Chọn tệp JPG/PNG/WebP trên máy hoặc sử dụng ảnh đã có trong thư viện.</p>
         </section>
         <section className="cms-panel cms-side-help">
           <h3>Quy trình xuất bản</h3>
@@ -191,7 +194,7 @@ export function JournalArticleForm({initial}:{initial?:BlogArticle}){
           <p>2. Điền SEO, danh mục và hình ảnh.</p>
           <p>3. Xem trước và rà soát nội dung.</p>
           <p>4. Xuất bản sau khi phê duyệt.</p>
-          <p>Chỉ bài đã xuất bản được Public API trả về. Trang hiển thị bài thật cho khách sẽ có trong Sprint 4.</p>
+          <p>Bài đã xuất bản hiển thị ngay trong Journal công khai, không cần cập nhật code.</p>
         </section>
       </aside>
     </form>}

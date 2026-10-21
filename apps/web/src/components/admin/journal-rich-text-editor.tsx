@@ -7,6 +7,7 @@ import type {JSONContent} from "@tiptap/core";
 import {Bold,Italic,Underline,Strikethrough,Heading2,Heading3,List,ListOrdered,Quote,Link2,
   ImagePlus,Undo2,Redo2,Minus,Unlink} from "lucide-react";
 import {isApprovedLink,isApprovedUrl,normalizeBlogDocument} from "@/lib/blog-types";
+import {MediaPicker} from "@/components/admin/media-picker";
 
 type Props={initial:JSONContent;onChange:(data:JSONContent)=>void;disabled?:boolean};
 export function JournalRichTextEditor({initial,onChange,disabled}:Props){
@@ -43,7 +44,7 @@ export function JournalRichTextEditor({initial,onChange,disabled}:Props){
   function insertImage(){
     if(!editor)return;
     const url=imageURL.trim(),alt=imageAlt.trim();
-    if(!url||!isApprovedUrl(url)){setMessage("Ảnh phải có URL HTTPS hợp lệ.");return;}
+    if(!url||!isApprovedUrl(url)){setMessage("Chọn ảnh từ máy / thư viện hoặc URL HTTPS hợp lệ.");return;}
     if(!alt){setMessage("Hình ảnh bắt buộc có mô tả alt.");return;}
     editor.chain().focus().setImage({src:url,alt}).run();
     setImageURL("");setImageAlt("");setImageMode(false);setMessage("");
@@ -68,19 +69,19 @@ export function JournalRichTextEditor({initial,onChange,disabled}:Props){
       <span className="cms-toolbar-separator"/>
       {action("Chèn liên kết",Link2,editLink)}
       {action("Gỡ liên kết",Unlink,()=>editor?.chain().focus().unsetLink().run(),false,!editor?.isActive("link"))}
-      {action("Chèn hình bằng URL",ImagePlus,()=>setImageMode(v=>!v))}
+      {action("Chèn ảnh từ máy hoặc URL",ImagePlus,()=>setImageMode(v=>!v))}
       <span className="cms-toolbar-separator"/>
       {action("Hoàn tác",Undo2,()=>editor?.chain().focus().undo().run())}
       {action("Làm lại",Redo2,()=>editor?.chain().focus().redo().run())}
     </div>
     {imageMode&&<div className="cms-image-form" role="group" aria-label="Chèn hình ảnh">
-      <label>URL hình ảnh HTTPS<input type="url" value={imageURL} placeholder="https://..." onChange={e=>setImageURL(e.target.value)}/></label>
+      <div className="admin-wide"><MediaPicker compact label="Chọn ảnh từ máy hoặc thư viện" value={imageURL} onSelect={setImageURL} onUpload={asset=>{if(!imageAlt)setImageAlt(asset.original_name.replace(/\\.[^.]+$/,""))}}/></div><label>URL ảnh<input value={imageURL} placeholder="https://... hoặc /media/..." onChange={e=>setImageURL(e.target.value)}/></label>
       <label>Alt text mô tả ảnh<input value={imageAlt} maxLength={200} placeholder="Mô tả nội dung ảnh" onChange={e=>setImageAlt(e.target.value)}/></label>
       <button type="button" disabled={!editor||disabled} onClick={insertImage}>Chèn ảnh</button>
       <button type="button" className="cms-plain-button" onClick={()=>setImageMode(false)}>Đóng</button>
     </div>}
     {message&&<p className="cms-field-error" role="alert">{message}</p>}
     <EditorContent editor={editor}/>
-    <p className="cms-editor-hint">Dùng H2–H4 cho đề mục. Ảnh được nhúng bằng URL HTTPS và alt; chức năng tải tệp lên sẽ làm trong Media Manager.</p>
+    <p className="cms-editor-hint">Dùng H2–H4 cho đề mục. Ảnh có thể được tải trực tiếp từ máy lên thư viện Media, sau đó chèn kèm alt text.</p>
   </div>;
 }
