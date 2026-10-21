@@ -7,6 +7,8 @@ type Config struct {
 	Port           string
 	AdminKey       string
 	PaymentEnabled bool
+	AdminEmail     string
+	AdminPassword  string
 }
 
 func Load() Config {
@@ -20,5 +22,7 @@ func Load() Config {
 		AdminKey:    os.Getenv("ADMIN_API_KEY"),
 		// This switch intentionally does not activate a gateway yet.
 		PaymentEnabled: false,
+		AdminEmail:     os.Getenv("ADMIN_EMAIL"),
+		AdminPassword:  os.Getenv("ADMIN_PASSWORD"),
 	}
 }

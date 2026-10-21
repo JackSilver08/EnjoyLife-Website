@@ -55,6 +55,7 @@
 .admin-panel-grid h2{font:normal 34px var(--serif);margin:0 0 15px}
 .admin-panel-grid p{font-size:13px;color:var(--muted);line-height:1.75}
 .admin-empty{margin-top:25px;padding:30px;border:1px dashed #b8b9b2;color:#6b7069;font-size:13px;text-align:center}
+.admin-order{display:grid;grid-template-columns:1fr 1fr auto;gap:12px;padding:15px 0;border-bottom:1px solid var(--line);font-size:13px}.admin-order span{color:var(--muted)}
 .admin-panel-grid .admin-ai-panel{background:#29322a;color:white}
 .admin-panel-grid .admin-ai-panel p{color:#d1d9d2}
 .admin-ai-panel span{display:inline-block;border:1px solid #b3b9b1;padding:8px 12px;margin-top:22px;font-size:10px;letter-spacing:.12em}
@@ -62,6 +63,7 @@
 @media(max-width:720px){.hero-editorial{height:calc(100svh - 67px);min-height:510px}.category-grid{grid-template-columns:1fr}.category-card{min-height:145px}.shop-category{padding-block:70px 0}.footer-v2-inner{grid-template-columns:1fr}.footer-v2-links{grid-template-columns:repeat(2,max-content)}.admin-panel-grid,.admin-kpi-v2,.policy-list{grid-template-columns:1fr}.admin-workspace{padding:28px 18px}.admin-top{align-items:start;flex-direction:column}}
 @media(hover:none){.product-hover{display:none}}
 @media(prefers-reduced-motion:reduce){.hero-photo,.hero-content,.hero-topline,.hero-bottom{animation:none}}
+.account-page{padding-block:80px 120px}.account-page>h1,.account-head h1{font:normal clamp(52px,7vw,94px)/1.05 var(--serif);letter-spacing:-.035em;margin:20px 0}.account-page h1 em{color:var(--accent)}.account-card{width:min(520px,100%);background:#eeece7;padding:30px}.account-tabs{display:grid;grid-template-columns:1fr 1fr;margin-bottom:26px}.account-tabs button,.text-button{border:0;background:transparent;padding:12px;display:flex;gap:8px;align-items:center;justify-content:center;font-size:12px}.account-tabs button.active{background:var(--ink);color:#fff}.account-card form{display:grid;gap:17px}.account-card label{display:grid;gap:8px;font-size:12px;font-weight:700}.account-card input{padding:13px;border:1px solid #d0cbc2;background:#fff;font:inherit}.account-head{display:flex;justify-content:space-between;align-items:end;gap:20px;border-bottom:1px solid var(--line);margin-bottom:38px}.account-head p{color:var(--muted);padding-bottom:15px}.account-page>h2{font:normal 38px var(--serif);margin:55px 0 22px}.account-orders{border-top:1px solid var(--line)}.account-orders article{display:grid;grid-template-columns:1fr 1fr auto;gap:20px;padding:20px 0;border-bottom:1px solid var(--line);font-size:13px}.account-orders span{color:var(--muted)}
 
 .shop-page{padding-top:60px}
 .shop-head h1{font-size:clamp(52px,7vw,102px)}

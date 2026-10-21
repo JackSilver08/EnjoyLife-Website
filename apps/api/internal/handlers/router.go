@@ -34,16 +34,16 @@ type Variant struct {
 	Available int    `json:"available"`
 }
 type Product struct {
-	ID          string    `json:"id"`
-	Slug        string    `json:"slug"`
-	Name        string    `json:"name"`
-	Description string    `json:"description"`
-	ImageURL    string    `json:"image_url"`
-	Collection  string    `json:"collection"`
-	CategorySlug string `json:"category_slug"`
-	Available int `json:"available"`
-	PriceVND    int64     `json:"price_vnd"`
-	Variants    []Variant `json:"variants"`
+	ID           string    `json:"id"`
+	Slug         string    `json:"slug"`
+	Name         string    `json:"name"`
+	Description  string    `json:"description"`
+	ImageURL     string    `json:"image_url"`
+	Collection   string    `json:"collection"`
+	CategorySlug string    `json:"category_slug"`
+	Available    int       `json:"available"`
+	PriceVND     int64     `json:"price_vnd"`
+	Variants     []Variant `json:"variants"`
 }
 type OrderItemRequest struct {
 	VariantID string `json:"variant_id" binding:"required"`
@@ -72,6 +72,11 @@ func Router(a *App) *gin.Engine {
 	api.GET("/health", a.health)
 	api.GET("/products", a.products)
 	api.GET("/products/:slug", a.product)
+	api.POST("/auth/register", a.register)
+	api.POST("/auth/login", a.login)
+	api.POST("/auth/logout", a.logout)
+	api.GET("/auth/me", a.me)
+	api.GET("/account/orders", a.myOrders)
 	api.POST("/orders", a.createOrder)
 	api.GET("/orders/:token", a.orderStatus)
 	api.GET("/policies", func(c *gin.Context) {
@@ -84,7 +89,9 @@ func Router(a *App) *gin.Engine {
 	api.POST("/ai/customer", func(c *gin.Context) {
 		c.JSON(http.StatusNotImplemented, gin.H{"error": "Chưa cấu hình LLM; không giả lập câu trả lời AI."})
 	})
-	api.GET("/admin/summary", a.adminAuth, a.adminSummary)
+	api.GET("/admin/summary", a.adminSummary)
+	api.GET("/admin/orders", a.adminOrders)
+	api.GET("/admin/users", a.adminUsers)
 	// Deliberately no payment webhook endpoint until it has verified-signature processing.
 	return r
 }
@@ -186,6 +193,7 @@ func uuid() (string, error) {
 	return fmt.Sprintf("%08x-%04x-%04x-%04x-%012x", b[0:4], b[4:6], b[6:8], b[8:10], b[10:16]), nil
 }
 func (a *App) createOrder(c *gin.Context) {
+	user := a.loadUser(c)
 	var input CreateOrderRequest
 	if err := c.ShouldBindJSON(&input); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Dữ liệu đơn hàng không hợp lệ"})
@@ -279,10 +287,14 @@ func (a *App) createOrder(c *gin.Context) {
 		total += snap.price * int64(item.Quantity)
 	}
 	// All price/availability values are read and locked from DB: never trust frontend totals.
+	var userID any
+	if user != nil {
+		userID = user.ID
+	}
 	_, err = tx.Exec(ctx, `INSERT INTO orders(id,public_token,client_order_key,order_no,customer_name,
-      customer_phone,shipping_address,note,payment_method,payment_status,status,total_vnd)
-      VALUES($1,$2,$3,$4,$5,$6,$7,$8,'COD','UNPAID','PENDING_CONFIRMATION',$9)`,
-		orderID, token, input.ClientOrderKey, orderNo, input.CustomerName, input.CustomerPhone, input.ShippingAddress, input.Note, total)
+	      customer_phone,shipping_address,note,payment_method,payment_status,status,total_vnd,user_id)
+	      VALUES($1,$2,$3,$4,$5,$6,$7,$8,'COD','UNPAID','PENDING_CONFIRMATION',$9,$10)`,
+		orderID, token, input.ClientOrderKey, orderNo, input.CustomerName, input.CustomerPhone, input.ShippingAddress, input.Note, total, userID)
 	if err != nil {
 		serverError(c, err)
 		return
@@ -352,6 +364,9 @@ func (a *App) adminAuth(c *gin.Context) {
 	c.Next()
 }
 func (a *App) adminSummary(c *gin.Context) {
+	if a.requireAdmin(c) == nil {
+		return
+	}
 	var orders int64
 	var amount int64
 	err := a.DB.QueryRow(c.Request.Context(), `SELECT count(*),COALESCE(sum(total_vnd),0) FROM orders`).Scan(&orders, &amount)

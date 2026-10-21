@@ -32,6 +32,10 @@ func main() {
 		slog.Error("database unavailable", "error", err)
 		os.Exit(1)
 	}
+	if err = handlers.EnsureAdmin(ctx, db, cfg.AdminEmail, cfg.AdminPassword); err != nil {
+		slog.Error("admin bootstrap", "error", err)
+		os.Exit(1)
+	}
 	app := &handlers.App{DB: db, Config: cfg}
 	srv := &http.Server{Addr: ":" + cfg.Port, Handler: handlers.Router(app), ReadHeaderTimeout: 5 * time.Second, ReadTimeout: 15 * time.Second, WriteTimeout: 20 * time.Second, IdleTimeout: 60 * time.Second}
 	go func() {

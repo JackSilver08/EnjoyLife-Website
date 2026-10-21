@@ -11,7 +11,9 @@
 - Local cart with size/color selection and quantity controls.
 - COD checkout: backend validates buyer/item data, obtains DB row locks, checks inventory, creates order, reserves stock, writes a movement log, returns a non-guessable order lookup token.
 - Read-only order confirmation by secure random token.
-- Admin visual preview and chatbot "coming soon" **clearly marked as nonfunctional**, not fake dashboards/AI.
+- Đăng ký/đăng nhập bằng email và mật khẩu băm bcrypt; phiên đăng nhập dùng cookie HTTP-only trong 30 ngày.
+- Tài khoản xem được các đơn đã đặt khi đăng nhập; đơn COD mới tự liên kết với tài khoản đó.
+- Trang quản trị yêu cầu vai trò `ADMIN`, hiển thị người dùng và các đơn gần đây từ PostgreSQL. Chatbot AI vẫn chỉ là phần giữ chỗ.
 - Docker Compose with Postgres seeded data, healthcheck, schema and starter tests.
 - Ready-to-extend payment gateway interfaces and AI endpoints, but **no actual online payments yet**.
 
@@ -28,7 +30,7 @@
 ```powershell
 Copy-Item .env.example .env
 # Edit .env only if you want to change dev DB credentials; keep payment disabled.
-docker compose up --build -d
+docker compose up --build --wait
 docker compose ps
 docker compose logs -f --tail=100
 ```
@@ -37,7 +39,8 @@ Or double-click **START.bat**. First startup takes longer as images and dependen
 
 - Website: http://localhost:3000
 - Shop: http://localhost:3000/shop
-- Admin UI preview: http://localhost:3000/admin
+- Tài khoản: http://localhost:3000/account
+- Quản trị: http://localhost:3000/admin (chỉ tài khoản quản trị)
 - Go API: http://localhost:8081/api/v1/health
 - Catalog JSON: http://localhost:8081/api/v1/products
 - Postgres from your PC: localhost:5433 (the database is otherwise private to the Compose network).
@@ -54,7 +57,18 @@ To stop: `docker compose down` or **STOP.bat**. Data persists in `postgres_data`
 - `API db_unavailable`: `docker compose logs db api` and wait for Postgres initialization.
 - `npm` / `go` download error: Check Internet, firewall, DNS and proxy configuration for Docker containers.
 - `no such table`: init scripts only execute on an empty DB volume. Inspect `docker compose logs db`; reset demo volume only if its data is disposable.
-- Backend source changed: `docker compose restart api` to rebuild Go on restart (frontend hot reloads).
+- Backend source changed: `docker compose restart api` to rebuild Go on restart. Nếu vừa thêm route/page mới, chạy thêm `docker compose restart web`.
+
+### Tài khoản quản trị phát triển
+
+Khi API khởi động, nó tạo (hoặc nâng quyền) tài khoản được khai báo trong `.env`. Với cấu hình mẫu, đăng nhập tại `/account` bằng `admin@enjoylife.local` và `dev_admin_change_me`, sau đó mở `/admin`. **Đổi cả hai giá trị trước khi triển khai ở bất cứ môi trường công khai nào.**
+
+Nếu cơ sở dữ liệu đã được tạo từ phiên bản cũ, áp dụng migration tài khoản một lần:
+
+```powershell
+docker compose exec -T db psql -U enjoylife -d enjoylife -f /docker-entrypoint-initdb.d/004_accounts.sql
+docker compose restart api web
+```
 
 ## 4. Project map
 
@@ -82,11 +96,14 @@ enjoy-life-starter/
 | GET | `/api/v1/health` | Checks DB readiness |
 | GET | `/api/v1/products?q=...` | Public, published catalog |
 | GET | `/api/v1/products/:slug` | Public product + current variants |
+| POST | `/api/v1/auth/register` | Creates a customer account and session |
+| POST | `/api/v1/auth/login` / `/auth/logout` | Starts or terminates the current session |
+| GET | `/api/v1/auth/me` / `/account/orders` | Current user and that user's order history |
 | POST | `/api/v1/orders` | COD only; reserves selected SKUs in a DB transaction |
 | GET | `/api/v1/orders/:token` | Guest lookup via private random token |
 | GET | `/api/v1/policies` | Placeholder policies; **not official** |
 | POST | `/api/v1/ai/customer` | 501 until LLM integration is completed |
-| GET | `/api/v1/admin/summary` | Requires an ADMIN_API_KEY, disabled by default |
+| GET | `/api/v1/admin/summary`, `/admin/orders`, `/admin/users` | Requires a signed-in `ADMIN` account |
 
 **For test orders**: enter sample contact details only. Do not expose to the Internet, enter real customer data, or send real money using this code.
 
@@ -102,10 +119,10 @@ Requires locally installed Postgres 17, Go >=1.25, Node >=20.9 (Next 16), and In
 
 ## 7. Important limitations / production gates
 
-- **No customer account/login, refunds, shipment workflow or real administration UI yet** — those are in project roadmap.
+- **Accounts and the read-only admin overview are implemented for local development.** Password reset, email verification, rate limiting, audit logs, role management UI, refunds and shipment workflow are not yet implemented.
 - **PAYOS intentionally returns 501** even if credentials are accidentally entered. Do not flip an environment variable to attempt to take payments. Implement/verify signature, payment states, idempotency, timeouts, reconciliation, cancellation and refund handling before activation.
 - **COD demo order reservation exists; shipment, cancellation, expiry and reserve release do not.** Until these are implemented and tested, do not run the checkout against real stock.
-- API admin key is an isolated developer diagnostic, **not full RBAC or production authentication**.
+- The bootstrap administrator and local HTTP cookie setup are for development only; add HTTPS-only cookies, password reset/verification, rate limits and audit logs before production.
 - Browser cart prices are indicative; actual checkout price is always calculated from Postgres.
 - Cart may show stale stock; server rejects insufficient inventory with HTTP 409.
 - No AI model calls are performed. Both shopper assistant and Admin AI require tool whitelists, server-side keys, roles, prompt-injection controls and evaluation.
