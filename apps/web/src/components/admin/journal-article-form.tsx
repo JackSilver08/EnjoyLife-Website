@@ -101,9 +101,9 @@ export function JournalArticleForm({initial}:{initial?:BlogArticle}){
     <div className="cms-form-actions">
       <button type="button" className="cms-secondary-action" onClick={()=>setPreview(v=>!v)}>
         {preview?<EyeOff size={17}/>:<Eye size={17}/>} {preview?"Quay lại chỉnh sửa":"Xem trước"}</button>
-      <button type="button" className="cms-secondary-action" onClick={()=>void save("DRAFT")} disabled={isSaving}>
+      {currentStatus==="DRAFT"?<button type="button" className="cms-secondary-action" onClick={()=>void save("DRAFT")} disabled={isSaving}>
         <Save size={16}/> Lưu nháp</button>
-      {currentStatus==="PUBLISHED"&&<button type="button" className="cms-secondary-action" disabled={isSaving} onClick={()=>void save("DRAFT")}><RotateCcw size={16}/> Gỡ xuất bản</button>}
+       :<button type="button" className="cms-secondary-action" disabled={isSaving} onClick={()=>void save("DRAFT")}><RotateCcw size={16}/> Gỡ xuất bản</button>}
       <button type="button" className="cms-primary-action" disabled={isSaving} onClick={()=>void save("PUBLISHED")}>
         <Send size={16}/>{isSaving?"Đang lưu...":currentStatus==="PUBLISHED"?"Cập nhật bài":"Xuất bản"}</button>
     </div>

@@ -1,3 +1,7 @@
+## Enjoy Journal — Sprint 3 Admin CMS
+
+Admin can now create, edit, preview and publish Journal articles using Tiptap + PostgreSQL. Visit `/admin/blog` after logging in as Admin. Public /blog pages will be connected to published articles in Sprint 4. See [Sprint 3 instructions](docs/JOURNAL_SPRINT3.md).
+
 ## Enjoy Journal — Sprint 2
 
 PostgreSQL blog schema and protected Go APIs are implemented. Drafts are private; public endpoints return only published articles. See [Sprint 2 API and migration guide](docs/JOURNAL_SPRINT2.md). The CMS editor UI is planned for Sprint 3.
