@@ -48,6 +48,19 @@ jobs:
           cache-dependency-path: apps/api/go.sum
       - run: go test ./...
       - run: go vet ./...
+      - name: Compose dev admin config regression
+        working-directory: .
+        run: |
+          cp .env.example .env
+          python3 - <<'PY'
+          import json, subprocess
+          obj=json.loads(subprocess.check_output(["docker","compose","config","--format","json"],text=True))
+          env=obj["services"]["api"]["environment"]
+          expected={"APP_ENV":"development","GIN_MODE":"debug","ENABLE_DEV_ADMIN":"true"}
+          for key,value in expected.items():
+              assert env.get(key)==value, (key,env.get(key))
+          print("Compose API auth config:",{key:env[key] for key in expected})
+          PY
       - name: PostgreSQL integration test
         run: |
           docker run -d --name enjoy-ci-postgres -e POSTGRES_USER=enjoylife -e POSTGRES_PASSWORD=ci_password -e POSTGRES_DB=enjoylife -p 55433:5432 postgres:17-alpine

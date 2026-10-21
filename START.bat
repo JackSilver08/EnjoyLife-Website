@@ -17,6 +17,13 @@ if not exist ".env" (
   copy ".env.example" ".env" >nul
   echo [INFO] Created .env from development example. Change secrets before any public deployment.
 )
+echo [INFO] Validating Docker Compose configuration...
+docker compose config --quiet
+if errorlevel 1 (
+  echo [ERROR] Invalid Compose or .env configuration. Fix the reported values first.
+  pause
+  exit /b 1
+)
 echo [INFO] Building and starting Enjoy Life...
 docker compose up --build --wait --wait-timeout 120
 if errorlevel 1 (

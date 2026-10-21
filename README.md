@@ -1,3 +1,12 @@
+### Local Admin login: configuration check
+For local development only, set these lines in `.env`:
+```dotenv
+APP_ENV=development
+GIN_MODE=debug
+ENABLE_DEV_ADMIN=true
+```
+The API container reads these flags directly from `.env` via `env_file`; `compose.yaml` no longer overrides them with `production/release/false` defaults. Run `docker compose up -d --build --force-recreate api web`, then `docker compose exec api env | Select-String "APP_ENV|GIN_MODE|ENABLE_DEV_ADMIN"` on Windows PowerShell. The three flags must match exactly before the `admin / admin` **local-only** login can work at `http://localhost:3000/account`. Never use demo credentials on public servers.
+
 ## Admin v0.3 quick start
 
 Visit http://localhost:3000/account after enabling APP_ENV=development, GIN_MODE=debug and ENABLE_DEV_ADMIN=true in .env. Local-only demo credentials: admin / admin. This is not a production password. See [Admin operations guide](docs/ADMIN_V03.md).
