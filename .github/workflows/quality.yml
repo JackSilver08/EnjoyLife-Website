@@ -26,14 +26,24 @@ jobs:
       - name: Build
         env:
           API_INTERNAL_URL: http://localhost:8081
+          NEXT_PUBLIC_SITE_URL: https://enjoylife.example.com
           NEXT_TELEMETRY_DISABLED: '1'
         run: npm run build
-      - name: Same-origin auth regression smoke test
+      - name: Published Journal SSR, SEO and security regression
+        env:
+          NEXT_PUBLIC_SITE_URL: https://enjoylife.example.com
         run: |
+          node scripts/mock-journal-api.mjs > /tmp/enjoy-mock-api.log 2>&1 &
+          API_PID=$!
           npm run start -- -p 3399 > /tmp/enjoy-next.log 2>&1 &
           WEB_PID=$!
-          trap 'kill $WEB_PID 2>/dev/null || true' EXIT
+          trap 'kill $WEB_PID $API_PID 2>/dev/null || true' EXIT
           node scripts/check-origin.mjs
+      - name: Show Next.js and mock API logs on failure
+        if: failure()
+        run: |
+          cat /tmp/enjoy-next.log 2>/dev/null || true
+          cat /tmp/enjoy-mock-api.log 2>/dev/null || true
   backend:
     name: Go tests and vet
     runs-on: ubuntu-latest
@@ -116,6 +126,8 @@ jobs:
           docker compose ps
           curl --fail --silent --show-error --max-time 15 http://127.0.0.1:3000/api/health | grep '"status":"ok"'
           docker compose exec -T web node -p 'require.resolve("@tiptap/extension-image")'
+      - name: Published Journal end-to-end via real Go and PostgreSQL
+        run: node apps/web/scripts/journal-docker-e2e.mjs
       - name: Show container logs on failure
         if: failure()
         run: docker compose logs --tail=180 web api db
