@@ -15,7 +15,7 @@ deps_present() {
     const dependencies = Object.keys(require("./package.json").dependencies || {});
     for (const name of dependencies) {
       if (!fs.existsSync("node_modules/" + name + "/package.json")) {
-        process.stderr.write("Missing installed dependency: " + name + "\\n");
+        process.stderr.write("Missing installed dependency: " + name + "\n");
         process.exit(1);
       }
     }
@@ -28,7 +28,7 @@ if [ "$current" != "$previous" ] || ! deps_present; then
   npm install --no-audit --no-fund
   deps_present
   mkdir -p node_modules
-  printf '%s\\n' "$current" > "$stamp"
+  printf '%s\n' "$current" > "$stamp"
   echo "[enjoy-life] Web dependencies are ready."
 else
   echo "[enjoy-life] Web dependencies already match package.json."
