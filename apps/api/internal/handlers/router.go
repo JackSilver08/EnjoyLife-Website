@@ -74,6 +74,7 @@ func Router(a *App) *gin.Engine {
 	api.GET("/products/:slug", a.product)
 	api.POST("/auth/register", a.register)
 	api.POST("/auth/login", a.login)
+	api.POST("/auth/admin-demo", a.devAdminLogin)
 	api.POST("/auth/logout", a.logout)
 	api.GET("/auth/me", a.me)
 	api.GET("/account/orders", a.myOrders)
