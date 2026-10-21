@@ -26,9 +26,9 @@ services:
     environment:
       DATABASE_URL: postgres://${POSTGRES_USER:-enjoylife}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-enjoylife}?sslmode=disable
       PORT: "8081"
-      GIN_MODE: debug
-      APP_ENV: development
-      ENABLE_DEV_ADMIN: "true"
+      GIN_MODE: ${GIN_MODE:-release}
+      APP_ENV: ${APP_ENV:-production}
+      ENABLE_DEV_ADMIN: ${ENABLE_DEV_ADMIN:-false}
     ports:
       - "127.0.0.1:8081:8081"
     healthcheck:
