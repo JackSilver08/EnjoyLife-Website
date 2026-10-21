@@ -56,7 +56,7 @@ const imp=await call("/api/store/admin/products/import",{method:"POST",cookie,bo
 ensure(imp.status===201&&imp.json.created===1,"CSV product import failed: "+imp.status+" "+imp.text);
 const products=await call("/api/store/admin/products");
 const product=products.json?.items?.find(x=>x.slug===csvSlug);
-ensure(product&&!product.published&&product.image_url===media.url,"Imported CSV product must be hidden with persisted image");
+ensure(product&&!product.published&&product.image_url===media.url,"Imported CSV product must be hidden with persisted image; status="+products.status+" payload="+JSON.stringify(products.json)?.slice(0,1800));
 ensure(!(await call("/shop")).text.includes(csvSlug),"Hidden imported product appeared in Shop");
 console.log("Sprint 5 media & content E2E PASSED: upload -> reject forged files/CSRF -> image roundtrip -> Hero -> CSV hidden import");
 

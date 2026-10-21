@@ -43,6 +43,7 @@ func(a *App) adminSiteContentPut(c *gin.Context){
  story_image_url=$5,story_eyebrow=$6,story_title=$7,story_emphasis=$8,story_p1=$9,story_p2=$10,updated_at=now() WHERE id=1`,
  s.HeroImage,s.HeroEyebrow,s.HeroTitle,s.HeroEmphasis,s.StoryImage,s.StoryEyebrow,s.StoryTitle,s.StoryEmphasis,s.StoryP1,s.StoryP2)
  if err!=nil{serverError(c,err);return}
- _,_ = a.DB.Exec(c.Request.Context(),`INSERT INTO admin_audit_logs(actor_id,action,details) VALUES($1,'SITE_CONTENT_EDIT','Hero and Story updated')`,actor.ID)
+ _,err = a.DB.Exec(c.Request.Context(),`INSERT INTO admin_audit_logs(actor_id,action,target_id,details) VALUES($1,'SITE_CONTENT_EDIT','homepage','Hero and Story updated')`,actor.ID)
+ if err!=nil{serverError(c,err);return}
  c.JSON(200,gin.H{"status":"ok"})
 }
