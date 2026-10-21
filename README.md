@@ -1,3 +1,7 @@
+## Windows Docker startup fix
+
+The `web` container now accepts Windows CRLF bind mounts for the dependency startup script. See [CRLF troubleshooting](docs/WINDOWS_CRLF_DOCKER.md). Do not delete Docker volumes to fix shell errors.
+
 ## Development dependency synchronization (Sprint 3 bugfix)
 
 If the Admin editor reports `Module not found: Can't resolve '@tiptap/extension-image'`, the existing Docker named volume `web_node_modules` may still contain dependencies from an older release. Rebuilding the Docker image **does not** replace the contents of that volume.

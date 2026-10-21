@@ -1,0 +1,4 @@
+# Keep shell scripts in Unix LF format even when contributors use Windows.
+# The Compose command additionally normalizes old CRLF checkouts at runtime.
+*.sh text eol=lf
+*.bat text eol=crlf

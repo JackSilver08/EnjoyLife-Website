@@ -68,7 +68,8 @@ services:
       - web_node_modules:/app/node_modules
       - web_next_cache:/app/.next
     # Always verify dependencies inside the named volume; --build alone does not refresh it.
-    command: ["sh", "-ec", "sh scripts/ensure-deps.sh && exec npm run dev -- --hostname 0.0.0.0"]
+    # CRLF-safe on Windows bind mounts: strip carriage returns before /bin/sh reads the script.
+    command: ["sh", "-ec", "tr -d '\\015' < scripts/ensure-deps.sh | sh && exec npm run dev -- --hostname 0.0.0.0"]
     healthcheck:
       # Do not compile the full SSR homepage just to check Next.js readiness.
       # The first local start may install npm packages into an older named volume.
