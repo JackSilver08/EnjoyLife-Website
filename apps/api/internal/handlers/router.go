@@ -107,7 +107,7 @@ func (a *App) products(c *gin.Context) {
       JOIN product_variants v ON v.product_id=p.id AND v.active
       LEFT JOIN inventory i ON i.variant_id=v.id
       WHERE p.published AND ($1 = '' OR p.name ILIKE '%' || $1 || '%' OR p.collection_name ILIKE '%' || $1 || '%')
-      GROUP BY p.id ORDER BY p.created_at DESC LIMIT 60`, query)
+      GROUP BY p.id,c.slug ORDER BY p.created_at DESC LIMIT 60`, query)
 	if err != nil {
 		serverError(c, err)
 		return
