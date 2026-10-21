@@ -8,7 +8,7 @@ export function useAdminData<T>(path:string){
   catch(e){setError(e instanceof Error?e.message:"Lỗi kết nối.");setData(null)}
   finally{setLoading(false)}
  },[path]);
- useEffect(()=>{void reload()},[reload]);
+ useEffect(()=>{const timer=window.setTimeout(()=>{void reload()},0);return()=>window.clearTimeout(timer)},[reload]);
  return {data,loading,error,reload};
 }
 export async function adminAction(path:string,method:"POST"|"PATCH",body?:unknown){
