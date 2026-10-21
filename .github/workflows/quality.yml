@@ -84,9 +84,9 @@ jobs:
           python3 - <<'PY'
           from pathlib import Path
           p = Path("apps/web/scripts/ensure-deps.sh")
-          source = p.read_bytes().replace(b"\\r\\n", b"\\n").replace(b"\\n", b"\\r\\n")
+          source = p.read_bytes().replace(b"\r\n", b"\n").replace(b"\n", b"\r\n")
           p.write_bytes(source)
-          assert b"\\r\\nset -eu\\r\\n" in source
+          assert b"\r\nset -eu\r\n" in source
           print("Created Windows CRLF test fixture for bind-mounted script")
           PY
       - name: Build web development image
@@ -100,14 +100,14 @@ jobs:
       - name: Restore dependency from manifest using actual Compose volume
         run: |
           docker compose run --rm --no-deps --entrypoint sh web -ec '
-            tr -d '\\015' < scripts/ensure-deps.sh | sh
+            tr -d "\015" < scripts/ensure-deps.sh | sh
             node -e "require.resolve(\"@tiptap/extension-image\"); require.resolve(\"@tiptap/react\")"
             test -s node_modules/.enjoy-package-sha256
           '
       - name: Verify repeat start preserves installed dependencies
         run: |
           docker compose run --rm --no-deps --entrypoint sh web -ec '
-            tr -d '\\015' < scripts/ensure-deps.sh | sh
+            tr -d "\015" < scripts/ensure-deps.sh | sh
             node -e "require.resolve(\"@tiptap/extension-image\")"
           '
       - name: Boot full development Compose stack and wait for health
