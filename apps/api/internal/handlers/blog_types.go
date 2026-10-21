@@ -56,6 +56,7 @@ func validBlogSlug(s string, max int) bool {
 
 func validBlogURL(s string) bool {
  if s=="" {return true}
+ if validStoredMediaURL(s) {return true}
  if len(s)>800 {return false}
  u,err:=url.Parse(s)
  return err==nil && u.Scheme=="https" && u.Host!="" && u.User==nil && u.Fragment==""

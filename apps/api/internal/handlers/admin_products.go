@@ -26,7 +26,7 @@ type productForm struct{
  Published bool `json:"published"`
 }
 func validProduct(v productForm)bool{
- return len(strings.TrimSpace(v.Name))>=3&&len(v.Name)<=140&&len(v.Slug)<=100&&slugPattern.MatchString(v.Slug)&&len(v.Description)<=3000&&len(v.Collection)<=100&&len(v.ImageURL)<=500&&(v.ImageURL==""||strings.HasPrefix(v.ImageURL,"https://images.unsplash.com/"))&&skuPattern.MatchString(v.SKU)&&len(v.Color)>0&&len(v.Color)<=40&&len(v.Size)>0&&len(v.Size)<=20&&v.Price>0&&v.Price<1000000000&&v.Stock>=0&&v.Stock<=100000&&len(v.Category)>0
+ return len(strings.TrimSpace(v.Name))>=3&&len(v.Name)<=140&&len(v.Slug)<=100&&slugPattern.MatchString(v.Slug)&&len(v.Description)<=3000&&len(v.Collection)<=100&&len(v.ImageURL)<=500&&validManagedImageURL(v.ImageURL)&&skuPattern.MatchString(v.SKU)&&len(v.Color)>0&&len(v.Color)<=40&&len(v.Size)>0&&len(v.Size)<=20&&v.Price>0&&v.Price<1000000000&&v.Stock>=0&&v.Stock<=100000&&len(v.Category)>0
 }
 func(a *App) adminProducts(c *gin.Context){
  if a.requireAdmin(c)==nil{return}
@@ -78,11 +78,12 @@ func(a *App) adminUpdateProduct(c *gin.Context){
   Description string `json:"description"`
   Collection string `json:"collection"`
   Published bool `json:"published"`
+  ImageURL string `json:"image_url"`
  }
- if c.ShouldBindJSON(&input)!=nil||len(strings.TrimSpace(input.Name))<3||len(input.Name)>140||len(input.Description)>3000||len(input.Collection)>100{
+ if c.ShouldBindJSON(&input)!=nil||len(strings.TrimSpace(input.Name))<3||len(input.Name)>140||len(input.Description)>3000||len(input.Collection)>100||!validManagedImageURL(input.ImageURL){
   c.JSON(400,gin.H{"error":"Dữ liệu không hợp lệ."});return
  }
- cmd,err:=a.DB.Exec(c.Request.Context(),`UPDATE products SET name=$1,description=$2,collection_name=$3,published=$4 WHERE id::text=$5`,strings.TrimSpace(input.Name),input.Description,input.Collection,input.Published,c.Param("id"))
+ cmd,err:=a.DB.Exec(c.Request.Context(),`UPDATE products SET name=$1,description=$2,collection_name=$3,published=$4,image_url=$5 WHERE id::text=$6`,strings.TrimSpace(input.Name),input.Description,input.Collection,input.Published,input.ImageURL,c.Param("id"))
  if err!=nil{serverError(c,err);return}
  if cmd.RowsAffected()==0{c.JSON(404,gin.H{"error":"Không tìm thấy sản phẩm."});return}
  _,_ = a.DB.Exec(c.Request.Context(),`INSERT INTO admin_audit_logs(actor_id,action,target_id,details) VALUES($1,'PRODUCT_EDIT',$2,$3)`,actor.ID,c.Param("id"),input.Name)

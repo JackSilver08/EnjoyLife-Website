@@ -1,9 +1,9 @@
 import {NextRequest,NextResponse} from "next/server";
 const base=process.env.API_INTERNAL_URL??"http://localhost:8081";
 function allowed(path:string,method:string){
- if(method==="GET")return ["blog/articles","blog/categories","blog/tags","admin/blog/articles"].includes(path)||/^blog\/articles\/[a-z0-9-]{3,140}$/.test(path)||/^admin\/blog\/articles\/[a-f0-9-]{36}$/.test(path)||path==="products"||path==="policies"||/^products\/[a-z0-9-]{1,100}$/.test(path)||/^orders\/[a-f0-9]{48}$/.test(path)||["auth/me","account/orders","admin/summary","admin/dashboard","admin/orders","admin/users","admin/inventory","admin/products","admin/reports"].includes(path)||/^admin\/products\/[a-f0-9-]{36}\/variants$/.test(path);
- if(method==="POST")return ["admin/blog/articles","admin/blog/categories","admin/blog/tags","orders","auth/register","auth/login","auth/logout","auth/admin-demo","admin/products"].includes(path)||/^admin\/orders\/EL-[A-F0-9]{8}\/paid$/.test(path)||/^admin\/products\/[a-f0-9-]{36}\/variants$/.test(path);
- if(method==="PUT")return /^admin\/blog\/articles\/[a-f0-9-]{36}$/.test(path);
+ if(method==="GET")return ["blog/articles","blog/categories","blog/tags","admin/blog/articles","admin/media","site/content"].includes(path)||/^blog\/articles\/[a-z0-9-]{3,140}$/.test(path)||/^admin\/blog\/articles\/[a-f0-9-]{36}$/.test(path)||path==="products"||path==="policies"||/^products\/[a-z0-9-]{1,100}$/.test(path)||/^orders\/[a-f0-9]{48}$/.test(path)||["auth/me","account/orders","admin/summary","admin/dashboard","admin/orders","admin/users","admin/inventory","admin/products","admin/reports"].includes(path)||/^admin\/products\/[a-f0-9-]{36}\/variants$/.test(path);
+ if(method==="POST")return ["admin/blog/articles","admin/blog/categories","admin/blog/tags","admin/media","orders","auth/register","auth/login","auth/logout","auth/admin-demo","admin/products"].includes(path)||/^admin\/orders\/EL-[A-F0-9]{8}\/paid$/.test(path)||/^admin\/products\/[a-f0-9-]{36}\/variants$/.test(path);
+ if(method==="PUT")return path==="admin/site/content"||/^admin\/blog\/articles\/[a-f0-9-]{36}$/.test(path);
  if(method==="DELETE")return /^admin\/blog\/articles\/[a-f0-9-]{36}$/.test(path);
  if(method==="PATCH")return /^admin\/blog\/articles\/[a-f0-9-]{36}\/status$/.test(path)||/^admin\/orders\/EL-[A-F0-9]{8}\/status$/.test(path)||/^admin\/inventory\/[a-f0-9-]{36}$/.test(path)||/^admin\/products\/[a-f0-9-]{36}$/.test(path)||/^admin\/variants\/[a-f0-9-]{36}$/.test(path);
  return false;
@@ -36,7 +36,21 @@ async function forward(req:NextRequest,params:Promise<{path:string[]}>,method:"G
     if(v!==null)url.searchParams.set(key,v.slice(0,100));
    }
   }
-  const upstream=await fetch(url,{method,headers:{"Content-Type":"application/json","Cookie":req.headers.get("cookie")??""},body:method==="GET"?undefined:await req.text(),cache:"no-store",signal:AbortSignal.timeout(12000)});
+  const upload=path==="admin/media"&&method==="POST";
+  let payload:BodyInit|undefined;
+  if(method!=="GET"){
+   if(upload){
+    const length=Number(req.headers.get("content-length")||0);
+    if(length>9_500_000)return NextResponse.json({error:"Tệp quá lớn."},{status:413});
+    const bytes=await req.arrayBuffer();
+    if(bytes.byteLength>9_500_000)return NextResponse.json({error:"Tệp quá lớn."},{status:413});
+    payload=bytes;
+   }else payload=await req.text();
+  }
+  const headersUpstream:Record<string,string>={"Cookie":req.headers.get("cookie")??""};
+  if(upload)headersUpstream["Content-Type"]=req.headers.get("content-type")??"";
+  else headersUpstream["Content-Type"]="application/json";
+  const upstream=await fetch(url,{method,headers:headersUpstream,body:payload,cache:"no-store",signal:AbortSignal.timeout(upload?30000:12000)});
   const headers=new Headers({"Content-Type":"application/json","Cache-Control":"no-store","X-Content-Type-Options":"nosniff"});
   upstream.headers.forEach((value,key)=>{if(key.toLowerCase()==="set-cookie")headers.append("Set-Cookie",value)});
   if(upstream.status===204||upstream.status===205||upstream.status===304){
