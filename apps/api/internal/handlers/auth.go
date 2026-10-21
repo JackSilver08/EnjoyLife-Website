@@ -17,7 +17,12 @@ import (
 
 const sessionCookie = "enjoy_life_session"
 
-type currentUser struct{ ID, Email, Name, Role string }
+type currentUser struct {
+ ID string `json:"id"`
+ Email string `json:"email"`
+ Name string `json:"name"`
+ Role string `json:"role"`
+}
 type credentials struct {
 	Email    string `json:"email"`
 	Password string `json:"password"`

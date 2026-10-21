@@ -1,6 +1,6 @@
 ## Admin v0.3 quick start
 
-Visit http://localhost:3000/admin/login after enabling APP_ENV=development, GIN_MODE=debug and ENABLE_DEV_ADMIN=true in .env. Local-only demo credentials: admin / admin. This is not a production password. See [Admin operations guide](docs/ADMIN_V03.md).
+Visit http://localhost:3000/account after enabling APP_ENV=development, GIN_MODE=debug and ENABLE_DEV_ADMIN=true in .env. Local-only demo credentials: admin / admin. This is not a production password. See [Admin operations guide](docs/ADMIN_V03.md).
 
 # Enjoy Life — Fashion Commerce & AI Starter (v0.1)
 

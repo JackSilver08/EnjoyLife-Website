@@ -4,7 +4,7 @@
 1. Update the repository: `git pull origin main`
 2. Copy `.env.example` to `.env` if necessary. Set `APP_ENV=development`, `GIN_MODE=debug` and `ENABLE_DEV_ADMIN=true` in `.env` for local login. **Never expose the development stack to the Internet**. Default Compose values disable the demo account.
 3. Start: `docker compose up --build -d`
-4. Open `http://localhost:3000/admin/login`. The local demonstration username is `admin` and its password is `admin`.
+4. Open `http://localhost:3000/account`. Development admin username/password: `admin` / `admin`. The local demonstration username is `admin` and its password is `admin`.
 5. Credentials are checked only in the Go backend when `APP_ENV=development`, `GIN_MODE=debug` and `ENABLE_DEV_ADMIN=true`. Production must disable all three conditions and use strong admin accounts.
 
 ## Operational modules
@@ -24,3 +24,12 @@ Local demo credentials are intentionally weak. There is no full RBAC, order ship
 
 ## CI validation
 GitHub Actions runs TypeScript checks, ESLint, Next.js production build, Go tests/vet, and disposable PostgreSQL integration covering dev login, product and SKU creation, stock adjustment, COD order progression, payment and logout.
+
+## One unified login (v0.3.1)
+- Go to `http://localhost:3000/account` for **both** shoppers and admins.
+- Shopper: email address and normal password.
+- Local development admin: username `admin`, password `admin`, then automatically routed to `/admin`.
+- `/admin/login` redirects to the shared account page. Protected Admin pages also redirect there if there is no valid admin session.
+- **Security:** the browser does not authenticate `admin/admin`. JavaScript only selects the backend endpoint when the username is `admin`. The Go API validates credentials and issues an HttpOnly session cookie. Admin APIs still check role on the server.
+- Local demo login is available only with `APP_ENV=development`, `GIN_MODE=debug`, `ENABLE_DEV_ADMIN=true`; never expose this publicly.
+- The JSON user DTO uses lowercase `id`, `name`, `email`, `role` to match the frontend.
