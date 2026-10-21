@@ -1,5 +1,21 @@
 # Enjoy Life — Sprint 5: Media Manager & Dynamic Store Content
 
+
+## Tải cả bộ ảnh ZIP trước khi import CSV (cập nhật)
+
+Trường `image_url` trong CSV **không chứa ảnh nhúng**. Nó chỉ chứa **tên file gốc** được đối chiếu trong Media Manager.
+
+**Nếu import CSV bị lỗi "Chưa tìm thấy ảnh đã tải lên với tên file":**
+1. Vào `http://localhost:3000/admin/media` bằng tài khoản Admin.
+2. Nhấn **TẢI ZIP ẢNH SẢN PHẨM**, chọn nguyên file `Sản Phẩm(1).zip`; không cần giải nén.
+3. Hệ thống kiểm tra ảnh trong ZIP, bỏ qua thư mục/CSV hướng dẫn và lưu ảnh thật vào volume `media_data`. Không cho lưu HTML/SVG/EXE; mỗi ảnh tối đa 8 MB, ZIP tối đa 30 MB/120 ảnh/160 MB giải nén.
+4. Chờ thông báo **Đã xử lý 44 ảnh**, gồm số ảnh tải mới và số ảnh đã tồn tại. Tải lại ZIP không tạo thêm bản ghi trùng tên.
+5. Mở `/admin/products` → **Nhập danh mục CSV** và chọn file CSV 43 sản phẩm đã điền giá demo. Lần này API sẽ tìm tên file gốc `original_name` trong PostgreSQL và tự điền URL `/media/UUID.jpg` cho từng dòng.
+
+Đối với ZIP 44 ảnh `Sản Phẩm(1).zip` và CSV 43 dòng từ Enjoy Life, có 43 ảnh được gán sản phẩm và một ảnh phụ được giữ trong thư viện để sử dụng về sau.
+
+**Quan trọng:** Upload ZIP chỉ tạo dữ liệu media, **không tự tạo sản phẩm**. Import CSV là thao tác riêng để chủ cửa hàng kiểm tra trước khi đưa sản phẩm vào trạng thái Ẩn. Sản phẩm vẫn cần duyệt size, giá và tồn kho trước khi công khai.
+
 ## Đã triển khai
 
 **Media Manager**
