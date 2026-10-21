@@ -3,27 +3,29 @@ import { ArrowDown, ArrowUpRight, Mail } from "lucide-react";
 import { fetchProducts } from "@/lib/api";
 import { ProductCard } from "@/components/product-card";
 import { JournalGrid } from "@/components/journal-grid";
+import { fetchSiteContent } from "@/lib/site-content";
 import { getPublishedArticles } from "@/lib/journal-api";
 
 export default async function HomePage() {
-  const [products, journal] = await Promise.all([
+  const [products, journal, content] = await Promise.all([
     fetchProducts(),
     getPublishedArticles({limit:3}).catch(()=>null),
+    fetchSiteContent(),
   ]);
   const contactEmail = process.env.CONTACT_EMAIL?.trim();
   const emailAvailable = !!contactEmail && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(contactEmail);
 
   return <>
     <section className="hero-editorial" aria-label="Chiến dịch thời trang Enjoy Life">
-      <div className="hero-photo" role="img" aria-label="Hình ảnh thời trang đường phố"/>
+      <div className="hero-photo" role="img" aria-label="Hình ảnh thời trang đường phố" style={content?.hero_image_url?{backgroundImage:`url("${content.hero_image_url.replace(/[\\"\\\\]/g,"")}")`}:undefined}/>
       <div className="hero-scrim"/>
       <div className="hero-topline">
         <span>THỜI TRANG CHO NHỮNG NGÀY RIÊNG CỦA BẠN</span>
         <span>ENJOY LIFE / EDITORIAL</span>
       </div>
       <div className="hero-content">
-        <p>PHONG CÁCH ĐƯỢC ĐỊNH NGHĨA BỞI BẠN</p>
-        <h1>Sống theo<br/><em>nhịp riêng.</em></h1>
+        <p>{content?.hero_eyebrow??"PHONG CÁCH ĐƯỢC ĐỊNH NGHĨA BỞI BẠN"}</p>
+        <h1>{content?.hero_title??"Sống theo"}<br/><em>{content?.hero_emphasis??"nhịp riêng."}</em></h1>
         <Link href="#our-story" className="button-ivory">
           KHÁM PHÁ CÂU CHUYỆN <ArrowDown size={17} aria-hidden="true"/>
         </Link>
@@ -41,14 +43,14 @@ export default async function HomePage() {
           <p>KHÔNG CHỈ LÀ TRANG PHỤC, MÀ CÒN LÀ CẢM GIÁC KHI BẠN MẶC NÓ.</p>
         </div>
         <div className="home-story-layout">
-          <div className="home-story-photo" role="img" aria-label="Cảm hứng thời trang và lối sống hiện đại">
+          <div className="home-story-photo" role="img" aria-label="Cảm hứng thời trang và lối sống hiện đại" style={content?.story_image_url?{backgroundImage:`url("${content.story_image_url.replace(/[\\"\\\\]/g,"")}")`}:undefined}>
             <span>THE EVERYDAY EDIT / ENJOY LIFE</span>
           </div>
           <div className="home-story-copy">
-            <span className="eyebrow">MỘT LỐI SỐNG / MỘT CÁ TÍNH</span>
-            <h2 id="story-title">Không chỉ là<br/>điều bạn mặc.<br/><em>Mà là cách bạn sống.</em></h2>
-            <p>Có những ngày bạn muốn nổi bật, cũng có những ngày chỉ cần thật thoải mái. Enjoy Life tin rằng phong cách không bắt đầu từ những quy tắc cứng nhắc — mà từ những lựa chọn khiến bạn thấy là chính mình.</p>
-            <p>Chúng tôi muốn mỗi món đồ đều có thể đi cùng bạn trong những khoảnh khắc bình thường, theo một cách thật riêng.</p>
+            <span className="eyebrow">{content?.story_eyebrow??"MỘT LỐI SỐNG / MỘT CÁ TÍNH"}</span>
+            <h2 id="story-title">{content?.story_title??"Không chỉ là điều bạn mặc."}<br/><em>{content?.story_emphasis??"Mà là cách bạn sống."}</em></h2>
+            <p>{content?.story_p1??"Phong cách không bắt đầu từ những quy tắc cứng nhắc."}</p>
+            <p>{content?.story_p2??"Mỗi món đồ đi cùng bạn theo một cách thật riêng."}</p>
             <Link href="#featured-products" className="text-link">KHÁM PHÁ NHỮNG LỰA CHỌN <ArrowDown size={15} aria-hidden="true"/></Link>
           </div>
         </div>
