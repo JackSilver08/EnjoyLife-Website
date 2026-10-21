@@ -16,3 +16,24 @@ if(other.status!==403)throw Error("Cross-site request was not rejected: "+other.
 const forged=await run("https://attacker.invalid","same-origin");
 if(forged.status!==403)throw Error("Forged same-origin metadata bypassed Origin host check");
 console.log("Origin smoke checks passed; localhost status="+same.status+", attacker status="+other.status);
+
+const page=async(path)=>{
+ const response=await fetch(base+path);
+ if(!response.ok)throw Error("Route "+path+" returned "+response.status);
+ return response.text();
+};
+const homepage=await page("/");
+const sections=["our-story","featured-products","journal","contact"];
+let cursor=-1;
+for(const id of sections){
+ const found=homepage.indexOf('id="'+id+'"');
+ if(found<=cursor)throw Error("Homepage missing or out of order section: "+id);
+ cursor=found;
+}
+if(!homepage.includes('href="#our-story"'))throw Error("Hero is not linked to story section");
+if(homepage.includes('id="lookbook"')||homepage.includes('id="shop-category"'))throw Error("Retired homepage sections are still rendered");
+const blog=await page("/blog");
+if(!blog.includes("CHỦ ĐỀ DỰ KIẾN"))throw Error("Journal needs explicit unpublished content labels");
+const contact=await page("/contact");
+if(!contact.includes("LIÊN HỆ"))throw Error("Contact page content missing");
+console.log("Homepage story/product/journal/contact and supporting routes passed");
