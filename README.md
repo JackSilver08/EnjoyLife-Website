@@ -1,3 +1,19 @@
+## Development dependency synchronization (Sprint 3 bugfix)
+
+If the Admin editor reports `Module not found: Can't resolve '@tiptap/extension-image'`, the existing Docker named volume `web_node_modules` may still contain dependencies from an older release. Rebuilding the Docker image **does not** replace the contents of that volume.
+
+The `web` service now runs `apps/web/scripts/ensure-deps.sh` before Next.js. It detects changes in `package.json` and verifies that all declared runtime packages resolve inside the mounted volume. If not, it runs `npm install` **inside the web container** and checks Tiptap before launching Next.js. This also synchronizes the development checkout's package lock; it does not delete PostgreSQL or any order data.
+
+On Windows PowerShell:
+```powershell
+git pull origin main
+docker compose up -d --build --force-recreate web
+docker compose logs web --tail=80
+docker compose exec web node -p "require.resolve('@tiptap/extension-image')"
+```
+
+If the last command prints a path inside `node_modules`, open `http://localhost:3000/admin/blog/new` after logging in. **Do not run `docker compose down -v`**, which also deletes `postgres_data`.
+
 ## Enjoy Journal — Sprint 3 Admin CMS
 
 Admin can now create, edit, preview and publish Journal articles using Tiptap + PostgreSQL. Visit `/admin/blog` after logging in as Admin. Public /blog pages will be connected to published articles in Sprint 4. See [Sprint 3 instructions](docs/JOURNAL_SPRINT3.md).
