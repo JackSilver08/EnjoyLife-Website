@@ -42,3 +42,12 @@ jobs:
           cache-dependency-path: apps/api/go.sum
       - run: go test ./...
       - run: go vet ./...
+      - name: PostgreSQL integration test
+        run: |
+          docker run -d --name enjoy-ci-postgres -e POSTGRES_USER=enjoylife -e POSTGRES_PASSWORD=ci_password -e POSTGRES_DB=enjoylife -p 55433:5432 postgres:17-alpine
+          for i in {1..30}; do docker exec enjoy-ci-postgres pg_isready -U enjoylife -d enjoylife && break; sleep 2; done
+          for file in db/init/001_schema.sql db/init/002_seed.sql db/init/003_vietnamese_catalog.sql db/init/004_accounts.sql db/init/005_admin_audit.sql; do
+            docker exec -i enjoy-ci-postgres psql -v ON_ERROR_STOP=1 -U enjoylife -d enjoylife < "$file"
+          done
+          INTEGRATION_DATABASE_URL="postgres://enjoylife:ci_password@localhost:55433/enjoylife?sslmode=disable" go test ./internal/handlers -run '^TestAdminIntegration
+ -count=1 -v
