@@ -1,6 +1,7 @@
 "use client";
 import {useState,type FormEvent} from "react";
 import Link from "next/link";
+import {parseCSV,CSV_TEMPLATE} from "@/lib/catalog-csv";
 import {VariantManager} from "@/components/admin/variant-manager";
 import {MediaPicker} from "@/components/admin/media-picker";
 import {adminAction,moneyVND,useAdminData} from "@/components/admin/admin-data";
@@ -8,7 +9,7 @@ type Product={id:string;slug:string;name:string;description:string;image_url:str
 const empty={name:"",slug:"",description:"",image_url:"",collection:"",category:"ao",sku:"",color:"",size:"M",price_vnd:0,opening_stock:0,published:false};
 export default function Products(){
  const {data,loading,error,reload}=useAdminData<{items:Product[]}>("admin/products");
- const [adding,setAdding]=useState(false);const [form,setForm]=useState(empty);const [editing,setEditing]=useState<Product|null>(null);const [busy,setBusy]=useState(false);const [notice,setNotice]=useState("");const [search,setSearch]=useState("");
+ const [adding,setAdding]=useState(false);const [form,setForm]=useState(empty);const [editing,setEditing]=useState<Product|null>(null);const [busy,setBusy]=useState(false);const [importing,setImporting]=useState(false);const [csvName,setCsvName]=useState("");const [csvRows,setCsvRows]=useState<ReturnType<typeof parseCSV>>([]);const [notice,setNotice]=useState("");const [search,setSearch]=useState("");
  const products=(data?.items??[]).filter(x=>(x.name+" "+x.slug).toLowerCase().includes(search.toLowerCase()));
  async function create(e:FormEvent<HTMLFormElement>){
   e.preventDefault();setBusy(true);setNotice("");
@@ -20,9 +21,30 @@ export default function Products(){
   try{await adminAction("admin/products/"+editing.id,"PATCH",{name:editing.name,description:editing.description,collection:editing.collection,published:editing.published,image_url:editing.image_url});setNotice("Đã cập nhật "+editing.name);setEditing(null);await reload()}
   catch(err){setNotice(err instanceof Error?err.message:"Không lưu được.")}finally{setBusy(false)}
  }
+ async function selectCSV(file:File|undefined){
+  if(!file)return;
+  setNotice("");setCsvName(file.name);
+  if(file.size>100_000){setNotice("File CSV quá lớn, giới hạn 100 KB.");return}
+  try{setCsvRows(parseCSV(await file.text()))}
+  catch(err){setCsvRows([]);setNotice(err instanceof Error?err.message:"File CSV không hợp lệ.")}
+ }
+ async function importCSV(){
+  if(!csvRows.length)return;
+  setBusy(true);setNotice("");
+  try{
+   const response=await fetch("/api/store/admin/products/import",{method:"POST",
+    headers:{"Content-Type":"application/json"},body:JSON.stringify({rows:csvRows})});
+   const json=await response.json().catch(()=>null);
+   if(!response.ok)throw Error((json?.error||"Import thất bại.")+(json?.row?" Dòng "+json.row:""));
+   setNotice("Đã tạo "+json.created+" sản phẩm ở trạng thái ẨN; kiểm tra tồn và ảnh trước khi công khai.");
+   setCsvRows([]);setCsvName("");setImporting(false);await reload();
+  }catch(err){setNotice(err instanceof Error?err.message:"Không thể nhập CSV.")}
+  finally{setBusy(false)}
+ }
  return <><span className="eyebrow">QUẢN LÝ / SẢN PHẨM</span><h1>Danh mục sản phẩm</h1><p className="admin-subtitle">Tạo sản phẩm cùng SKU đầu tiên, chỉnh sửa thông tin và kiểm soát trạng thái hiển thị.</p>
- <div className="admin-toolbar"><input placeholder="Tìm tên sản phẩm..." aria-label="Tìm sản phẩm" value={search} onChange={e=>setSearch(e.target.value)}/><button onClick={()=>setAdding(!adding)}>{adding?"Đóng form":"+ Thêm sản phẩm"}</button></div>
+ <div className="admin-toolbar"><button type="button" onClick={()=>setImporting(v=>!v)}>{importing?"Đóng import":"Nhập danh mục CSV"}</button><input placeholder="Tìm tên sản phẩm..." aria-label="Tìm sản phẩm" value={search} onChange={e=>setSearch(e.target.value)}/><button onClick={()=>setAdding(!adding)}>{adding?"Đóng form":"+ Thêm sản phẩm"}</button></div>
  {notice&&<p role="status" className="admin-notice">{notice}</p>}{error&&<p role="alert" className="admin-error">{error}</p>}
+ {importing&&<section className="admin-surface admin-create-form"><h2>Nhập nhiều sản phẩm từ CSV</h2><p>1 dòng = 1 sản phẩm cùng SKU đầu tiên. Chỉ tạo bản ẩn, không tự công khai. Tải ảnh lên Thư viện trước và điền /media/... vào cột image_url nếu có.</p><a href={"data:text/csv;charset=utf-8,"+encodeURIComponent(CSV_TEMPLATE)} download="enjoy-life-product-template.csv" className="cms-inline-link">Tải file CSV mẫu ↗</a><label>Chọn file CSV từ máy<input type="file" accept=".csv,text/csv" onChange={e=>void selectCSV(e.target.files?.[0])}/></label><p>{csvName?csvName+" — ":""}{csvRows.length} sản phẩm sẵn sàng.</p><button type="button" className="button-dark" disabled={busy||!csvRows.length} onClick={()=>void importCSV()}>NHẬP {csvRows.length} SẢN PHẨM (ẨN)</button></section>}
  {adding&&<form className="admin-create-form admin-surface" onSubmit={create}><h2>Tạo sản phẩm mới</h2><div className="admin-form-grid">
  <label>Tên sản phẩm<input minLength={3} maxLength={140} required value={form.name} onChange={e=>setForm({...form,name:e.target.value})}/></label>
  <label>Slug URL<input pattern="[a-z0-9]+(-[a-z0-9]+)*" required value={form.slug} onChange={e=>setForm({...form,slug:e.target.value})} placeholder="ao-so-mi-basic"/></label>

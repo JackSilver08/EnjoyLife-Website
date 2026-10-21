@@ -110,6 +110,7 @@ func Router(a *App) *gin.Engine {
 	api.POST("/admin/orders/:no/paid", a.adminMarkCODPaid)
 	api.GET("/admin/products", a.adminProducts)
 	api.POST("/admin/products", a.adminCreateProduct)
+	api.POST("/admin/products/import", a.adminImportProducts)
 	api.PATCH("/admin/products/:id", a.adminUpdateProduct)
 	api.GET("/admin/reports", a.adminReports)
     // Enjoy Journal admin: session/role checked inside every handler.
