@@ -1,0 +1,4 @@
+import Link from "next/link";
+import { ArrowUpRight } from "lucide-react";
+export const metadata={title:"Câu chuyện của chúng tôi"};
+export default function About() {return <div className="about-page"><section className="about-hero"><span className="eyebrow">LỜI YÊU THƯƠNG GỬI NHỮNG NGÀY BÌNH THƯỜNG</span><h1>Cuộc sống đẹp hơn<br/>khi bạn <em>tận hưởng nó.</em></h1></section><section className="page-shell about-copy"><span className="eyebrow">ENJOY LIFE / CÂU CHUYỆN</span><div><h2>Dành cho mọi điều<br/>khiến bạn là <em>chính mình.</em></h2><p>Enjoy Life hướng đến phong cách tự do, tối giản và giàu cảm xúc. Từ những bản phối đời thường cho đến khoảnh khắc đặc biệt, chúng tôi tin sự tự tin bắt đầu từ cảm giác thoải mái với chính mình.</p><p>Đây là nội dung định hướng thương hiệu cho bản mẫu thử, cần được duyệt trước khi công bố.</p><Link className="button-dark" href="/shop">KHÁM PHÁ BỘ SƯU TẬP <ArrowUpRight size={17}/></Link></div></section></div>}
