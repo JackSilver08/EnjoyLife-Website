@@ -83,6 +83,9 @@ export default function AccountPage() {
       });
       const result: AuthResponse = await response.json();
       if (!response.ok || !result.user) {
+        if (localAdmin && response.status === 404) {
+          throw new Error("Đăng nhập Admin thử nghiệm chưa khả dụng. Kiểm tra APP_ENV=development, GIN_MODE=debug và ENABLE_DEV_ADMIN=true trong file .env, sau đó tạo lại container API.");
+        }
         throw new Error(result.error || "Đăng nhập không thành công.");
       }
       if (localAdmin && result.user.role !== "ADMIN") {
