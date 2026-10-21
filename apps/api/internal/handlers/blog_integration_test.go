@@ -100,6 +100,7 @@ func TestBlogIntegration(t *testing.T){
  filtered:=call("GET","/api/v1/blog/articles?category="+category+"&tag="+tag,nil,nil);check(200,filtered)
  if !strings.Contains(filtered.Body.String(),slug){t.Fatal("Published article missing from filtered feed")}
  check(400,call("GET","/api/v1/blog/articles?limit=999",nil,nil))
+ article["expected_version"]=1
  check(409,call("PUT",articleEndpoint+"/"+id,article,admin))
  article["expected_version"]=2
  article["seo_title"]="Phong cách nhẹ nhàng cho mỗi ngày"
