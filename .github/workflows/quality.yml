@@ -77,6 +77,8 @@ jobs:
       - uses: actions/checkout@v4
       - name: Configure local Compose development
         run: cp .env.example .env
+      - name: Check dependency startup shell syntax
+        run: sh -n apps/web/scripts/ensure-deps.sh
       - name: Build web development image
         run: docker compose build web
       - name: Simulate a stale node_modules named volume

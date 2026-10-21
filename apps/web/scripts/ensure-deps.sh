@@ -19,7 +19,7 @@ deps_present() {
         process.exit(1);
       }
     }
-    // Confirm the precise image extension from the user's crash can be resolved.
+    // Confirm the precise image extension from the reported crash can be resolved.
     require.resolve("@tiptap/extension-image");
   '
 }
