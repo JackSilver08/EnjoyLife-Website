@@ -6,7 +6,7 @@ import Image from "@tiptap/extension-image";
 import type {JSONContent} from "@tiptap/core";
 import {Bold,Italic,Underline,Strikethrough,Heading2,Heading3,List,ListOrdered,Quote,Link2,
   ImagePlus,Undo2,Redo2,Minus,Unlink} from "lucide-react";
-import {isApprovedLink,isApprovedUrl} from "@/lib/blog-types";
+import {isApprovedLink,isApprovedUrl,normalizeBlogDocument} from "@/lib/blog-types";
 
 type Props={initial:JSONContent;onChange:(data:JSONContent)=>void;disabled?:boolean};
 export function JournalRichTextEditor({initial,onChange,disabled}:Props){
@@ -27,7 +27,7 @@ export function JournalRichTextEditor({initial,onChange,disabled}:Props){
     immediatelyRender:false,
     editable:!disabled,
     editorProps:{attributes:{class:"cms-prosemirror",role:"textbox","aria-label":"Nội dung bài viết","aria-multiline":"true"}},
-    onUpdate:({editor:instance})=>onChange(instance.getJSON()),
+    onUpdate:({editor:instance})=>onChange(normalizeBlogDocument(instance.getJSON())),
   });
   function editLink(){
     if(!editor)return;

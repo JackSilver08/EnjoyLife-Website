@@ -61,3 +61,29 @@ export function isApprovedLink(value:string){
   if(value.startsWith("/")&&!value.startsWith("//")&&!value.includes("\\"))return true;
   return isApprovedUrl(value) && value!=="";
 }
+
+// Serialize only the node attributes/marks that the Go content validator accepts.
+// The API independently validates every document; browser-side cleaning is for
+// Tiptap compatibility, not a substitute for server-side safety checks.
+export function normalizeBlogDocument(document:JSONContent):JSONContent {
+  const normalize=(node:JSONContent):JSONContent=>{
+    const result:JSONContent={type:node.type};
+    if(typeof node.text==="string")result.text=node.text;
+    if(node.type==="heading" && [2,3,4].includes(Number(node.attrs?.level))){
+      result.attrs={level:Number(node.attrs?.level)};
+    }
+    if(node.type==="orderedList"&&typeof node.attrs?.start==="number"){
+      result.attrs={start:node.attrs.start};
+    }
+    if(node.type==="image"){
+      result.attrs={src:String(node.attrs?.src??""),alt:String(node.attrs?.alt??"")};
+    }
+    if(node.marks?.length){
+      result.marks=node.marks.map(mark=>mark.type==="link"?
+        {type:"link",attrs:{href:String(mark.attrs?.href??"")}}:{type:mark.type});
+    }
+    if(node.content)result.content=node.content.map(normalize);
+    return result;
+  };
+  return normalize(document);
+}
