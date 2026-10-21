@@ -618,3 +618,7 @@ html{scroll-padding-top:calc(82px + 18px)}
 .site-admin-grid textarea{min-height:100px;line-height:1.7}
 @media(max-width:1000px){.site-admin-grid{grid-template-columns:1fr}.media-manager-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
 @media(max-width:650px){.media-manager-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.media-gallery-grid{grid-template-columns:repeat(3,minmax(0,1fr))}.media-picker-top{align-items:flex-start}}
+
+/* Bulk ZIP media intake */
+.media-bulk-actions{display:flex;flex-wrap:wrap;align-items:center;gap:12px}
+@media(max-width:720px){.media-bulk-actions{width:100%}.media-bulk-actions button{flex:1;min-width:180px}}

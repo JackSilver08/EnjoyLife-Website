@@ -2,7 +2,7 @@
 import {useEffect,useRef,useState} from "react";
 import Link from "next/link";
 import {UploadCloud,Images,Copy,Check} from "lucide-react";
-import {fetchMediaAssets,uploadMedia,type MediaAsset} from "@/lib/media-api";
+import {fetchMediaAssets,uploadMedia,uploadMediaZip,type MediaAsset} from "@/lib/media-api";
 
 export default function AdminMedia(){
  const [items,setItems]=useState<MediaAsset[]>([]);
@@ -12,6 +12,7 @@ export default function AdminMedia(){
  const [message,setMessage]=useState("");
  const [copied,setCopied]=useState("");
  const picker=useRef<HTMLInputElement>(null);
+ const zipPicker=useRef<HTMLInputElement>(null);
  useEffect(()=>{fetchMediaAssets().then(setItems).catch(e=>setError(String(e))).finally(()=>setLoading(false))},[]);
  async function receive(files:FileList|null){
   if(!files?.length)return;
@@ -27,6 +28,17 @@ export default function AdminMedia(){
   }catch(e){setError(e instanceof Error?e.message:"Không thể tải ảnh.")}
   finally{setBusy(false);if(picker.current)picker.current.value=""}
  }
+ async function importZIP(file:File|undefined){
+  if(!file)return;
+  setBusy(true);setError("");setMessage("Đang tải và giải nén "+file.name+"...");
+  try{
+   const result=await uploadMediaZip(file);
+   setMessage("Đã xử lý "+result.total+" ảnh: tải mới "+result.uploaded+
+    ", đã có "+result.skipped_existing+". Bây giờ hãy vào Sản phẩm để import CSV.");
+   setItems(await fetchMediaAssets());
+  }catch(e){setError(e instanceof Error?e.message:"Không thể import ZIP ảnh.");setMessage("");}
+  finally{setBusy(false);if(zipPicker.current)zipPicker.current.value="";}
+ }
  async function copy(url:string){
   try{await navigator.clipboard.writeText(url);setCopied(url)}
   catch{setError("Trình duyệt không cho phép sao chép. Hãy chọn ảnh trực tiếp trong form.")}
@@ -35,12 +47,20 @@ export default function AdminMedia(){
   <span className="eyebrow">ENJOY LIFE / MEDIA MANAGER</span>
   <div className="cms-page-heading"><div><h1>Thư viện hình ảnh.</h1>
    <p>Tải ảnh từ máy lên để sử dụng trong sản phẩm, bài viết, Hero và câu chuyện thương hiệu.</p></div>
-   <button className="cms-primary-action" type="button" disabled={busy} onClick={()=>picker.current?.click()}>
-    <UploadCloud size={18}/> {busy?"ĐANG TẢI...":"TẢI ẢNH TỪ MÁY"}
-   </button>
+   <div className="media-bulk-actions">
+    <button className="cms-secondary-action" type="button" disabled={busy} onClick={()=>zipPicker.current?.click()}>
+     <Images size={18}/> TẢI ZIP ẢNH SẢN PHẨM
+    </button>
+    <button className="cms-primary-action" type="button" disabled={busy} onClick={()=>picker.current?.click()}>
+     <UploadCloud size={18}/> {busy?"ĐANG TẢI...":"TẢI ẢNH TỪ MÁY"}
+    </button>
+   </div>
   </div>
+  <input hidden ref={zipPicker} type="file" accept=".zip,application/zip,application/x-zip-compressed"
+   onChange={e=>void importZIP(e.target.files?.[0])}/>
   <input hidden multiple ref={picker} type="file" accept="image/jpeg,image/png,image/webp,.jpg,.jpeg,.png,.webp"
    onChange={e=>void receive(e.target.files)}/>
+  <div className="cms-note">Có file ZIP ảnh? Chọn <strong>Tải ZIP ảnh sản phẩm</strong> để tải toàn bộ ảnh một lần, không cần giải nén. Sau đó qua <Link href="/admin/products">Sản phẩm → Nhập danh mục CSV</Link>. Tên file gốc sẽ được tự đối chiếu với cột <code>image_url</code>. Nếu thiếu ảnh, import sẽ báo rõ tên file còn thiếu.</div>
   <div className="cms-note">Ảnh được lưu trên volume <code>media_data</code> của Docker, không lưu trực tiếp trong PostgreSQL. Không chạy <code>docker compose down -v</code>. Khi đưa lên server cần backup cả database lẫn media.</div>
   {error&&<p role="alert" className="admin-error">{error}</p>}
   {message&&<p role="status" className="admin-notice">{message}</p>}

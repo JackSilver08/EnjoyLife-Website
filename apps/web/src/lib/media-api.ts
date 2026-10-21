@@ -17,3 +17,15 @@ export async function uploadMedia(file:File):Promise<MediaAsset>{
  if(!response.ok)throw Error(json?.error||"Không thể tải ảnh lên.");
  return json as MediaAsset;
 }
+
+export type MediaZipSummary={uploaded:number;skipped_existing:number;total:number};
+export async function uploadMediaZip(file:File):Promise<MediaZipSummary>{
+ if(!file.name.toLowerCase().endsWith(".zip")||file.size<1||file.size>30*1024*1024)
+  throw Error("Vui lòng chọn ZIP ảnh nhỏ hơn 30 MB.");
+ const data=new FormData();
+ data.set("file",file,file.name);
+ const response=await fetch("/api/store/admin/media/bulk",{method:"POST",body:data,credentials:"same-origin"});
+ const json=await response.json().catch(()=>null);
+ if(!response.ok)throw Error(json?.error||"Không thể nhập bộ ảnh ZIP.");
+ return json as MediaZipSummary;
+}
