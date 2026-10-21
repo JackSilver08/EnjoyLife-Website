@@ -109,6 +109,7 @@ export default function AccountPage() {
 
   async function logout() {
     try {
+      setError("");
       const response = await fetch("/api/store/auth/logout", { method: "POST" });
       if (!response.ok) throw new Error("Đăng xuất thất bại.");
       setUser(null);

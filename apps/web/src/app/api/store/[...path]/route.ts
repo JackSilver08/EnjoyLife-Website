@@ -39,8 +39,15 @@ async function forward(req:NextRequest,params:Promise<{path:string[]}>,method:"G
   const upstream=await fetch(url,{method,headers:{"Content-Type":"application/json","Cookie":req.headers.get("cookie")??""},body:method==="GET"?undefined:await req.text(),cache:"no-store",signal:AbortSignal.timeout(12000)});
   const headers=new Headers({"Content-Type":"application/json","Cache-Control":"no-store","X-Content-Type-Options":"nosniff"});
   upstream.headers.forEach((value,key)=>{if(key.toLowerCase()==="set-cookie")headers.append("Set-Cookie",value)});
+  if(upstream.status===204||upstream.status===205||upstream.status===304){
+   headers.delete("Content-Type");
+   return new NextResponse(null,{status:upstream.status,headers});
+  }
   return new NextResponse(await upstream.text(),{status:upstream.status,headers});
- }catch{return NextResponse.json({error:"Không kết nối được máy chủ. Vui lòng thử lại."},{status:503});}
+ }catch(err){
+  console.error("Store API proxy error:", err);
+  return NextResponse.json({error:"Không kết nối được máy chủ. Vui lòng thử lại."},{status:503});
+ }
 }
 type Ctx={params:Promise<{path:string[]}>};
 export async function GET(req:NextRequest,{params}:Ctx){return forward(req,params,"GET")}
