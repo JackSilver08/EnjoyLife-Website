@@ -34,7 +34,28 @@ if(!homepage.includes('href="#our-story"'))throw Error("Hero is not linked to st
 // Only check actual rendered sections, not serialized scripts embedded in Next.js HTML.
 if(/<section\\b[^>]*\\bid="(?:lookbook|shop-category)"/i.test(homepage))throw Error("Retired homepage sections are still rendered");
 const blog=await page("/blog");
-if(!blog.includes("CHỦ ĐỀ DỰ KIẾN"))throw Error("Journal needs explicit unpublished content labels");
+
+if(!blog.includes("Bài viết kiểm thử Sprint 4"))throw Error("Published API article not displayed on /blog");
+if(blog.includes("CHỦ ĐỀ DỰ KIẾN"))throw Error("Hardcoded Journal preview still rendered");
+if(!homepage.includes("Bài viết kiểm thử Sprint 4"))throw Error("Homepage Journal is not dynamically populated");
+const article=await page("/blog/sprint-4-test-article");
+for(const fragment of ["Bài viết kiểm thử Sprint 4","Nội dung từ API","Chi tiết bài viết thực sự lấy từ API","BlogPosting","SEO Description kiểm thử"]){
+ if(!article.includes(fragment))throw Error("Article detail missing "+fragment);
+}
+if(!article.includes('rel="canonical"')||!article.includes("sprint-4-test-article"))throw Error("Canonical article URL missing");
+if(!article.includes('property="og:type"'))throw Error("OpenGraph metadata missing");
+const unpublished=await fetch(base+"/blog/draft-should-never-appear");
+if(unpublished.status!==404)throw Error("Draft/unpublished detail should return HTTP 404, got "+unpublished.status);
+const filtered=await page("/blog?category=phong-cach&tag=toi-gian");
+if(!filtered.includes("Bài viết kiểm thử Sprint 4"))throw Error("Category+tag filters failed");
+const emptyFiltered=await page("/blog?category=khong-ton-tai");
+if(emptyFiltered.includes("Bài viết kiểm thử Sprint 4"))throw Error("Filtered feed showed irrelevant article");
+const robot=await page("/robots.txt");
+if(!robot.includes("Disallow: /admin/"))throw Error("Production robots guard missing");
+const sitemap=await page("/sitemap.xml");
+if(!sitemap.includes("https://enjoylife.example.com/blog/sprint-4-test-article"))throw Error("Published blog URL missing from sitemap");
+if(sitemap.includes("draft-should-never-appear"))throw Error("Unpublished slug leaked to sitemap");
+
 const contact=await page("/contact");
 if(!contact.includes("LIÊN HỆ"))throw Error("Contact page content missing");
 console.log("Homepage story/product/journal/contact and supporting routes passed");
