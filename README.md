@@ -1,3 +1,7 @@
+## Enjoy Journal — Sprint 2
+
+PostgreSQL blog schema and protected Go APIs are implemented. Drafts are private; public endpoints return only published articles. See [Sprint 2 API and migration guide](docs/JOURNAL_SPRINT2.md). The CMS editor UI is planned for Sprint 3.
+
 ## Homepage redesign — Sprint 1
 
 The customer-facing Homepage now guides visitors through Hero → Story → Products → Enjoy Journal → Contact. The Journal cards are **upcoming content concepts**, not published articles. Add a verified `CONTACT_EMAIL` to `.env` when available. See [Sprint 1 notes](docs/HOMEPAGE_SPRINT1.md).
