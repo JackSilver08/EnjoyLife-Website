@@ -99,6 +99,7 @@ func Router(a *App) *gin.Engine {
 	})
 	api.GET("/admin/media", a.adminMediaList)
 	api.POST("/admin/media", a.adminMediaUpload)
+	api.POST("/admin/media/bulk", a.adminMediaBulkZip)
 	api.PUT("/admin/site/content", a.adminSiteContentPut)
 	api.GET("/admin/summary", a.adminSummary)
 	api.GET("/admin/orders", a.adminOrders)
