@@ -34,20 +34,26 @@ func TestAdminIntegration(t *testing.T){
  if r:=send("GET","/api/v1/admin/dashboard",nil,nil);r.Code!=401{t.Fatalf("unauthorized request=%d",r.Code)}
  login:=send("POST","/api/v1/auth/admin-demo",map[string]any{"username":"admin","password":"admin"},nil)
  if login.Code!=200{t.Fatalf("login=%d %s",login.Code,login.Body.String())}
- // Regression: frontend expects user.role, not user.Role.
- var loginJSON struct {User struct {ID string `json:"id"`;Name string `json:"name"`;Role string `json:"role"`} `json:"user"`}
- if err=json.Unmarshal(login.Body.Bytes(), &loginJSON);err!=nil{t.Fatal(err)}
- if loginJSON.User.Role!="ADMIN"||loginJSON.User.ID==""||loginJSON.User.Name==""{
-  t.Fatalf("login user payload must use lowercase id/name/role, got %s",login.Body.String())
+ // Regression: exact JSON field casing matters to JavaScript clients.
+ var loginJSON map[string]json.RawMessage
+ if err=json.Unmarshal(login.Body.Bytes(),&loginJSON);err!=nil{t.Fatal(err)}
+ var loginUser map[string]any
+ if err=json.Unmarshal(loginJSON["user"],&loginUser);err!=nil{t.Fatal(err)}
+ if loginUser["role"]!="ADMIN"||loginUser["id"]==nil||loginUser["name"]==nil {
+  t.Fatalf("Expected exact lowercase keys id/name/role in response, got %s",login.Body.String())
  }
  var cookie *http.Cookie
  for _,c:=range login.Result().Cookies(){if c.Name=="enjoy_life_session"{cookie=c}}
  if cookie==nil||!cookie.HttpOnly{t.Fatal("missing secure session")}
  me:=send("GET","/api/v1/auth/me",nil,cookie)
  if me.Code!=200{t.Fatalf("me=%d %s",me.Code,me.Body.String())}
- var meJSON struct{User struct{Role string `json:"role"`} `json:"user"`}
+ var meJSON map[string]json.RawMessage
  if err=json.Unmarshal(me.Body.Bytes(),&meJSON);err!=nil{t.Fatal(err)}
- if meJSON.User.Role!="ADMIN"{t.Fatalf("session role not available to frontend: %s",me.Body.String())}
+ var meUser map[string]any
+ if err=json.Unmarshal(meJSON["user"],&meUser);err!=nil{t.Fatal(err)}
+ if meUser["role"]!="ADMIN"{t.Fatalf("Expected exact lowercase role in /auth/me: %s",me.Body.String())}
+ badLogin:=send("POST","/api/v1/auth/admin-demo",map[string]any{"username":"admin","password":"wrong"},nil)
+ if badLogin.Code!=401{t.Fatalf("invalid admin password unexpectedly accepted: %d",badLogin.Code)}
  if r:=send("GET","/api/v1/admin/dashboard",nil,cookie);r.Code!=200{t.Fatalf("dashboard=%d %s",r.Code,r.Body.String())}
  product:=send("POST","/api/v1/admin/products",map[string]any{
   "name":"Integration tee","slug":"ci-integration-tee","description":"Test","category":"ao",
