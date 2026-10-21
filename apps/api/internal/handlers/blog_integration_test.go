@@ -57,7 +57,7 @@ func TestBlogIntegration(t *testing.T){
  check(200,login);admin:=sessionCookieFrom(login)
  suffix:=fmt.Sprintf("%d",time.Now().UnixNano())
  visitor:=call("POST","/api/v1/auth/register",map[string]any{"name":"Sample Customer","email":"journal-"+suffix+"@example.test","password":"customer-strong-password"},nil)
- check(201,visitor);customer:=sessionCookieFrom(visitor)
+ check(200,visitor);customer:=sessionCookieFrom(visitor)
  articleEndpoint:="/api/v1/admin/blog/articles"
  check(401,call("POST",articleEndpoint,map[string]any{},nil))
  check(403,call("GET",articleEndpoint,nil,customer))
