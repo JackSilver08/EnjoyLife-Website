@@ -40,6 +40,8 @@ type Product struct {
 	Description string    `json:"description"`
 	ImageURL    string    `json:"image_url"`
 	Collection  string    `json:"collection"`
+	CategorySlug string `json:"category_slug"`
+	Available int `json:"available"`
 	PriceVND    int64     `json:"price_vnd"`
 	Variants    []Variant `json:"variants"`
 }
@@ -99,8 +101,11 @@ func (a *App) products(c *gin.Context) {
 	query := strings.TrimSpace(c.Query("q"))
 	ctx, cancel := context.WithTimeout(c.Request.Context(), 3*time.Second)
 	defer cancel()
-	rows, err := a.DB.Query(ctx, `SELECT p.id::text,p.slug,p.name,p.description,p.image_url,p.collection_name,
-      MIN(v.price_vnd) FROM products p JOIN product_variants v ON v.product_id=p.id AND v.active
+	rows, err := a.DB.Query(ctx, `SELECT p.id::text,p.slug,p.name,p.description,p.image_url,p.collection_name,c.slug,
+      MIN(v.price_vnd), COALESCE(SUM(GREATEST(i.on_hand-i.reserved-i.unavailable,0)),0)::int
+      FROM products p JOIN categories c ON c.id=p.category_id
+      JOIN product_variants v ON v.product_id=p.id AND v.active
+      LEFT JOIN inventory i ON i.variant_id=v.id
       WHERE p.published AND ($1 = '' OR p.name ILIKE '%' || $1 || '%' OR p.collection_name ILIKE '%' || $1 || '%')
       GROUP BY p.id ORDER BY p.created_at DESC LIMIT 60`, query)
 	if err != nil {
@@ -111,7 +116,7 @@ func (a *App) products(c *gin.Context) {
 	items := make([]Product, 0)
 	for rows.Next() {
 		var p Product
-		if err := rows.Scan(&p.ID, &p.Slug, &p.Name, &p.Description, &p.ImageURL, &p.Collection, &p.PriceVND); err != nil {
+		if err := rows.Scan(&p.ID, &p.Slug, &p.Name, &p.Description, &p.ImageURL, &p.Collection, &p.CategorySlug, &p.PriceVND, &p.Available); err != nil {
 			serverError(c, err)
 			return
 		}
@@ -128,10 +133,10 @@ func (a *App) product(c *gin.Context) {
 	ctx, cancel := context.WithTimeout(c.Request.Context(), 3*time.Second)
 	defer cancel()
 	p := Product{Variants: []Variant{}}
-	err := a.DB.QueryRow(ctx, `SELECT p.id::text,p.slug,p.name,p.description,p.image_url,p.collection_name,
+	err := a.DB.QueryRow(ctx, `SELECT p.id::text,p.slug,p.name,p.description,p.image_url,p.collection_name,c.slug,
       COALESCE((SELECT MIN(price_vnd) FROM product_variants WHERE product_id=p.id AND active),0)
-      FROM products p WHERE p.slug=$1 AND p.published`, c.Param("slug")).Scan(
-		&p.ID, &p.Slug, &p.Name, &p.Description, &p.ImageURL, &p.Collection, &p.PriceVND)
+      FROM products p JOIN categories c ON c.id=p.category_id WHERE p.slug=$1 AND p.published`, c.Param("slug")).Scan(
+		&p.ID, &p.Slug, &p.Name, &p.Description, &p.ImageURL, &p.Collection, &p.CategorySlug, &p.PriceVND)
 	if errors.Is(err, pgx.ErrNoRows) {
 		c.JSON(http.StatusNotFound, gin.H{"error": "Không tìm thấy sản phẩm"})
 		return

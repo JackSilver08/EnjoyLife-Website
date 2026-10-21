@@ -62,3 +62,22 @@
 @media(max-width:720px){.hero-editorial{height:calc(100svh - 67px);min-height:510px}.category-grid{grid-template-columns:1fr}.category-card{min-height:145px}.shop-category{padding-block:70px 0}.footer-v2-inner{grid-template-columns:1fr}.footer-v2-links{grid-template-columns:repeat(2,max-content)}.admin-panel-grid,.admin-kpi-v2,.policy-list{grid-template-columns:1fr}.admin-workspace{padding:28px 18px}.admin-top{align-items:start;flex-direction:column}}
 @media(hover:none){.product-hover{display:none}}
 @media(prefers-reduced-motion:reduce){.hero-photo,.hero-content,.hero-topline,.hero-bottom{animation:none}}
+
+.shop-page{padding-top:60px}
+.shop-head h1{font-size:clamp(52px,7vw,102px)}
+.shop-head{padding-bottom:38px}
+.shop-tools-v2{padding-top:28px}
+.shop-categories{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:23px}
+.shop-categories a{padding:11px 19px;border:1px solid #d5d0c7;font-size:12px}
+.shop-categories a.is-active{background:var(--ink);color:white;border-color:var(--ink)}
+.shop-controls{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+.shop-controls label{font-size:11px;font-weight:700;letter-spacing:.05em}
+.shop-controls input,.shop-controls select{background:var(--paper);padding:13px;border:1px solid #d5d0c7;font-size:13px;min-width:0}
+.shop-controls input{flex:1;min-width:180px}
+.shop-controls button{padding:13px 18px;border:0;background:var(--ink);color:#fff;font-size:11px}
+.shop-count{color:var(--muted);font-size:11px;letter-spacing:.1em;margin:22px 0 30px}
+.size-guide-toggle{background:none;border:none;color:#7c604c;text-decoration:underline;display:flex;gap:6px;align-items:center;font-size:12px}
+.size-guide-info{background:#eeeae2;padding:18px;margin-top:17px;font-size:13px;line-height:1.65}
+.size-guide-info p{margin-bottom:0;color:#625e56}
+.buyer-notes a{text-decoration:underline;color:var(--ink)}
+@media(max-width:720px){.shop-controls{display:grid;grid-template-columns:1fr}.shop-controls input{width:100%}.shop-controls select{width:100%}.shop-controls button{width:100%}.shop-head h1{font-size:56px}}
