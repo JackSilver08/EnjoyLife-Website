@@ -42,6 +42,7 @@ services:
     volumes:
       - ./apps/api:/app
       - go_mod_cache:/go/pkg/mod
+      - media_data:/app/media
     working_dir: /app
     command: ["go", "run", "./cmd/server"]
   web:
@@ -83,3 +84,4 @@ volumes:
   go_mod_cache:
   web_node_modules:
   web_next_cache:
+  media_data:

@@ -70,6 +70,8 @@ func Router(a *App) *gin.Engine {
 	})
 	api := r.Group("/api/v1")
 	api.GET("/health", a.health)
+	api.GET("/media/:filename", a.publicMedia)
+	api.GET("/site/content", a.siteContentGet)
 	api.GET("/products", a.products)
 	api.GET("/products/:slug", a.product)
     // Enjoy Journal public: only published, non-archived articles.
@@ -95,6 +97,9 @@ func Router(a *App) *gin.Engine {
 	api.POST("/ai/customer", func(c *gin.Context) {
 		c.JSON(http.StatusNotImplemented, gin.H{"error": "Chưa cấu hình LLM; không giả lập câu trả lời AI."})
 	})
+	api.GET("/admin/media", a.adminMediaList)
+	api.POST("/admin/media", a.adminMediaUpload)
+	api.PUT("/admin/site/content", a.adminSiteContentPut)
 	api.GET("/admin/summary", a.adminSummary)
 	api.GET("/admin/orders", a.adminOrders)
 	api.GET("/admin/users", a.adminUsers)
