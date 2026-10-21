@@ -10,7 +10,9 @@
 
 **Admin sản phẩm**
 - `/admin/products` form tạo và sửa sản phẩm hỗ trợ nút **Chọn ảnh từ máy** và **Thư viện ảnh**; SKU/size/giá/tồn vẫn được quản lý như trước.
-- Import danh mục CSV hàng loạt đến **100 sản phẩm/lần**, transaction PostgreSQL (thất bại một dòng thì không tạo dòng nào), kiểm tra SKU/slug trùng. Mỗi dòng là một sản phẩm kèm SKU đầu tiên; các SKU khác có thể được thêm từ form sửa sản phẩm.
+- Import danh mục CSV hàng loạt đến **100 sản phẩm/lần**, transaction PostgreSQL (thất bại một dòng thì không tạo dòng nào), kiểm tra SKU/slug trùng.
+- Khi nhập CSV, cột `image_url` có thể ghi **đúng tên file gốc đã upload vào `/admin/media`** (ví dụ `abc123.jpg`); API sẽ tìm `media_assets.original_name` và đổi thành `/media/<UUID>.jpg` trong cùng transaction. Nếu thiếu ảnh hoặc tên sai, toàn bộ import bị từ chối và trả về số dòng lỗi.
+- Hỗ trợ 9 danh mục: `ao`, `quan`, `outerwear`, `giay-dep`, `tui-xach`, `trang-suc`, `mu-non`, `khan-choang`, `vay-dam` (schema thêm idempotent khi khởi động Go API). Mỗi dòng là một sản phẩm kèm SKU đầu tiên; các SKU khác có thể được thêm từ form sửa sản phẩm.
 - Mọi sản phẩm import đều được tạo ở trạng thái **Ẩn**, kể cả file tự khai `published=true`. Giá và tồn kho chỉ đến từ dữ liệu Admin nhập, tuyệt đối không suy đoán từ ảnh.
 - Bốn sản phẩm demo gốc của dự án được chuyển sang `published=false` đúng **một lần** bằng migration (chỉ các UUID seed khớp và mô tả chứa từ *mẫu*). Không xóa sản phẩm hoặc những đơn hàng/stock movements đã tồn tại.
 
@@ -37,7 +39,7 @@ Vào `http://localhost:3000/account` đăng nhập tài khoản Admin đã cấu
 
 1. `/admin/media`: thử upload một ảnh từ máy và kiểm tra hiển thị.
 2. `/admin/products`: tạo sản phẩm, chọn ảnh vừa upload, thêm SKU và tồn thật; khi sẵn sàng mới bật Công khai.
-3. Trong cùng trang, có thể tải file mẫu CSV và import nhiều sản phẩm; sản phẩm import mặc định Ẩn.
+3. Trong cùng trang, có thể tải file mẫu CSV và import nhiều sản phẩm; sản phẩm import mặc định Ẩn. Nếu có nhiều ảnh, hãy tải ảnh lên Media Manager trước, rồi điền tên file ảnh gốc vào `image_url` trong CSV. Trước khi import cần điền **giá thật >0** và **size hợp lệ**; tuyệt đối không tự đoán giá/tồn từ hình.
 4. `/admin/blog/new`: chọn ảnh bìa từ máy, ảnh OG từ thư viện, chèn ảnh trực tiếp trong Tiptap; nhập alt trước khi lưu.
 5. `/admin/site`: thay Hero/Story rồi mở Homepage kiểm tra.
 
