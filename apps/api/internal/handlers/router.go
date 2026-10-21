@@ -92,6 +92,15 @@ func Router(a *App) *gin.Engine {
 	api.GET("/admin/summary", a.adminSummary)
 	api.GET("/admin/orders", a.adminOrders)
 	api.GET("/admin/users", a.adminUsers)
+	api.GET("/admin/dashboard", a.adminDashboard)
+	api.GET("/admin/inventory", a.adminInventory)
+	api.PATCH("/admin/inventory/:id", a.adminAdjustInventory)
+	api.PATCH("/admin/orders/:no/status", a.adminChangeOrderStatus)
+	api.POST("/admin/orders/:no/paid", a.adminMarkCODPaid)
+	api.GET("/admin/products", a.adminProducts)
+	api.POST("/admin/products", a.adminCreateProduct)
+	api.PATCH("/admin/products/:id", a.adminUpdateProduct)
+	api.GET("/admin/reports", a.adminReports)
 	// Deliberately no payment webhook endpoint until it has verified-signature processing.
 	return r
 }

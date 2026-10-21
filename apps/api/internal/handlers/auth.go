@@ -65,7 +65,7 @@ func (a *App) loadUser(c *gin.Context) *currentUser {
 	defer cancel()
 	var user currentUser
 	err = a.DB.QueryRow(ctx, `SELECT u.id::text,u.email,u.display_name,u.role FROM user_sessions s JOIN users u ON u.id=s.user_id WHERE s.token_hash=$1 AND s.expires_at>now()`, tokenHash(token)).Scan(&user.ID, &user.Email, &user.Name, &user.Role)
-	if err != nil {
+	if err != nil || (user.Email==demoAdminEmail && !devAdminEnabled()) {
 		return nil
 	}
 	return &user
@@ -92,12 +92,12 @@ func (a *App) requireAdmin(c *gin.Context) *currentUser {
 func (a *App) createSession(c *gin.Context, user currentUser) {
 	token, _ := randomHex(32)
 	id, _ := uuid()
-	_, err := a.DB.Exec(c.Request.Context(), "INSERT INTO user_sessions(id,token_hash,user_id,expires_at) VALUES($1,$2,$3,$4)", id, tokenHash(token), user.ID, time.Now().Add(30*24*time.Hour))
+	_, err := a.DB.Exec(c.Request.Context(), "INSERT INTO user_sessions(id,token_hash,user_id,expires_at) VALUES($1,$2,$3,$4)", id, tokenHash(token), user.ID, time.Now().Add(24*time.Hour))
 	if err != nil {
 		serverError(c, err)
 		return
 	}
-	http.SetCookie(c.Writer, &http.Cookie{Name: sessionCookie, Value: token, Path: "/", HttpOnly: true, SameSite: http.SameSiteLaxMode, MaxAge: 30 * 24 * 60 * 60})
+	http.SetCookie(c.Writer, &http.Cookie{Name: sessionCookie, Value: token, Path: "/", HttpOnly: true, Secure: c.Request.TLS != nil, SameSite: http.SameSiteLaxMode, MaxAge: 24 * 60 * 60})
 	c.JSON(http.StatusOK, gin.H{"user": user})
 }
 func (a *App) register(c *gin.Context) {
@@ -107,6 +107,7 @@ func (a *App) register(c *gin.Context) {
 		return
 	}
 	in.Email = cleanEmail(in.Email)
+    if in.Email==demoAdminEmail { c.JSON(400,gin.H{"error":"Địa chỉ email không khả dụng."});return }
 	in.Name = strings.TrimSpace(in.Name)
 	if len(in.Name) < 2 || len(in.Name) > 100 || len(in.Email) < 5 || !strings.Contains(in.Email, "@") || len(in.Password) < 8 || len(in.Password) > 72 {
 		c.JSON(400, gin.H{"error": "Vui lòng nhập tên, email hợp lệ và mật khẩu ít nhất 8 ký tự."})
@@ -136,6 +137,7 @@ func (a *App) login(c *gin.Context) {
 		return
 	}
 	in.Email = cleanEmail(in.Email)
+    if in.Email==demoAdminEmail { c.JSON(401,gin.H{"error":"Vui lòng đăng nhập qua trang quản trị."});return }
 	var user currentUser
 	var hash string
 	err := a.DB.QueryRow(c.Request.Context(), "SELECT id::text,email,display_name,role,password_hash FROM users WHERE email=$1", in.Email).Scan(&user.ID, &user.Email, &user.Name, &user.Role, &hash)

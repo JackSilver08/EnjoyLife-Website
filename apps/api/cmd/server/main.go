@@ -32,6 +32,8 @@ func main() {
 		slog.Error("database unavailable", "error", err)
 		os.Exit(1)
 	}
+	if err = handlers.EnsureAccountSchema(ctx, db); err != nil { slog.Error("accounts migration", "error", err); os.Exit(1) }
+	if err = handlers.EnsureAdminAudit(ctx, db); err != nil { slog.Error("admin audit migration", "error", err); os.Exit(1) }
 	if err = handlers.EnsureAdmin(ctx, db, cfg.AdminEmail, cfg.AdminPassword); err != nil {
 		slog.Error("admin bootstrap", "error", err)
 		os.Exit(1)

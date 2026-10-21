@@ -1,0 +1,1 @@
+CREATE TABLE IF NOT EXISTS admin_audit_logs(id BIGSERIAL PRIMARY KEY, actor_id UUID NOT NULL REFERENCES users(id), action TEXT NOT NULL, target_id TEXT NOT NULL, details TEXT NOT NULL, created_at TIMESTAMPTZ NOT NULL DEFAULT now());
