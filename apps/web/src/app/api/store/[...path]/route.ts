@@ -42,9 +42,21 @@ async function forward(req:NextRequest,params:Promise<{path:string[]}>,method:"G
    if(upload){
     const length=Number(req.headers.get("content-length")||0);
     if(length>9_500_000)return NextResponse.json({error:"Tệp quá lớn."},{status:413});
-    const bytes=await req.arrayBuffer();
-    if(bytes.byteLength>9_500_000)return NextResponse.json({error:"Tệp quá lớn."},{status:413});
-    payload=bytes;
+    const reader=req.body?.getReader();
+    if(!reader)return NextResponse.json({error:"Không có dữ liệu ảnh."},{status:400});
+    const chunks:Uint8Array[]=[];
+    let total=0;
+    while(true){
+      const {done,value}=await reader.read();
+      if(done)break;
+      total+=value.byteLength;
+      if(total>9_500_000){await reader.cancel().catch(()=>{});return NextResponse.json({error:"Tệp quá lớn."},{status:413})}
+      chunks.push(value);
+    }
+    const bytes=new Uint8Array(total);
+    let offset=0;
+    for(const chunk of chunks){bytes.set(chunk,offset);offset+=chunk.byteLength}
+    payload=bytes.buffer;
    }else payload=await req.text();
   }
   const headersUpstream:Record<string,string>={"Cookie":req.headers.get("cookie")??""};
