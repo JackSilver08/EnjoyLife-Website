@@ -51,7 +51,7 @@ const csvSlug="sprint-5-ci-"+key;
 const imp=await call("/api/store/admin/products/import",{method:"POST",cookie,body:{rows:[{
  name:"Sản phẩm mẫu CSV Sprint 5",slug:csvSlug,description:"Sản phẩm thử nghiệm phải ẩn cho đến khi duyệt.",
  category:"ao",collection:"Test",sku:"EL-CI-"+key,color:"Trắng",size:"M",price_vnd:150000,opening_stock:2,
- image_url:media.url,published:true
+ image_url:"sprint5-test.png",published:true
 }]}});
 ensure(imp.status===201&&imp.json.created===1,"CSV product import failed: "+imp.status+" "+imp.text);
 const products=await call("/api/store/admin/products",{cookie});

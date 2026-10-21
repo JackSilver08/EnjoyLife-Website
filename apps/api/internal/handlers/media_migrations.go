@@ -44,6 +44,15 @@ func EnsureMediaSchema(ctx context.Context,db *pgxpool.Pool)error{
    'Có những ngày bạn muốn nổi bật, cũng có những ngày chỉ cần thật thoải mái. Enjoy Life tin rằng phong cách không bắt đầu từ những quy tắc cứng nhắc.',
    'Chúng tôi muốn mỗi món đồ đều có thể đi cùng bạn trong những khoảnh khắc bình thường, theo một cách thật riêng.')
    ON CONFLICT(id) DO NOTHING`,
+  `INSERT INTO categories(id,slug,name)
+  VALUES
+  ('10000000-0000-4000-8000-000000000004','giay-dep','Giày dép'),
+  ('10000000-0000-4000-8000-000000000005','tui-xach','Túi xách'),
+  ('10000000-0000-4000-8000-000000000006','trang-suc','Trang sức'),
+  ('10000000-0000-4000-8000-000000000007','mu-non','Mũ nón'),
+  ('10000000-0000-4000-8000-000000000008','khan-choang','Khăn choàng'),
+  ('10000000-0000-4000-8000-000000000009','vay-dam','Váy đầm')
+  ON CONFLICT (slug) DO NOTHING`,
   `CREATE TABLE IF NOT EXISTS migration_flags(name TEXT PRIMARY KEY,applied_at TIMESTAMPTZ NOT NULL DEFAULT now())`,
   // Never DELETE rows. Hide only the exact original four seeded demo UUIDs,
   // and only once. Preserve order_items foreign keys and historical snapshots.

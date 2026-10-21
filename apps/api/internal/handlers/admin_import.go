@@ -3,9 +3,30 @@ package handlers
 import (
  "context"
  "net/http"
+ "errors"
+ "regexp"
  "strings"
  "time"
  "github.com/gin-gonic/gin"
+ "github.com/jackc/pgx/v5"
+)
+
+// A CSV image_url may contain the original image filename, as long as the admin
+// previously uploaded that file into the Media Manager. The database resolves
+// it to a safely generated local media URL; no filesystem paths are accepted.
+var importImageName = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9._() -]{0,190}\\.(?i:jpg|jpeg|png|webp)package handlers
+
+import (
+ "context"
+ "net/http"
+ "errors"
+ "regexp"
+ "strings"
+ "time"
+ "github.com/gin-gonic/gin"
+ "github.com/jackc/pgx/v5"
+)
+
 )
 
 // Batch import is atomic. Imported products always start unpublished so pricing
@@ -17,18 +38,31 @@ func(a *App) adminImportProducts(c *gin.Context){
  if c.ShouldBindJSON(&input)!=nil||len(input.Rows)<1||len(input.Rows)>100{
   c.JSON(400,gin.H{"error":"Chọn từ 1 đến 100 sản phẩm trong một lần import."});return
  }
+ ctx,cancel:=context.WithTimeout(c.Request.Context(),20*time.Second);defer cancel()
+ tx,err:=a.DB.Begin(ctx);if err!=nil{serverError(c,err);return};defer tx.Rollback(ctx)
  seenSlug:=map[string]bool{};seenSKU:=map[string]bool{}
- for i:=range input.Rows{
-  row:= &input.Rows[i]
+ for index:=range input.Rows{
+  row:= &input.Rows[index]
   row.Published=false
   row.Name=strings.TrimSpace(row.Name)
+  row.ImageURL=strings.TrimSpace(row.ImageURL)
+  if row.ImageURL!=""&&!validManagedImageURL(row.ImageURL){
+   if !importImageName.MatchString(row.ImageURL){
+    c.JSON(400,gin.H{"error":"Tên file ảnh không hợp lệ. Hãy upload ảnh vào Media Manager trước.","row":index+1});return
+   }
+   var filename string
+   err=tx.QueryRow(ctx,`SELECT filename FROM media_assets WHERE original_name=$1 ORDER BY created_at DESC,id DESC LIMIT 1`,row.ImageURL).Scan(&filename)
+   if errors.Is(err,pgx.ErrNoRows){
+    c.JSON(400,gin.H{"error":"Chưa tìm thấy ảnh đã tải lên với tên file: "+row.ImageURL,"row":index+1});return
+   }
+   if err!=nil{serverError(c,err);return}
+   row.ImageURL="/media/"+filename
+  }
   if !validProduct(*row)||seenSlug[row.Slug]||seenSKU[row.SKU]{
-   c.JSON(400,gin.H{"error":"Dòng import sai thông tin hoặc trùng slug/SKU.","row":i+1});return
+   c.JSON(400,gin.H{"error":"Dòng import sai thông tin hoặc trùng slug/SKU.","row":index+1});return
   }
   seenSlug[row.Slug]=true;seenSKU[row.SKU]=true
  }
- ctx,cancel:=context.WithTimeout(c.Request.Context(),20*time.Second);defer cancel()
- tx,err:=a.DB.Begin(ctx);if err!=nil{serverError(c,err);return};defer tx.Rollback(ctx)
  for index,row:=range input.Rows{
   id,err:=uuid();if err!=nil{serverError(c,err);return}
   variant,err:=uuid();if err!=nil{serverError(c,err);return}
