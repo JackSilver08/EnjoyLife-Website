@@ -37,6 +37,38 @@ ensure(cross.status===403,"Cross-origin media upload not blocked");
 const corrupt=new FormData();corrupt.set("file",new Blob(["script>alert(1)"],{type:"image/png"}),"fake.png");
 const bad=await fetch(origin+"/api/store/admin/media",{method:"POST",headers:{Cookie:cookie,Origin:origin,"Sec-Fetch-Site":"same-origin"},body:corrupt});
 ensure(bad.status===400,"Non-image upload should be rejected, got "+bad.status);
+
+const zipFixture=Buffer.from("UEsDBBQAAAgIAGakVV1abPdOPwAAAEQAAAAdAAAAU+G6o24gUGjhuqltL3NwcmludDUtdGVzdC5wbmfrDPBz5+WS4mJgYOD19HAJAtKMIMzBAiS3yvAwASluTxfHkIpbyX/+yzMwMzMxvHsvORcozODp6ueyzimhCQBQSwMEFAAACAgAZqRVXVps904/AAAARAAAACcAAABT4bqjbiBQaOG6qW0vc3ByaW50NS16aXAtYWRkaXRpb25hbC5wbmfrDPBz5+WS4mJgYOD19HAJAtKMIMzBAiS3yvAwASluTxfHkIpbyX/+yzMwMzMxvHsvORcozODp6ueyzimhCQBQSwMEFAAAAAgAZqRVXaIsw5gJAAAABwAAAAwAAABndWlkYW5jZS5jc3ZL1EniMtQxAgBQSwECFAMUAAAICABmpFVdWmz3Tj8AAABEAAAAHQAAAAAAAAAAAAAAgAEAAAAAU+G6o24gUGjhuqltL3NwcmludDUtdGVzdC5wbmdQSwECFAMUAAAICABmpFVdWmz3Tj8AAABEAAAAJwAAAAAAAAAAAAAAgAF6AAAAU+G6o24gUGjhuqltL3NwcmludDUtemlwLWFkZGl0aW9uYWwucG5nUEsBAhQDFAAAAAgAZqRVXaIsw5gJAAAABwAAAAwAAAAAAAAAAAAAAIAB/gAAAGd1aWRhbmNlLmNzdlBLBQYAAAAAAwADANoAAAAxAQAAAAA=","base64");
+const zipData=new FormData();zipData.set("file",new Blob([zipFixture],{type:"application/zip"}),"Sản Phẩm.zip");
+const zipResult=await fetch(origin+"/api/store/admin/media/bulk",{
+ method:"POST",headers:{Cookie:cookie,Origin:origin,"Sec-Fetch-Site":"same-origin"},body:zipData,
+});
+const summary=await zipResult.json().catch(()=>null);
+ensure(zipResult.status===201&&summary?.uploaded===1&&summary?.skipped_existing===1&&summary?.total===2,
+ "ZIP media intake: "+zipResult.status+" "+JSON.stringify(summary));
+const mediaList=await call("/api/store/admin/media",{cookie});
+ensure(mediaList.status===200&&mediaList.json?.items?.some(m=>m.original_name==="sprint5-zip-additional.png"),
+ "ZIP image was not persisted and matched by original filename.");
+const duplicateZip=await fetch(origin+"/api/store/admin/media/bulk",{
+ method:"POST",headers:{Cookie:cookie,Origin:origin,"Sec-Fetch-Site":"same-origin"},body:zipData,
+});
+const duplicateResult=await duplicateZip.json().catch(()=>null);
+ensure(duplicateZip.status===201&&duplicateResult?.uploaded===0&&duplicateResult?.skipped_existing===2,
+ "ZIP reupload should be idempotent: "+JSON.stringify(duplicateResult));
+const zipWithoutAdmin=await fetch(origin+"/api/store/admin/media/bulk",{method:"POST",body:zipData});
+ensure([401,403].includes(zipWithoutAdmin.status),"Unauthenticated ZIP upload accepted");
+const zipCross=await fetch(origin+"/api/store/admin/media/bulk",{method:"POST",
+ headers:{Cookie:cookie,Origin:"https://attacker.invalid","Sec-Fetch-Site":"cross-site"},body:zipData,
+});
+ensure(zipCross.status===403,"Cross-origin ZIP upload accepted");
+const invalidZip=new FormData();
+invalidZip.set("file",new Blob([Buffer.from("UEsDBBQAAAgIAGakVV3fd10oEAAAABQAAAAYAAAAU+G6o24gUGjhuqltL2Rhbmdlci5odG1ssylOLsosKLFLy8+30YeyAVBLAQIUAxQAAAgIAGakVV3fd10oEAAAABQAAAAYAAAAAAAAAAAAAACAAQAAAABT4bqjbiBQaOG6qW0vZGFuZ2VyLmh0bWxQSwUGAAAAAAEAAQBGAAAARgAAAAAA","base64")],{type:"application/zip"}),"invalid.zip");
+const rejected=await fetch(origin+"/api/store/admin/media/bulk",{
+ method:"POST",headers:{Cookie:cookie,Origin:origin,"Sec-Fetch-Site":"same-origin"},body:invalidZip,
+});
+ensure(rejected.status===400,"ZIP with executable markup was not rejected: "+rejected.status);
+console.log("ZIP intake E2E PASSED: nested folders, skip existing, retry, reject scripts, Admin & CSRF");
+
 const site=await call("/api/store/site/content");
 ensure(site.status===200&&site.json?.hero_title,"Missing dynamic site content");
 const changed={...site.json,hero_image_url:media.url,hero_title:"Hero Sprint 5 test"};
