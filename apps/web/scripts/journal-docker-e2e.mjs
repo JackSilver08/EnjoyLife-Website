@@ -54,7 +54,7 @@ const imp=await call("/api/store/admin/products/import",{method:"POST",cookie,bo
  image_url:media.url,published:true
 }]}});
 ensure(imp.status===201&&imp.json.created===1,"CSV product import failed: "+imp.status+" "+imp.text);
-const products=await call("/api/store/admin/products");
+const products=await call("/api/store/admin/products",{cookie});
 const product=products.json?.items?.find(x=>x.slug===csvSlug);
 ensure(product&&!product.published&&product.image_url===media.url,"Imported CSV product must be hidden with persisted image; status="+products.status+" payload="+JSON.stringify(products.json)?.slice(0,1800));
 ensure(!(await call("/shop")).text.includes(csvSlug),"Hidden imported product appeared in Shop");
