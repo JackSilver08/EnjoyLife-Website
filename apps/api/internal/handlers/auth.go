@@ -185,25 +185,19 @@ func (a *App) myOrders(c *gin.Context) {
 	c.JSON(200, gin.H{"items": items})
 }
 func (a *App) adminOrders(c *gin.Context) {
-	if a.requireAdmin(c) == nil {
-		return
-	}
-	rows, err := a.DB.Query(c.Request.Context(), `SELECT o.order_no,o.status,o.payment_status,o.total_vnd,o.created_at,COALESCE(u.display_name,o.customer_name),COALESCE(u.email,'') FROM orders o LEFT JOIN users u ON u.id=o.user_id ORDER BY o.created_at DESC LIMIT 50`)
-	if err != nil {
-		serverError(c, err)
-		return
-	}
-	defer rows.Close()
-	items := []gin.H{}
-	for rows.Next() {
-		var no, status, pay, name, email string
-		var total int64
-		var created time.Time
-		if rows.Scan(&no, &status, &pay, &total, &created, &name, &email) == nil {
-			items = append(items, gin.H{"order_no": no, "status": status, "payment_status": pay, "total_vnd": total, "created_at": created, "customer_name": name, "email": email})
-		}
-	}
-	c.JSON(200, gin.H{"items": items})
+ if a.requireAdmin(c)==nil{return}
+ rows,err:=a.DB.Query(c.Request.Context(),`SELECT order_no,status,payment_status,payment_method,total_vnd,created_at,customer_name,customer_phone,shipping_address,note FROM orders ORDER BY created_at DESC LIMIT 100`)
+ if err!=nil{serverError(c,err);return};defer rows.Close()
+ items:=[]gin.H{}
+ for rows.Next(){
+  var no,status,pay,method,name,phone,address,note string
+  var total int64
+  var created time.Time
+  if err=rows.Scan(&no,&status,&pay,&method,&total,&created,&name,&phone,&address,&note);err!=nil{serverError(c,err);return}
+  items=append(items,gin.H{"order_no":no,"status":status,"payment_status":pay,"payment_method":method,"total_vnd":total,"created_at":created,"customer_name":name,"phone":phone,"shipping_address":address,"note":note})
+ }
+ if err=rows.Err();err!=nil{serverError(c,err);return}
+ c.JSON(200,gin.H{"items":items})
 }
 func (a *App) adminUsers(c *gin.Context) {
 	if a.requireAdmin(c) == nil {
