@@ -158,6 +158,10 @@ func TestPayOSIntegration(t *testing.T){
  var mismatchState string
  if err=db.QueryRow(ctx,"SELECT payment_status FROM orders WHERE public_token=$1",mismatchOrder.Token).Scan(&mismatchState);err!=nil{t.Fatal(err)}
  if mismatchState!="REVIEW_REQUIRED"{t.Fatalf("partial payment incorrectly finalized: %s",mismatchState)}
+ var partialEvents int
+ if err=db.QueryRow(ctx,`SELECT count(*) FROM payment_events WHERE external_event_key=$1 AND signature_verified`,fmt.Sprintf("PAYOS:%d:partial-transfer",mismatchCheckout.Code)).Scan(&partialEvents);err!=nil||partialEvents!=1{
+  t.Fatalf("verified partial transfer missing from audit: count=%d err=%v",partialEvents,err)
+ }
  if rec:=send("POST","/api/v1/orders/"+mismatchOrder.Token+"/payment-link",nil);rec.Code!=409{t.Fatalf("mismatched payment reused checkout link: %d",rec.Code)}
  // Regression: authenticated payOS status reconciliation marks an unpaid order paid.
  checked:=newOrder();if checked.Code!=201{t.Fatalf("fourth order: %d %s",checked.Code,checked.Body.String())}
@@ -170,5 +174,9 @@ func TestPayOSIntegration(t *testing.T){
  mu.Lock();statuses[checkedCheckout.Code]="PAID";mu.Unlock()
  verifiedStatus:=send("GET","/api/v1/orders/"+checkedOrder.Token+"/payment-status",nil)
  if verifiedStatus.Code!=200||!bytes.Contains(verifiedStatus.Body.Bytes(),[]byte(`"payment_status":"PAID"`)){t.Fatalf("provider-paid status not reconciled: %d %s",verifiedStatus.Code,verifiedStatus.Body.String())}
+ var providerEvents int
+ if err=db.QueryRow(ctx,`SELECT count(*) FROM payment_events WHERE external_event_key=$1 AND NOT signature_verified`,fmt.Sprintf("PAYOS:%d:PROVIDER_STATUS_PAID",checkedCheckout.Code)).Scan(&providerEvents);err!=nil||providerEvents!=1{
+  t.Fatalf("provider status reconciliation missing from audit: count=%d err=%v",providerEvents,err)
+ }
  // CI should never use real merchant credentials or touch a real bank account.
 }
