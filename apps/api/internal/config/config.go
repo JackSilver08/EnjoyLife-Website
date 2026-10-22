@@ -11,6 +11,8 @@ type Config struct {
 	PayOSAPIKey string
 	PayOSChecksumKey string
 	WebOrigin string
+	// PayOSBaseURL is injectable in unit/integration tests only; Load never reads a public override.
+	PayOSBaseURL string
 	AdminEmail     string
 	AdminPassword  string
 }
