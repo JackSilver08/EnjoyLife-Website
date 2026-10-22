@@ -36,7 +36,8 @@ func(a *App) adminProducts(c *gin.Context){
  view:=c.Query("view")
  if view!=""&&view!="trash"{c.JSON(400,gin.H{"error":"Bộ lọc không hợp lệ."});return}
  rows,err:=a.DB.Query(c.Request.Context(),`SELECT p.id::text,p.slug,p.name,p.description,p.image_url,p.collection_name,p.published,c.slug,
- COALESCE(MIN(v.price_vnd),0),COALESCE(SUM(GREATEST(i.on_hand-i.reserved-i.unavailable,0)),0)::int
+ COALESCE(MIN(v.price_vnd),0),COALESCE(SUM(GREATEST(i.on_hand-i.reserved-i.unavailable,0)),0)::int,
+ COALESCE((SELECT pv.sku FROM product_variants pv WHERE pv.product_id=p.id ORDER BY pv.sku LIMIT 1),'')
  FROM products p LEFT JOIN categories c ON p.category_id=c.id
  LEFT JOIN product_variants v ON p.id=v.product_id AND v.active LEFT JOIN inventory i ON i.variant_id=v.id
  WHERE ($1 = 'trash' AND p.archived_at IS NOT NULL) OR ($1 <> 'trash' AND p.archived_at IS NULL)
@@ -44,10 +45,10 @@ func(a *App) adminProducts(c *gin.Context){
  if err!=nil{serverError(c,err);return};defer rows.Close()
  items:=[]gin.H{}
  for rows.Next(){
-  var id,slug,name,description,image,collection string;var published bool;var cat *string;var price int64;var stock int
-  if err=rows.Scan(&id,&slug,&name,&description,&image,&collection,&published,&cat,&price,&stock);err!=nil{serverError(c,err);return}
+  var id,slug,name,description,image,collection,sku string;var published bool;var cat *string;var price int64;var stock int
+  if err=rows.Scan(&id,&slug,&name,&description,&image,&collection,&published,&cat,&price,&stock,&sku);err!=nil{serverError(c,err);return}
   category:="";if cat!=nil{category=*cat}
-  items=append(items,gin.H{"id":id,"slug":slug,"name":name,"description":description,"image_url":image,"collection":collection,"category":category,"published":published,"price_vnd":price,"available":stock})
+  items=append(items,gin.H{"id":id,"slug":slug,"name":name,"description":description,"image_url":image,"collection":collection,"category":category,"published":published,"price_vnd":price,"available":stock,"sku":sku})
  }
  if err=rows.Err();err!=nil{serverError(c,err);return}
  c.JSON(200,gin.H{"items":items})

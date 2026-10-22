@@ -8,7 +8,7 @@ export function VariantManager({productId}:{productId:string}){
  const [form,setForm]=useState(blank);const [message,setMessage]=useState("");const [busy,setBusy]=useState(false);
  async function create(e:FormEvent<HTMLFormElement>){
   e.preventDefault();setBusy(true);setMessage("");
-  try{await adminAction("admin/products/"+productId+"/variants","POST",form);setMessage("Đã thêm biến thể mới.");setForm(blank);await reload()}
+  try{const created=await adminAction("admin/products/"+productId+"/variants","POST",{...form,sku:""});setMessage("Đã thêm màu/size mới. Mã hàng: "+created.sku+".");setForm(blank);await reload()}
   catch(err){setMessage(err instanceof Error?err.message:"Không thêm được SKU.")}finally{setBusy(false)}
  }
  async function update(variant:Variant){
@@ -28,9 +28,9 @@ export function VariantManager({productId}:{productId:string}){
  }
  return <section className="admin-variants"><h3>Biến thể theo màu và kích thước</h3>
  {message&&<p role="status" className="admin-notice">{message}</p>}{error&&<p role="alert" className="admin-error">{error}</p>}
- {loading?<p>Đang tải biến thể...</p>:<div className="admin-table-wrap"><table className="admin-table"><thead><tr><th>SKU</th><th>Màu / Size</th><th>Giá</th><th>Kho</th><th>Trạng thái / Thao tác</th></tr></thead><tbody>{(data?.items??[]).map(x=><tr key={x.id}><td>{x.sku}</td><td>{x.color} / {x.size}</td><td>{moneyVND(x.price_vnd)}</td><td>{x.available} bán được <small>{x.reserved} đã giữ</small></td><td><span className="admin-pill">{x.active?"Đang bán":"Ngừng bán"}</span><div className="admin-row-actions"><button disabled={busy} type="button" onClick={()=>void update(x)}>Sửa giá</button><button disabled={busy} type="button" onClick={()=>void toggle(x)}>{x.active?"Ngừng bán":"Mở bán"}</button></div></td></tr>)}</tbody></table></div>}
- <form onSubmit={create} className="admin-variant-add"><h3>Thêm size / màu mới</h3><div className="admin-form-grid">
-  <label>SKU<input value={form.sku} required minLength={3} onChange={e=>setForm({...form,sku:e.target.value})}/></label>
+ {loading?<p>Đang tải biến thể...</p>:<div className="admin-table-wrap"><table className="admin-table"><thead><tr><th>Mã hàng</th><th>Màu / Size</th><th>Giá</th><th>Kho</th><th>Trạng thái / Thao tác</th></tr></thead><tbody>{(data?.items??[]).map(x=><tr key={x.id}><td>{x.sku}</td><td>{x.color} / {x.size}</td><td>{moneyVND(x.price_vnd)}</td><td>{x.available} bán được <small>{x.reserved} đã giữ</small></td><td><span className="admin-pill">{x.active?"Đang bán":"Ngừng bán"}</span><div className="admin-row-actions"><button disabled={busy} type="button" onClick={()=>void update(x)}>Sửa giá</button><button disabled={busy} type="button" onClick={()=>void toggle(x)}>{x.active?"Ngừng bán":"Mở bán"}</button></div></td></tr>)}</tbody></table></div>}
+ <form onSubmit={create} className="admin-variant-add"><h3>Thêm size / màu mới</h3><p className="admin-help">Mã hàng SP-001, SP-002... được hệ thống cấp khi lưu. Bạn chỉ cần chọn màu và size.</p><div className="admin-form-grid">
+
   <label>Màu<input value={form.color} required onChange={e=>setForm({...form,color:e.target.value})}/></label>
   <label>Size<input value={form.size} required onChange={e=>setForm({...form,size:e.target.value})}/></label>
   <label>Giá VND<input type="number" required min={1} value={form.price_vnd||""} onChange={e=>setForm({...form,price_vnd:Number(e.target.value)})}/></label>
