@@ -96,5 +96,23 @@ func TestAdminIntegrationStaff(t *testing.T) {
  if rec:=send("POST","/api/v1/auth/login",map[string]string{"email":email,"password":"integrationPassword2026!"},nil);rec.Code!=401{t.Fatalf("disabled login=%d",rec.Code)}
  change=send("PATCH","/api/v1/admin/staff/"+staff.ID,map[string]bool{"disabled":false},admin)
  if change.Code!=200{t.Fatalf("restore=%d",change.Code)}
- if rec:=send("POST","/api/v1/auth/login",map[string]string{"email":email,"password":"integrationPassword2026!"},nil);rec.Code!=200{t.Fatalf("restored login=%d",rec.Code)}
+ restored:=send("POST","/api/v1/auth/login",map[string]string{"email":email,"password":"integrationPassword2026!"},nil)
+ if restored.Code!=200{t.Fatalf("restored login=%d",restored.Code)}
+ changePassword:=send("POST","/api/v1/auth/change-password",map[string]string{
+  "current_password":"integrationPassword2026!","new_password":"staffNewPassword2026!",
+ },cookieOf(restored))
+ if changePassword.Code!=200{t.Fatalf("staff password change=%d %s",changePassword.Code,changePassword.Body.String())}
+ if rec:=send("POST","/api/v1/auth/login",map[string]string{"email":email,"password":"integrationPassword2026!"},nil);rec.Code!=401{t.Fatalf("old password accepted after change: %d",rec.Code)}
+ newLogin:=send("POST","/api/v1/auth/login",map[string]string{"email":email,"password":"staffNewPassword2026!"},nil)
+ if newLogin.Code!=200{t.Fatalf("new password login=%d %s",newLogin.Code,newLogin.Body.String())}
+ adminReset:=send("POST","/api/v1/admin/staff/"+staff.ID+"/reset-password",map[string]string{"password":"resetByAdmin2026!"},admin)
+ if adminReset.Code!=200{t.Fatalf("admin password reset=%d %s",adminReset.Code,adminReset.Body.String())}
+ if rec:=send("GET","/api/v1/admin/orders",nil,cookieOf(newLogin));rec.Code!=401{t.Fatalf("reset failed to revoke session: %d",rec.Code)}
+ if rec:=send("POST","/api/v1/auth/login",map[string]string{"email":email,"password":"resetByAdmin2026!"},nil);rec.Code!=200{t.Fatalf("reset password login=%d",rec.Code)}
+ lockedEmail:="invalid-"+time.Now().Format("150405.000000000")+"@example.test"
+ for i:=0;i<5;i++{
+  if rec:=send("POST","/api/v1/auth/login",map[string]string{"email":lockedEmail,"password":"incorrect password"},nil);rec.Code!=401{t.Fatalf("failed login #%d=%d",i,rec.Code)}
+ }
+ if rec:=send("POST","/api/v1/auth/login",map[string]string{"email":lockedEmail,"password":"incorrect password"},nil);rec.Code!=429{t.Fatalf("attempt lockout=%d",rec.Code)}
+
 }
