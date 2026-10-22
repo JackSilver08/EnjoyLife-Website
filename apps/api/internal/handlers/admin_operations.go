@@ -18,10 +18,10 @@ func (a *App) adminDashboard(c *gin.Context) {
  err:=a.DB.QueryRow(ctx,`SELECT count(*),count(*) FILTER (WHERE status='PENDING_CONFIRMATION'),COALESCE(sum(total_vnd) FILTER (WHERE status <> 'CANCELLED'),0) FROM orders`).Scan(&orders,&pending,&orderValue)
  if err!=nil {serverError(c,err);return}
  var lowStock int64
- err=a.DB.QueryRow(ctx,`SELECT count(*) FROM inventory i JOIN product_variants v ON v.id=i.variant_id WHERE v.active AND (i.on_hand-i.reserved-i.unavailable)<=3`).Scan(&lowStock)
+ err=a.DB.QueryRow(ctx,`SELECT count(*) FROM inventory i JOIN product_variants v ON v.id=i.variant_id JOIN products p ON p.id=v.product_id WHERE p.archived_at IS NULL AND v.active AND (i.on_hand-i.reserved-i.unavailable)<=3`).Scan(&lowStock)
  if err!=nil {serverError(c,err);return}
  var products int64
- err=a.DB.QueryRow(ctx,`SELECT count(*) FROM products`).Scan(&products)
+ err=a.DB.QueryRow(ctx,`SELECT count(*) FROM products WHERE archived_at IS NULL`).Scan(&products)
  if err!=nil {serverError(c,err);return}
  c.JSON(200,gin.H{"orders":orders,"pending_orders":pending,"order_value_vnd":orderValue,"low_stock_skus":lowStock,"products":products,"revenue_note":"Giá trị đơn chưa hủy, KHÔNG phải doanh thu đã thu."})
 }
@@ -30,7 +30,7 @@ func (a *App) adminInventory(c *gin.Context) {
  if a.requireAdmin(c)==nil {return}
  rows,err:=a.DB.Query(c.Request.Context(),`SELECT v.id::text,v.sku,p.name,v.color,v.size,i.on_hand,i.reserved,i.unavailable,(i.on_hand-i.reserved-i.unavailable)::int
  FROM inventory i JOIN product_variants v ON v.id=i.variant_id JOIN products p ON p.id=v.product_id
- WHERE v.active ORDER BY p.name,v.color,v.size LIMIT 200`)
+ WHERE v.active AND p.archived_at IS NULL ORDER BY p.name,v.color,v.size LIMIT 200`)
  if err!=nil {serverError(c,err);return};defer rows.Close()
  items:=[]gin.H{}
  for rows.Next(){
