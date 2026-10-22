@@ -19,6 +19,8 @@ jobs:
           node-version: '22'
       - name: Install dependencies
         run: npm install --no-audit --no-fund
+      - name: Offline VietQR codec and UI contract regression
+        run: node scripts/test-payos-qr.mjs
       - name: Typecheck
         run: npm run typecheck
       - name: Lint
@@ -104,6 +106,7 @@ jobs:
           node --check apps/web/scripts/journal-docker-e2e.mjs
           node --check apps/web/scripts/staff-docker-e2e.mjs
           node --check apps/web/scripts/orders-payment-docker-e2e.mjs
+          node --check apps/web/scripts/test-payos-qr.mjs
           node --check apps/web/scripts/check-origin.mjs
       - name: Build web development image
         run: docker compose build web
