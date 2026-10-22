@@ -5,7 +5,7 @@
 - Customer checkout offers COD (unchanged) or payOS QR when enabled.
 - Prices and stock are recalculated and reserved in PostgreSQL; browser totals are never trusted.
 - Each order has at most one provider payment attempt and unique numeric payOS orderCode.
-- The backend creates signed payment links, returns the official `https://pay.payos.vn/` checkout URL, and customers scan a VietQR on payOS's hosted secure checkout.
+- The backend creates signed payment links and returns the official `https://pay.payos.vn/` checkout URL; customers can scan VietQR directly on the order page through payOS's official embedded Checkout Script.
 - Unpaid order status includes a recovery button and server-verified payment polling, never marking paid merely from returnUrl query parameters.
 - Public webhook: `POST /api/payments/payos/webhook`. Next.js forwards to Gin; Gin checks the HMAC-SHA256 signature with the checksum key, payment link ID, unique provider order code, amount and VND currency, then records a deduplicated payment event in PostgreSQL.
 - Customer can cancel unpaid checkout only after payOS confirms cancellation; stock is released in a single transaction. Existing Admin/Staff order-status action refuses to bypass payOS cancellation.
@@ -45,7 +45,8 @@ Manual pre-release acceptance with a protected payment channel and controlled en
 
 ## Current scope limits
 
-- The QR is displayed by the official payOS-hosted checkout rather than rendered with a separate QR library inside Enjoy Life. Customers leave Enjoy Life for the hosted payment page and return to the order status afterwards.
+- The QR is displayed through **payOS's official embedded Checkout Script** on the Enjoy Life order page, without generating or editing bank QR data in a third-party service. If that script is unavailable, the customer can use the official payOS-hosted checkout fallback.
+- The payOS script is loaded from `https://cdn.payos.vn/payos-checkout/v1/stable/payos-initialize.js` per official payOS documentation. Production CSP must allow this script and payOS frame endpoints. Browser SDK success/cancel callbacks only trigger a server-side status refresh; they never mark the order paid.
 - A real production domain and verified webhook are required before public use. Do not expose the existing development-only Docker Compose as a payment production server.
 - Bank refunds, chargeback disputes and settlement accounting require a separate controlled admin workflow. An unexpected late payment on a canceled order is explicitly marked `REVIEW_REQUIRED`, leaves the order canceled, and needs manual review before any refund or fulfillment.
 - A merchant admin should investigate `REVIEW_REQUIRED` attempts; do not manually mark an unpaid payOS order as paid.
@@ -59,7 +60,7 @@ git pull origin main
 docker compose up -d --build --force-recreate api web
 ```
 
-With `PAYMENT_ENABLED=false`, COD remains usable and QR is visibly disabled. See CI for synthetic provider integration results. Preserve volumes (`docker compose down -v` destroys local data).
+With `PAYMENT_ENABLED=false`, COD remains usable and QR is visibly disabled. See CI for synthetic provider integration results. When enabled, choosing payOS directs customers to the order page; click **HIỂN THỊ MÃ QR** to embed the official payOS checkout, or use the hosted fallback link. Preserve volumes (`docker compose down -v` destroys local data).
 
 ## Sprint 8 financial safety regression checks
 
