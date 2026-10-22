@@ -254,3 +254,17 @@ ensure(removed.status===200,"Unpublish failed");
 ensure((await call("/blog/"+slug)).status===404,"Unpublished article still publicly available");
 ensure(!(await call("/blog")).text.includes(payload.title),"Unpublished article remained on blog index");
 console.log("Docker E2E PASSED: Admin draft -> 404 -> publish -> SSR Homepage/blog/article -> unpublish -> 404");
+
+
+// Sprint 8: fail closed in local CI with no live merchant secrets.
+const payosAvailability=await call("/api/store/payments/config");
+ensure(payosAvailability.status===200 && payosAvailability.json?.payos_enabled===false,
+ "PayOS must not be enabled in disposable CI with no merchant credentials");
+const gatewayDisabled=await call("/api/store/orders/"+"a".repeat(48)+"/payment-link",{method:"POST",body:{}});
+ensure(gatewayDisabled.status===503,"Disabled payment creation was not rejected safely");
+const invalidWebhook=await call("/api/payments/payos/webhook",{method:"POST",body:{code:"00",success:true,data:{amount:1000},signature:"forged"}});
+ensure(invalidWebhook.status!==200,"A forged or disabled payOS webhook was accepted");
+const checkoutView=await call("/checkout");
+ensure(checkoutView.status===200&&checkoutView.text.includes("Thanh toán mã QR qua payOS"),
+ "Checkout is missing payOS payment UI");
+console.log("Sprint 8 E2E PASSED: QR option, opt-in flag, disabled gateway and forged webhook rejection");
