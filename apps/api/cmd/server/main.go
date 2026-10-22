@@ -43,6 +43,9 @@ func main() {
 		os.Exit(1)
 	}
 	app := &handlers.App{DB: db, Config: cfg}
+	reconcileCtx,reconcileCancel:=context.WithCancel(context.Background())
+	defer reconcileCancel()
+	go app.StartPayOSReconciler(reconcileCtx)
 	srv := &http.Server{Addr: ":" + cfg.Port, Handler: handlers.Router(app), ReadHeaderTimeout: 5 * time.Second, ReadTimeout: 15 * time.Second, WriteTimeout: 20 * time.Second, IdleTimeout: 60 * time.Second}
 	go func() {
 		slog.Info("Enjoy Life API listening", "port", cfg.Port)
