@@ -11,9 +11,9 @@ const vendor=readFileSync(join(root,"src/lib/vendor/qrcodegen.ts"),"utf8");
 const out=ts.transpileModule(vendor,{
  compilerOptions:{target:ts.ScriptTarget.ES2022,module:ts.ModuleKind.CommonJS}
 }).outputText;
-const module={exports:{}};
-runInNewContext(out,{exports:module.exports,module,Uint8Array,TextEncoder,encodeURI,parseInt,Math,Array,RangeError,Error,Infinity,Number,Boolean,Object,String,RegExp});
-const QrCode=module.exports.qrcodegen?.QrCode;
+const sandboxModule={exports:{}};
+runInNewContext(out,{exports:sandboxModule.exports,module:sandboxModule,Uint8Array,TextEncoder,encodeURI,parseInt,Math,Array,RangeError,Error,Infinity,Number,Boolean,Object,String,RegExp});
+const QrCode=sandboxModule.exports.qrcodegen?.QrCode;
 assert.ok(QrCode,"Offline QR encoder must be importable");
 const samples=[
  "HELLO WORLD",
