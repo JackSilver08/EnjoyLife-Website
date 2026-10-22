@@ -34,7 +34,7 @@ func (a *App) changePassword(c *gin.Context) {
  _,err=tx.Exec(ctx,`DELETE FROM user_sessions WHERE user_id=$1 AND token_hash<>$2`,user.ID,tokenHash(token))
  if err!=nil{serverError(c,err);return}
  if user.Role!="CUSTOMER"{
-  _,err=tx.Exec(ctx,`INSERT INTO admin_audit_logs(actor_id,action,target_id,details) VALUES($1,'PASSWORD_CHANGE',$1,'Owner changed own password')`,user.ID)
+  _,err=tx.Exec(ctx,`INSERT INTO admin_audit_logs(actor_id,action,target_id,details) VALUES($1,'PASSWORD_CHANGE',$2,'Owner changed own password')`,user.ID,user.ID)
   if err!=nil{serverError(c,err);return}
  }
  if err=tx.Commit(ctx);err!=nil{serverError(c,err);return}
