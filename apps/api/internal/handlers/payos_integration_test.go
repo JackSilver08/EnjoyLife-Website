@@ -51,7 +51,7 @@ func TestPayOSIntegration(t *testing.T){
   if strings.HasSuffix(r.URL.Path,"/cancel"){statuses[code]="CANCELLED";state="CANCELLED"}
   mu.Unlock()
   if amount==0 {w.WriteHeader(404);return}
-  paid:=int64(0);if state=="PAID"{paid=amount}
+  paid:=int64(0);if state=="PAID"{paid=amount};if state=="PARTIALLY_PAID"{paid=1000};if state=="OVERPAID"{paid=amount+1000}
   _=json.NewEncoder(w).Encode(map[string]any{"code":"00","data":map[string]any{"orderCode":code,"amount":amount,"amountPaid":paid,"status":state}})
  }))
  defer mock.Close()
@@ -177,6 +177,38 @@ func TestPayOSIntegration(t *testing.T){
  var providerEvents int
  if err=db.QueryRow(ctx,`SELECT count(*) FROM payment_events WHERE external_event_key=$1 AND NOT signature_verified`,fmt.Sprintf("PAYOS:%d:PROVIDER_STATUS_PAID",checkedCheckout.Code)).Scan(&providerEvents);err!=nil||providerEvents!=1{
   t.Fatalf("provider status reconciliation missing from audit: count=%d err=%v",providerEvents,err)
+ }
+ // A provider-reported partial transfer must not be canceled or fulfilled.
+ partialOrder:=newOrder();if partialOrder.Code!=201{t.Fatalf("partial provider order: %d %s",partialOrder.Code,partialOrder.Body.String())}
+ var partialRecord struct{Token string `json:"order_token"`;OrderNo string `json:"order_no"`}
+ _=json.Unmarshal(partialOrder.Body.Bytes(),&partialRecord)
+ partialLink:=send("POST","/api/v1/orders/"+partialRecord.Token+"/payment-link",nil)
+ if partialLink.Code!=200{t.Fatalf("provider partial link: %d",partialLink.Code)}
+ var partialCheckout struct{Code int64 `json:"order_code"`}
+ _=json.Unmarshal(partialLink.Body.Bytes(),&partialCheckout)
+ mu.Lock();statuses[partialCheckout.Code]="PARTIALLY_PAID";mu.Unlock()
+ partialStatus:=send("GET","/api/v1/orders/"+partialRecord.Token+"/payment-status",nil)
+ if partialStatus.Code!=200||!bytes.Contains(partialStatus.Body.Bytes(),[]byte(`"payment_status":"REVIEW_REQUIRED"`)){
+  t.Fatalf("partial provider status not flagged: %d %s",partialStatus.Code,partialStatus.Body.String())
+ }
+ if rec:=send("POST","/api/v1/orders/"+partialRecord.Token+"/cancel-payment",nil);rec.Code!=409{
+  t.Fatalf("partially-paid provider order was canceled: %d",rec.Code)
+ }
+ if rec:=asAdmin("PATCH","/api/v1/admin/orders/"+partialRecord.OrderNo+"/status",map[string]string{"status":"CONFIRMED"});rec.Code!=409{
+  t.Fatalf("partially-paid provider order advanced: %d",rec.Code)
+ }
+ // Overpayment is a manual refund/review, never silently completed.
+ overOrder:=newOrder();if overOrder.Code!=201{t.Fatalf("overpayment order: %d",overOrder.Code)}
+ var overRecord struct{Token string `json:"order_token"`}
+ _=json.Unmarshal(overOrder.Body.Bytes(),&overRecord)
+ overLink:=send("POST","/api/v1/orders/"+overRecord.Token+"/payment-link",nil)
+ if overLink.Code!=200{t.Fatalf("overpaid provider link: %d",overLink.Code)}
+ var overCheckout struct{Code int64 `json:"order_code"`}
+ _=json.Unmarshal(overLink.Body.Bytes(),&overCheckout)
+ mu.Lock();statuses[overCheckout.Code]="OVERPAID";mu.Unlock()
+ overStatus:=send("GET","/api/v1/orders/"+overRecord.Token+"/payment-status",nil)
+ if overStatus.Code!=200||!bytes.Contains(overStatus.Body.Bytes(),[]byte(`"payment_status":"REVIEW_REQUIRED"`)){
+  t.Fatalf("overpayment silently accepted: %d %s",overStatus.Code,overStatus.Body.String())
  }
  // CI should never use real merchant credentials or touch a real bank account.
 }
