@@ -36,7 +36,7 @@ PostgreSQL blog schema and protected Go APIs are implemented. Drafts are private
 
 ## Homepage redesign — Sprint 1
 
-The customer-facing Homepage now guides visitors through Hero → Story → Products → Enjoy Journal → Contact. The Journal cards are **upcoming content concepts**, not published articles. Add a verified `CONTACT_EMAIL` to `.env` when available. See [Sprint 1 notes](docs/HOMEPAGE_SPRINT1.md).
+The customer-facing Homepage now guides visitors through Hero → Story → Products → Enjoy Journal → Contact. The Contact section now contains a Formspree message form; no `CONTACT_EMAIL` or separate contact page is needed. See [Contact form guide](docs/CONTACT_FORMSPREE.md). See [Sprint 1 notes](docs/HOMEPAGE_SPRINT1.md).
 
 ### Local Admin login: configuration check
 For local development only, set these lines in `.env`:

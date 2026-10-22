@@ -1,5 +1,6 @@
 import Link from "next/link";
-import { ArrowDown, ArrowUpRight, Mail } from "lucide-react";
+import { ArrowDown, ArrowUpRight } from "lucide-react";
+import { ContactForm } from "@/components/contact-form";
 import { fetchProducts } from "@/lib/api";
 import { ProductCard } from "@/components/product-card";
 import { JournalGrid } from "@/components/journal-grid";
@@ -12,8 +13,6 @@ export default async function HomePage() {
     getPublishedArticles({limit:3}).catch(()=>null),
     fetchSiteContent(),
   ]);
-  const contactEmail = process.env.CONTACT_EMAIL?.trim();
-  const emailAvailable = !!contactEmail && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(contactEmail);
 
   return <>
     <section className="hero-editorial" aria-label="Chiến dịch thời trang Enjoy Life">
@@ -100,11 +99,7 @@ export default async function HomePage() {
         <div><span className="eyebrow">04 / KẾT NỐI VỚI ENJOY LIFE</span><h2 id="contact-title">Có điều muốn nói?<br/><em>Hãy kết nối.</em></h2></div>
         <div className="home-contact-details">
           <p>Cần tìm hiểu thêm về trang phục, đơn hàng hay các chính sách mua sắm? Hãy để Enjoy Life đồng hành cùng bạn.</p>
-          {emailAvailable ? (
-            <a href={`mailto:${contactEmail}`} className="contact-primary">GỬI EMAIL CHO CHÚNG TÔI <Mail size={17} aria-hidden="true"/></a>
-          ) : (
-            <Link href="/contact" className="contact-primary">THÔNG TIN LIÊN HỆ <ArrowUpRight size={17} aria-hidden="true"/></Link>
-          )}
+          <ContactForm/>
           <Link className="contact-secondary" href="/policies">CHÍNH SÁCH GIAO HÀNG & ĐỔI TRẢ <ArrowUpRight size={15} aria-hidden="true"/></Link>
         </div>
       </div>

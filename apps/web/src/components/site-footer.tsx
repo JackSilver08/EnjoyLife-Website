@@ -11,7 +11,7 @@ export function SiteFooter() {
         <Link href="/shop">Cửa hàng</Link>
         <Link href="/blog">Enjoy Journal</Link>
         <Link href="/about">Câu chuyện</Link>
-        <Link href="/contact">Liên hệ</Link>
+        <Link href="/#contact">Liên hệ</Link>
         <Link href="/policies">Giao hàng & đổi trả</Link>
         <Link href="/cart">Giỏ hàng</Link>
       </nav>

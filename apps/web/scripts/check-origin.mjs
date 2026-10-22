@@ -56,9 +56,26 @@ const sitemap=await page("/sitemap.xml");
 if(!sitemap.includes("https://enjoylife.example.com/blog/sprint-4-test-article"))throw Error("Published blog URL missing from sitemap");
 if(sitemap.includes("draft-should-never-appear"))throw Error("Unpublished slug leaked to sitemap");
 
-const contact=await page("/contact");
-if(!contact.includes("LIÊN HỆ"))throw Error("Contact page content missing");
-console.log("Homepage story/product/journal/contact and supporting routes passed");
+// Contact form is shown on the homepage (no extra navigation required).
+for(const fragment of [
+  'id="enjoy-contact-form"',
+  'action="https://formspree.io/f/meaeydne"',
+  'name="name"',
+  'name="email"',
+  'name="topic"',
+  'name="message"',
+  'name="_gotcha"',
+  'GỬI LỜI NHẮN',
+]){
+ if(!homepage.includes(fragment))throw Error("Inline contact form missing "+fragment);
+}
+if(homepage.includes("THÔNG TIN LIÊN HỆ"))throw Error("Legacy contact button remains on homepage");
+if(!homepage.includes('href="/#contact"'))throw Error("Footer no longer links to the inline contact section");
+// Preserve old bookmarks but remove the standalone contact content page.
+const legacyContact=await fetch(base+"/contact",{redirect:"manual"});
+if(![301,302,303,307,308].includes(legacyContact.status)||!String(legacyContact.headers.get("location")).includes("/#contact"))
+ throw Error("Legacy contact page must redirect to homepage form; got "+legacyContact.status);
+console.log("Homepage story/product/journal and Formspree inline contact verified");
 
 const protectedPage=await fetch(base+"/admin/blog",{redirect:"manual"});
 if(![303,307,308].includes(protectedPage.status)||!String(protectedPage.headers.get("location")).includes("/account"))

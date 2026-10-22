@@ -732,3 +732,41 @@ html{scroll-padding-top:calc(82px + 18px)}
  .product-gallery-lightbox>img{max-width:75vw;max-height:78vh}
  .product-gallery-lightbox button{padding:6px}
 }
+
+/* Enjoy Life contact: inline Formspree submission, no standalone contact page */
+.home-contact-layout{align-items:center}
+.home-contact-details{min-width:0;width:100%}
+.enjoy-contact-form{display:grid;gap:18px;max-width:580px}
+.enjoy-contact-fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:15px}
+.enjoy-contact-form label{display:flex;flex-direction:column;gap:9px;min-width:0;font-size:10px;font-weight:700;letter-spacing:.12em;color:#e5e9e0}
+.enjoy-contact-form input:not([name="_gotcha"]),.enjoy-contact-form select,.enjoy-contact-form textarea{
+ display:block;width:100%;min-width:0;min-height:51px;box-sizing:border-box;border:1px solid #cbd4ca;border-radius:2px;
+ padding:14px 15px;color:#203029;background:#f8f7f3;font:400 14px/1.5 var(--sans);letter-spacing:normal;
+}
+.enjoy-contact-form input::placeholder,.enjoy-contact-form textarea::placeholder{color:#8a938b}
+.enjoy-contact-form textarea{min-height:118px;resize:vertical}
+.enjoy-contact-form select{cursor:pointer}
+.enjoy-contact-form input:focus-visible,.enjoy-contact-form select:focus-visible,.enjoy-contact-form textarea:focus-visible,
+.enjoy-contact-form button:focus-visible{outline:3px solid #dbc09e;outline-offset:3px}
+.enjoy-contact-form input:disabled,.enjoy-contact-form select:disabled,.enjoy-contact-form textarea:disabled{opacity:.7;cursor:wait}
+.enjoy-contact-submit{display:grid;gap:12px}
+.enjoy-contact-submit>p{margin:0;font-size:11px;line-height:1.6;color:#cbd5c9}
+.enjoy-contact-form button.contact-primary{
+ appearance:none;border:0;border-radius:2px;min-height:54px;max-width:none;width:100%;text-align:left;
+ cursor:pointer;transition:background .2s,color .2s;justify-content:space-between;
+}
+.enjoy-contact-form button.contact-primary:disabled{cursor:wait;opacity:.75}
+.enjoy-contact-honeypot{position:absolute;left:-9999px;width:1px;height:1px;overflow:hidden;pointer-events:none}
+.enjoy-contact-status:empty{display:none}
+.enjoy-contact-status p{display:flex;align-items:flex-start;gap:9px;font-size:12px;line-height:1.65;margin:0;padding:12px 14px;border-radius:2px}
+.enjoy-contact-success{color:#e8f6e6;background:#315743;border:1px solid #66896a}
+.enjoy-contact-error{color:#ffe2db;background:#67372e;border:1px solid #986258}
+@media(max-width:780px){
+ .home-contact-details{max-width:640px}
+ .enjoy-contact-form{max-width:100%}
+}
+@media(max-width:520px){
+ .enjoy-contact-fields{grid-template-columns:1fr}
+ .home-contact{padding-block:65px}
+ .enjoy-contact-form{gap:16px}
+}
