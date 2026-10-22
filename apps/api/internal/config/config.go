@@ -26,7 +26,7 @@ func Load() Config {
 		DatabaseURL: os.Getenv("DATABASE_URL"),
 		Port:        port,
 		AdminKey:    os.Getenv("ADMIN_API_KEY"),
-		PaymentEnabled: strings.EqualFold(os.Getenv("PAYMENT_ENABLED"),"true") && os.Getenv("PAYOS_CLIENT_ID")!="" && os.Getenv("PAYOS_API_KEY")!="" && os.Getenv("PAYOS_CHECKSUM_KEY")!="",
+		PaymentEnabled: strings.EqualFold(strings.TrimSpace(os.Getenv("PAYMENT_ENABLED")),"true"),
 		PayOSClientID: os.Getenv("PAYOS_CLIENT_ID"),
 		PayOSAPIKey: os.Getenv("PAYOS_API_KEY"),
 		PayOSChecksumKey: os.Getenv("PAYOS_CHECKSUM_KEY"),
