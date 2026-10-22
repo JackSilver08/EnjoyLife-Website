@@ -20,7 +20,12 @@ export default function Products(){
   const id=new URLSearchParams(window.location.search).get("edit");
   if(!id)return;
   const item=data.items.find(x=>x.id===id);
-  if(item){setEditing({...item});setAdding(false);initialOpen.current=true}
+  if(!item)return;
+  const timeout=window.setTimeout(()=>{
+   if(initialOpen.current)return;
+   setEditing({...item});setAdding(false);initialOpen.current=true;
+  },0);
+  return()=>window.clearTimeout(timeout);
  },[data]);
  async function create(e:FormEvent<HTMLFormElement>){
   e.preventDefault();if(busy)return;setBusy(true);setNotice("");

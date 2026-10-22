@@ -44,7 +44,9 @@ export default function Inventory(){
  const [notice,setNotice]=useState("");
  useEffect(()=>{
   const id=new URLSearchParams(window.location.search).get("product");
-  if(id&&/^[a-f0-9-]{36}$/.test(id))setProductFilter(id);
+  if(!id||!/^[a-f0-9-]{36}$/.test(id))return;
+  const timeout=window.setTimeout(()=>setProductFilter(id),0);
+  return()=>window.clearTimeout(timeout);
  },[]);
  const rows=useMemo(()=>(data?.items??[]).filter(x=>
   (!productFilter||x.product_id===productFilter)

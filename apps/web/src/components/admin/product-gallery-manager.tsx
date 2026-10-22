@@ -13,7 +13,11 @@ export function ProductGalleryManager({productId,onSaved}:{productId:string;onSa
  const [busy,setBusy]=useState(false);
  const [message,setMessage]=useState("");
  const filesRef=useRef<HTMLInputElement>(null);
- useEffect(()=>{if(data)setImages(data.images||[])},[data]);
+ useEffect(()=>{
+  if(!data)return;
+  const timeout=window.setTimeout(()=>setImages(data.images||[]),0);
+  return()=>window.clearTimeout(timeout);
+ },[data]);
  function add(url:string){
   setImages(prev=>prev.some(item=>item.url===url)?prev:prev.length<12?[...prev,{url,alt:""}]:prev);
  }
