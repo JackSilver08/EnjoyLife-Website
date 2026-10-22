@@ -69,7 +69,7 @@ func (a *App) loadUser(c *gin.Context) *currentUser {
 	ctx, cancel := context.WithTimeout(c.Request.Context(), 2*time.Second)
 	defer cancel()
 	var user currentUser
-	err = a.DB.QueryRow(ctx, `SELECT u.id::text,u.email,u.display_name,u.role FROM user_sessions s JOIN users u ON u.id=s.user_id WHERE s.token_hash=$1 AND s.expires_at>now()`, tokenHash(token)).Scan(&user.ID, &user.Email, &user.Name, &user.Role)
+	err = a.DB.QueryRow(ctx, `SELECT u.id::text,u.email,u.display_name,u.role FROM user_sessions s JOIN users u ON u.id=s.user_id WHERE s.token_hash=$1 AND s.expires_at>now() AND u.disabled_at IS NULL`, tokenHash(token)).Scan(&user.ID, &user.Email, &user.Name, &user.Role)
 	if err != nil || (user.Email==demoAdminEmail && !devAdminEnabled()) {
 		return nil
 	}
@@ -87,7 +87,7 @@ func (a *App) requireAdmin(c *gin.Context) *currentUser {
 	if u == nil {
 		return nil
 	}
-	if u.Role != "ADMIN" {
+	if u.Role != "ADMIN" && !(u.Role == "STAFF" && c.GetBool(staffPermissionKey)) {
 		c.AbortWithStatusJSON(http.StatusForbidden, gin.H{"error": "Bạn không có quyền quản trị."})
 		return nil
 	}
@@ -145,7 +145,7 @@ func (a *App) login(c *gin.Context) {
     if in.Email==demoAdminEmail { c.JSON(401,gin.H{"error":"Vui lòng đăng nhập qua trang quản trị."});return }
 	var user currentUser
 	var hash string
-	err := a.DB.QueryRow(c.Request.Context(), "SELECT id::text,email,display_name,role,password_hash FROM users WHERE email=$1", in.Email).Scan(&user.ID, &user.Email, &user.Name, &user.Role, &hash)
+	err := a.DB.QueryRow(c.Request.Context(), "SELECT id::text,email,display_name,role,password_hash FROM users WHERE email=$1 AND disabled_at IS NULL", in.Email).Scan(&user.ID, &user.Email, &user.Name, &user.Role, &hash)
 	if err != nil || bcrypt.CompareHashAndPassword([]byte(hash), []byte(in.Password)) != nil {
 		c.JSON(401, gin.H{"error": "Email hoặc mật khẩu không đúng."})
 		return
