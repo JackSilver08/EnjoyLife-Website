@@ -5,6 +5,7 @@ import {useAdminRole} from "@/components/admin/admin-shell";
 type Order={order_no:string;customer_name:string;phone?:string;shipping_address?:string;status:string;payment_status:string;payment_method?:string;total_vnd:number;created_at:string};
 const transitions:Record<string,string[]>={PENDING_CONFIRMATION:["CONFIRMED","CANCELLED"],CONFIRMED:["PREPARING","CANCELLED"],PREPARING:["SHIPPING","CANCELLED"],SHIPPING:["DELIVERED"],DELIVERED:["COMPLETED"]};
 const status:Record<string,string>={PENDING_CONFIRMATION:"Chờ xác nhận",CONFIRMED:"Đã xác nhận",PREPARING:"Đang chuẩn bị",SHIPPING:"Đang giao",DELIVERED:"Đã giao",COMPLETED:"Hoàn tất",CANCELLED:"Đã hủy"};
+const paymentLabel:Record<string,string>={PAID:"Đã thu tiền",UNPAID:"Chưa thu tiền",REVIEW_REQUIRED:"Cần đối soát"};
 export default function OrdersPage(){
  const role=useAdminRole();
  const {data,loading,error,reload}=useAdminData<{items:Order[]}>("admin/orders");
@@ -28,8 +29,8 @@ export default function OrdersPage(){
  <section className="admin-surface">{loading?<p>Đang tải...</p>:!orders.length?<p className="admin-empty">Chưa có đơn trong nhóm này.</p>:<div className="admin-table-wrap"><table className="admin-table"><thead><tr><th>Đơn / Ngày</th><th>Khách</th><th>Giá trị</th><th>Thanh toán</th><th>Trạng thái / Thao tác</th></tr></thead><tbody>{orders.map(o=><tr key={o.order_no}>
  <td><strong>{o.order_no}</strong><small>{new Date(o.created_at).toLocaleString("vi-VN")}</small></td>
  <td>{o.customer_name}{o.phone&&<small>{o.phone}</small>}{o.shipping_address&&<small>{o.shipping_address}</small>}</td>
- <td>{moneyVND(o.total_vnd)}</td><td><span className="admin-pill">{o.payment_status==="PAID"?"Đã thu tiền":"Chưa thu tiền"}</span><small>{o.payment_method??"COD"}</small></td>
- <td><strong>{status[o.status]??o.status}</strong><div className="admin-row-actions">{(transitions[o.status]??[]).map(next=><button disabled={working===o.order_no} key={next} onClick={()=>void change(o,next)} className={next==="CANCELLED"?"admin-danger":""}>{status[next]}</button>)}
+ <td>{moneyVND(o.total_vnd)}</td><td><span className="admin-pill">{paymentLabel[o.payment_status]??o.payment_status}</span><small>{o.payment_method??"COD"}</small>{o.payment_status==="REVIEW_REQUIRED"&&<small role="alert">Kiểm tra giao dịch payOS trên bảng điều khiển trước khi xử lý hoặc hoàn tiền.</small>}</td>
+ <td><strong>{status[o.status]??o.status}</strong><div className="admin-row-actions">{(o.payment_method==="PAYOS"?(o.payment_status==="PAID"?(transitions[o.status]??[]).filter(next=>next!=="CANCELLED"):[]):(transitions[o.status]??[])).map(next=><button disabled={working===o.order_no} key={next} onClick={()=>void change(o,next)} className={next==="CANCELLED"?"admin-danger":""}>{status[next]}</button>)}
   {role==="ADMIN"&&o.payment_method==="COD"&&o.payment_status==="UNPAID"&&["DELIVERED","COMPLETED"].includes(o.status)&&<button disabled={working===o.order_no} onClick={()=>void paid(o)}>Xác nhận thu COD</button>}</div></td></tr>)}</tbody></table></div>}</section>
  </>;
 }

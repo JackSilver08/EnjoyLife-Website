@@ -1,12 +1,18 @@
 package config
 
-import "os"
+import ("os";"strings")
 
 type Config struct {
 	DatabaseURL    string
 	Port           string
 	AdminKey       string
 	PaymentEnabled bool
+	PayOSClientID string
+	PayOSAPIKey string
+	PayOSChecksumKey string
+	WebOrigin string
+	// PayOSBaseURL is injectable in unit/integration tests only; Load never reads a public override.
+	PayOSBaseURL string
 	AdminEmail     string
 	AdminPassword  string
 }
@@ -20,8 +26,11 @@ func Load() Config {
 		DatabaseURL: os.Getenv("DATABASE_URL"),
 		Port:        port,
 		AdminKey:    os.Getenv("ADMIN_API_KEY"),
-		// This switch intentionally does not activate a gateway yet.
-		PaymentEnabled: false,
+		PaymentEnabled: strings.EqualFold(os.Getenv("PAYMENT_ENABLED"),"true") && os.Getenv("PAYOS_CLIENT_ID")!="" && os.Getenv("PAYOS_API_KEY")!="" && os.Getenv("PAYOS_CHECKSUM_KEY")!="",
+		PayOSClientID: os.Getenv("PAYOS_CLIENT_ID"),
+		PayOSAPIKey: os.Getenv("PAYOS_API_KEY"),
+		PayOSChecksumKey: os.Getenv("PAYOS_CHECKSUM_KEY"),
+		WebOrigin: os.Getenv("WEB_ORIGIN"),
 		AdminEmail:     os.Getenv("ADMIN_EMAIL"),
 		AdminPassword:  os.Getenv("ADMIN_PASSWORD"),
 	}

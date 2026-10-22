@@ -32,6 +32,7 @@ func main() {
 		slog.Error("database unavailable", "error", err)
 		os.Exit(1)
 	}
+	if err = handlers.EnsurePaymentSchema(ctx, db); err != nil { slog.Error("payment migration", "error", err); os.Exit(1) }
 	if err = handlers.EnsureAccountSchema(ctx, db); err != nil { slog.Error("accounts migration", "error", err); os.Exit(1) }
 	if err = handlers.EnsureAdminAudit(ctx, db); err != nil { slog.Error("admin audit migration", "error", err); os.Exit(1) }
 	if err = handlers.EnsureBlogSchema(ctx, db); err != nil { slog.Error("blog migration", "error", err); os.Exit(1) }
@@ -42,6 +43,9 @@ func main() {
 		os.Exit(1)
 	}
 	app := &handlers.App{DB: db, Config: cfg}
+	reconcileCtx,reconcileCancel:=context.WithCancel(context.Background())
+	defer reconcileCancel()
+	go app.StartPayOSReconciler(reconcileCtx)
 	srv := &http.Server{Addr: ":" + cfg.Port, Handler: handlers.Router(app), ReadHeaderTimeout: 5 * time.Second, ReadTimeout: 15 * time.Second, WriteTimeout: 20 * time.Second, IdleTimeout: 60 * time.Second}
 	go func() {
 		slog.Info("Enjoy Life API listening", "port", cfg.Port)

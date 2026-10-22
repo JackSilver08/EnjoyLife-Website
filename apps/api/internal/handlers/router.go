@@ -91,10 +91,15 @@ func Router(a *App) *gin.Engine {
 	api.GET("/auth/me", a.me)
 	api.GET("/account/orders", a.myOrders)
 	api.POST("/orders", a.createOrder)
+    api.POST("/orders/:token/payment-link",a.createPayOSLink)
+    api.POST("/orders/:token/cancel-payment",a.cancelPayOS)
+    api.GET("/orders/:token/payment-status",a.payOSStatus)
+    api.POST("/payments/payos/webhook",a.payOSWebhook)
 	api.GET("/orders/:token", a.orderStatus)
+	api.GET("/payments/config",func(c *gin.Context){c.JSON(200,gin.H{"payos_enabled":a.payOSReady()})})
 	api.GET("/policies", func(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{"policies": []gin.H{
-			{"title": "Thanh toán", "content": "Enjoy Life hỗ trợ COD. Thanh toán tự động đang được tích hợp."},
+			{"title": "Thanh toán", "content": "Enjoy Life hỗ trợ COD và thanh toán QR payOS khi kênh được bật."},
 			{"title": "Giao hàng", "content": "Thời gian và phí giao hàng được xác nhận khi cửa hàng liên hệ xử lý đơn."},
 			{"title": "Đổi trả", "content": "Vui lòng liên hệ cửa hàng để xác minh điều kiện đổi trả. Chính sách chính thức sẽ được công bố trước khi mở bán."},
 		}})
@@ -140,7 +145,7 @@ func Router(a *App) *gin.Engine {
 	api.GET("/admin/products/:id/variants", a.adminVariants)
 	api.POST("/admin/products/:id/variants", a.adminCreateVariant)
 	api.PATCH("/admin/variants/:id", a.adminUpdateVariant)
-	// Deliberately no payment webhook endpoint until it has verified-signature processing.
+	// Sprint 8: webhook is public but accepts ONLY a verified payOS HMAC.
 	return r
 }
 func (a *App) health(c *gin.Context) {
@@ -265,8 +270,8 @@ func (a *App) createOrder(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Phương thức thanh toán không hợp lệ"})
 		return
 	}
-	if input.PaymentMethod == "PAYOS" {
-		c.JSON(http.StatusNotImplemented, gin.H{"error": "Cổng thanh toán đang tích hợp; hiện chưa nhận tiền online."})
+	if input.PaymentMethod == "PAYOS" && !a.payOSReady() {
+		c.JSON(http.StatusServiceUnavailable, gin.H{"error": "Thanh toán QR chưa được kích hoạt; vui lòng chọn COD."})
 		return
 	}
 	if len(input.Items) == 0 || len(input.Items) > 20 || len(input.ClientOrderKey) > 100 || len(input.ClientOrderKey) < 12 || len(input.Note) > 500 {
@@ -285,10 +290,11 @@ func (a *App) createOrder(c *gin.Context) {
 	ctx, cancel := context.WithTimeout(c.Request.Context(), 8*time.Second)
 	defer cancel()
 	// Idempotency: same client_order_key returns the original order instead of double-reserving.
-	var existingToken, existingNo string
-	e := a.DB.QueryRow(ctx, "SELECT public_token,order_no FROM orders WHERE client_order_key=$1", input.ClientOrderKey).Scan(&existingToken, &existingNo)
+	var existingToken, existingNo, existingMethod, existingPayment string
+	e := a.DB.QueryRow(ctx, "SELECT public_token,order_no,payment_method,payment_status FROM orders WHERE client_order_key=$1", input.ClientOrderKey).Scan(&existingToken, &existingNo,&existingMethod,&existingPayment)
 	if e == nil {
-		c.JSON(http.StatusOK, gin.H{"order_token": existingToken, "order_no": existingNo, "status": "PENDING_CONFIRMATION", "payment_status": "UNPAID"})
+        if existingMethod != input.PaymentMethod {c.JSON(409, gin.H{"error":"Không được đổi phương thức của đơn đã tạo."});return}
+		c.JSON(http.StatusOK, gin.H{"order_token": existingToken, "order_no": existingNo, "status": "PENDING_CONFIRMATION", "payment_status": existingPayment})
 		return
 	}
 	if !errors.Is(e, pgx.ErrNoRows) {
@@ -351,8 +357,8 @@ func (a *App) createOrder(c *gin.Context) {
 	}
 	_, err = tx.Exec(ctx, `INSERT INTO orders(id,public_token,client_order_key,order_no,customer_name,
 	      customer_phone,shipping_address,note,payment_method,payment_status,status,total_vnd,user_id)
-	      VALUES($1,$2,$3,$4,$5,$6,$7,$8,'COD','UNPAID','PENDING_CONFIRMATION',$9,$10)`,
-		orderID, token, input.ClientOrderKey, orderNo, input.CustomerName, input.CustomerPhone, input.ShippingAddress, input.Note, total, userID)
+	      VALUES($1,$2,$3,$4,$5,$6,$7,$8,$11,'UNPAID','PENDING_CONFIRMATION',$9,$10)`,
+		orderID, token, input.ClientOrderKey, orderNo, input.CustomerName, input.CustomerPhone, input.ShippingAddress, input.Note, total, userID,input.PaymentMethod)
 	if err != nil {
 		serverError(c, err)
 		return
@@ -407,7 +413,12 @@ func (a *App) orderStatus(c *gin.Context) {
 		serverError(c, err)
 		return
 	}
-	c.JSON(http.StatusOK, gin.H{"order_no": orderNo, "status": status, "payment_status": paymentStatus, "payment_method": method, "total_vnd": total, "created_at": created})
+	var payURL,qr,attemptState string
+    if method=="PAYOS"{
+      e:=a.DB.QueryRow(c.Request.Context(),`SELECT COALESCE(checkout_url,''),COALESCE(qr_code,''),status FROM payment_attempts WHERE order_id=(SELECT id FROM orders WHERE public_token=$1) AND provider='PAYOS'`,tok).Scan(&payURL,&qr,&attemptState)
+      if e!=nil && !errors.Is(e,pgx.ErrNoRows){serverError(c,e);return}
+    }
+    c.JSON(http.StatusOK, gin.H{"order_no": orderNo, "status": status, "payment_status": paymentStatus, "payment_method": method, "total_vnd": total, "created_at": created,"checkout_url":payURL,"qr_code":qr,"gateway_status":attemptState})
 }
 func (a *App) adminAuth(c *gin.Context) {
 	if a.Config.AdminKey == "" {
