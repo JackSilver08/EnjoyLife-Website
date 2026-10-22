@@ -19,7 +19,19 @@ export default function CheckoutPage() {
     e.preventDefault();
     if(!items.length || busy) return;
     setBusy(true); setError("");
-    if(!idempotencyKey.current) idempotencyKey.current = crypto.randomUUID();
+    if(!idempotencyKey.current){
+      // Keep the same order key after a failed network response or page refresh.
+      const fingerprint=items.map(i=>i.variantId+":"+i.quantity).sort().join("|");
+      const saved=sessionStorage.getItem("enjoylife_checkout_draft");
+      try{
+        const entry=saved?JSON.parse(saved) as {fingerprint:string;key:string;createdAt:number}:null;
+        if(entry?.fingerprint===fingerprint && Date.now()-entry.createdAt<3600000 && /^[0-9a-f-]{36}$/.test(entry.key)){
+          idempotencyKey.current=entry.key;
+        }
+      }catch{}
+      if(!idempotencyKey.current)idempotencyKey.current=crypto.randomUUID();
+      sessionStorage.setItem("enjoylife_checkout_draft",JSON.stringify({fingerprint,key:idempotencyKey.current,createdAt:Date.now()}));
+    }
     const form = new FormData(e.currentTarget);
     try {
       const response = await fetch("/api/store/orders", { method: "POST", headers:{ "Content-Type":"application/json" }, body:JSON.stringify({
@@ -35,6 +47,7 @@ export default function CheckoutPage() {
       if(!response.ok) throw new Error(payload.error || "Không thể tạo đơn hàng. Vui lòng thử lại.");
       const order = payload as OrderResponse;
       if(!order.order_token) throw new Error("API không trả mã tra cứu đơn.");
+      sessionStorage.removeItem("enjoylife_checkout_draft");
       clear();
       if(method==="PAYOS"){
         try{
