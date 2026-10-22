@@ -17,6 +17,10 @@ const created=await request("/api/store/admin/staff",{method:"POST",cookie:admin
 ensure(created.status===201&&created.json?.id,"Cannot create staff via Next proxy: "+created.status+" "+created.text);
 const staff=await request("/api/store/auth/login",{method:"POST",body:{email,password:"InitialPassword2026!"}});
 ensure(staff.status===200&&staff.cookie&&staff.json?.user?.role==="STAFF","Staff cannot log in via Next proxy");
+const staffPage=await request("/admin/orders",{cookie:staff.cookie});
+ensure(staffPage.status===200&&staffPage.text.includes("KHU VỰC NHÂN VIÊN"),"Staff workspace HTML did not render");
+const deniedPage=await request("/admin/staff",{cookie:staff.cookie});
+ensure(deniedPage.text.includes("Không có quyền truy cập"),"Staff saw management page instead of forbidden screen");
 for(const path of ["admin/orders","admin/inventory","admin/products"]){
  const found=await request("/api/store/"+path,{cookie:staff.cookie});
  ensure(found.status===200,"Staff read failed: "+path+" "+found.status);
