@@ -32,6 +32,7 @@ func main() {
 		slog.Error("database unavailable", "error", err)
 		os.Exit(1)
 	}
+	if err = handlers.EnsurePaymentSchema(ctx, db); err != nil { slog.Error("payment migration", "error", err); os.Exit(1) }
 	if err = handlers.EnsureAccountSchema(ctx, db); err != nil { slog.Error("accounts migration", "error", err); os.Exit(1) }
 	if err = handlers.EnsureAdminAudit(ctx, db); err != nil { slog.Error("admin audit migration", "error", err); os.Exit(1) }
 	if err = handlers.EnsureBlogSchema(ctx, db); err != nil { slog.Error("blog migration", "error", err); os.Exit(1) }
