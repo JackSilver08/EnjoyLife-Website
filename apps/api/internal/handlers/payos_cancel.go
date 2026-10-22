@@ -20,7 +20,7 @@ func (a *App) finalizePayOSCancellation(ctx context.Context,code int64) error {
  WHERE pa.provider='PAYOS' AND pa.provider_order_code=$1 FOR UPDATE OF pa,o`,code).Scan(&orderID,&orderState,&paymentState)
  if err!=nil{return err}
  if orderState=="CANCELLED"{return nil}
- if paymentState=="PAID"{return errors.New("payment already received")}
+ if paymentState!="UNPAID"{return errors.New("payment requires review or has already been received")}
  if orderState!="PENDING_CONFIRMATION"&&orderState!="CONFIRMED"&&orderState!="PREPARING"{return errors.New("order cannot be cancelled at this stage")}
  rows,err:=tx.Query(ctx,`SELECT variant_id::text,quantity FROM order_items WHERE order_id=$1 ORDER BY variant_id FOR UPDATE`,orderID)
  if err!=nil{return err}
@@ -51,7 +51,7 @@ func (a *App) cancelPayOSOrder(c *gin.Context){
  if err!=nil{serverError(c,err);return}
  if method!="PAYOS"{c.JSON(409,gin.H{"error":"Đây không phải đơn payOS."});return}
  if orderState=="CANCELLED"{c.JSON(200,gin.H{"status":"CANCELLED"});return}
- if paymentState=="PAID"{c.JSON(409,gin.H{"error":"Đơn đã thanh toán; vui lòng liên hệ cửa hàng để xử lý."});return}
+ if paymentState!="UNPAID"{c.JSON(409,gin.H{"error":"Giao dịch đã nhận tiền hoặc cần đối soát; không thể hủy tự động."});return}
  if orderState!="PENDING_CONFIRMATION"||code==nil{c.JSON(409,gin.H{"error":"Đơn đang được xử lý hoặc chưa có link thanh toán; hãy liên hệ cửa hàng."});return}
  if !a.payOSReady(){c.JSON(503,gin.H{"error":"Chưa kết nối được payOS."});return}
  status,err:=a.payOS().Get(ctx,*code)
@@ -59,7 +59,7 @@ func (a *App) cancelPayOSOrder(c *gin.Context){
   c.JSON(503,gin.H{"error":"Không xác minh được tình trạng thanh toán. Không hủy để tránh mất tiền."});return
  }
  if status.Status=="PAID"&&status.AmountPaid>=amount{
-  _,err=a.DB.Exec(ctx,`UPDATE orders SET payment_status='PAID' WHERE public_token=$1 AND payment_status='UNPAID'`,token)
+  _,err=a.recordProviderPaid(ctx,*code,amount)
   if err!=nil{serverError(c,err);return}
   c.JSON(409,gin.H{"error":"Thanh toán đã được ngân hàng xác nhận, không thể hủy."});return
  }
