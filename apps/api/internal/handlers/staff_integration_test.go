@@ -56,7 +56,7 @@ func TestAdminIntegrationStaff(t *testing.T) {
  }
  for _,test:=range []struct{method,path string}{
   {"GET","/api/v1/admin/users"},{"GET","/api/v1/admin/staff"},{"GET","/api/v1/admin/dashboard"},
-  {"POST","/api/v1/admin/products"},{"PATCH","/api/v1/admin/inventory/00000000-0000-0000-0000-000000000000"},
+  {"POST","/api/v1/admin/products"},{"POST","/api/v1/admin/staff"},
  } {
   if rec:=send(test.method,test.path,nil,staffCookie);rec.Code!=403{t.Fatalf("staff %s %s=%d",test.method,test.path,rec.Code)}
  }
