@@ -8,8 +8,7 @@ import (
  "errors"
  "fmt"
  "net/http"
- "strconv"
- "strings"
+  "strings"
  "time"
 
  "github.com/enjoy-life/store-api/internal/payment"
@@ -141,6 +140,5 @@ func (a *App) payOSStatus(c *gin.Context){
  c.JSON(200,gin.H{"payment_status":state,"provider_status":provider.Status})
 }
 func (a *App) cancelPayOS(c *gin.Context){
- c.JSON(501,gin.H{"error":"Để tránh hoàn tiền hoặc mất hàng khi ngân hàng đang xử lý, vui lòng liên hệ cửa hàng để hủy giao dịch payOS."})
+ a.cancelPayOSOrder(c)
 }
-func payOSCodeString(code int64)string{return strconv.FormatInt(code,10)}
