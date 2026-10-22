@@ -92,6 +92,13 @@ func (p PayOS) Create(ctx context.Context,code,amount int64,returnURL,cancelURL 
  u,err:=url.Parse(out.CheckoutURL);if err!=nil||u.Scheme!="https"||u.Host!="pay.payos.vn"{return Link{},errors.New("unsafe payOS payment URL")}
  return out,nil
 }
+func (p PayOS) Cancel(ctx context.Context,code int64)(Status,error){
+ var out Status
+ err:=p.call(ctx,"POST","/v2/payment-requests/"+strconv.FormatInt(code,10)+"/cancel",map[string]string{"cancellationReason":"Customer requested cancellation"},&out)
+ if err!=nil{return out,err}
+ if out.OrderCode!=code||out.Status!="CANCELLED"||out.AmountPaid>0{return Status{},errors.New("payOS did not confirm cancellation")}
+ return out,nil
+}
 func (p PayOS) Get(ctx context.Context,code int64)(Status,error){
  var out Status
  err:=p.call(ctx,"GET","/v2/payment-requests/"+strconv.FormatInt(code,10),nil,&out)
