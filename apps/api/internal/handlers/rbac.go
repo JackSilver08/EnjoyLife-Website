@@ -12,9 +12,10 @@ const staffPermissionKey = "staff_permission_verified"
 // staffCanAccess is a default-deny permission matrix. STAFF may only read
 // operational data; mutations and account-management always require ADMIN.
 func staffCanAccess(method, route string) bool {
-	if method != http.MethodGet {
-		return false
+	if method == http.MethodPatch {
+		return route == "/api/v1/admin/orders/:no/status" || route == "/api/v1/admin/inventory/:id"
 	}
+	if method != http.MethodGet {return false}
 	switch route {
 	case "/api/v1/admin/orders",
 		"/api/v1/admin/products",
