@@ -8,7 +8,8 @@ import (
  "errors"
  "fmt"
  "net/http"
-  "strings"
+ "net/url"
+ "strings"
  "time"
 
  "github.com/enjoy-life/store-api/internal/payment"
@@ -19,11 +20,20 @@ import (
 func (a *App) payOS() payment.PayOS {
  return payment.PayOS{ClientID:a.Config.PayOSClientID,APIKey:a.Config.PayOSAPIKey,ChecksumKey:a.Config.PayOSChecksumKey,BaseURL:a.Config.PayOSBaseURL}
 }
-func (a *App) payOSReady()bool{
- u:=strings.TrimSuffix(a.Config.WebOrigin,"/")
- return a.Config.PaymentEnabled && a.Config.PayOSClientID!="" && a.Config.PayOSAPIKey!="" && a.Config.PayOSChecksumKey!="" &&
- (strings.HasPrefix(u,"https://") || (strings.HasPrefix(u,"http://localhost:") && strings.TrimSpace(u)!=""))
+// payOSConfigStatus deliberately exposes no credentials or merchant identifiers.
+// Frontend diagnostics distinguish deployment configuration from payment errors.
+func (a *App) payOSConfigStatus() string {
+ if !a.Config.PaymentEnabled { return "disabled" }
+ if strings.TrimSpace(a.Config.PayOSClientID)=="" || strings.TrimSpace(a.Config.PayOSAPIKey)=="" || strings.TrimSpace(a.Config.PayOSChecksumKey)=="" {
+  return "missing_configuration"
+ }
+ u,err:=url.Parse(strings.TrimSpace(a.Config.WebOrigin))
+ if err!=nil || u.Host=="" || u.User!=nil || u.RawQuery!="" || u.Fragment!="" || (u.Path!=""&&u.Path!="/") { return "invalid_origin" }
+ if u.Scheme=="https" { return "enabled" }
+ if u.Scheme=="http" && (u.Hostname()=="localhost" || u.Hostname()=="127.0.0.1") && u.Port()!="" { return "enabled" }
+ return "invalid_origin"
 }
+func (a *App) payOSReady()bool{return a.payOSConfigStatus()=="enabled"}
 func validToken(s string)bool{
  if len(s)!=48{return false}
  _,err:=hex.DecodeString(s);return err==nil
