@@ -103,3 +103,25 @@ The order management page now provides a **next-state dropdown and an explicit U
 For COD, cancellation is available before shipping; payment collection can be confirmed after delivery. For payOS, unpaid orders may **not** be fulfilled; merchant must wait for an authenticated payment signal. Invalid transitions display an inline error on the affected order row.
 
 The CI regression goes through Next.js `/api/store/admin/orders/:no/status`, Gin, and disposable PostgreSQL; it tests the actual browser proxy rather than only calling Gin handlers directly. For a local environment that still fails, inspect the row's specific error, then use `docker compose logs --tail=100 api web`; update the source and recreate containers without deleting the PostgreSQL data volume.
+
+### If local payOS setup ends with HTTP 503
+
+An API container displaying `Started` is **not yet healthy**. The Go development command compiles after container startup. Calling the Next.js BFF immediately can return HTTP 503 until Gin accepts requests. This is not proof that payOS credentials are invalid.
+
+The Windows setup script now waits for the API to become **HEALTHY** using `docker compose up --wait api`, then checks the direct API and website proxy separately.
+
+If your keys were already saved, **do not re-enter them**. To retry the checks without editing `.env`:
+
+```powershell
+docker compose up -d --wait --wait-timeout 180 api
+.\scripts\configure-payos.ps1 -CheckOnly
+```
+
+You can also check the two endpoints manually:
+
+```powershell
+Invoke-RestMethod http://localhost:8081/api/v1/payments/config
+Invoke-RestMethod http://localhost:3000/api/store/payments/config
+```
+
+If the direct API fails, run `docker compose ps` and `docker compose logs --tail=80 api`. If direct API succeeds and proxy fails, run `docker compose up -d --wait web` and `docker compose logs --tail=80 web`. Redact credentials, personal data, and URLs containing private order tokens before sharing any log. A `payos_enabled: true` response only confirms configuration, **not** the validity of the merchant keys with payOS or receipt of money.
