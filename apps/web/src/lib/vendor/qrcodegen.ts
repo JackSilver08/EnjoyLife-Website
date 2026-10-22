@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-namespace, @typescript-eslint/no-unused-vars, prefer-const -- Vendored upstream MIT QR generator; preserve upstream algorithm verbatim. */
 /* 
  * QR Code generator library (TypeScript)
  * 
