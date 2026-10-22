@@ -13,3 +13,6 @@
 .payos-payment-success p{font-size:13px;line-height:1.7;margin:9px 0 0;color:#3d6948}
 .payos-note{color:#236339}
 @media(max-width:650px){.payos-payment-panel{padding:20px}.payos-payment-actions{flex-direction:column;align-items:stretch}.payos-payment-actions .button-dark,.payos-refresh{width:100%;justify-content:center}}
+
+.payos-cancel{margin-top:15px;background:transparent;border:1px solid #ac6b64;color:#883f36;font-size:12px;padding:11px 13px}
+.payos-cancel:hover{background:#f7e6e2}
