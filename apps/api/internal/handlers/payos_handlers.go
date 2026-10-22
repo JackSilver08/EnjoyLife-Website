@@ -137,6 +137,12 @@ func (a *App) payOSStatus(c *gin.Context){
   if err!=nil{serverError(c,err);return}
   c.JSON(200,gin.H{"payment_status":"PAID"});return
  }
+ if (provider.Status=="CANCELLED"||provider.Status=="EXPIRED")&&provider.AmountPaid==0 {
+  if err=a.finalizePayOSCancellation(ctx,*code);err!=nil{
+   c.JSON(503,gin.H{"payment_status":state,"error":"payOS đã kết thúc giao dịch nhưng hệ thống chưa đồng bộ được đơn."});return
+  }
+  c.JSON(200,gin.H{"payment_status":"UNPAID","provider_status":provider.Status,"order_status":"CANCELLED"});return
+ }
  c.JSON(200,gin.H{"payment_status":state,"provider_status":provider.Status})
 }
 func (a *App) cancelPayOS(c *gin.Context){
