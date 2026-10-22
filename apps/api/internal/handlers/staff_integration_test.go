@@ -63,6 +63,32 @@ func TestAdminIntegrationStaff(t *testing.T) {
  reg:=send("POST","/api/v1/auth/register",map[string]string{"email":"customer-"+time.Now().Format("150405.000000000")+"@example.test","name":"Test Customer","password":"customerPassword2026!"},nil)
  if reg.Code!=200{t.Fatalf("customer register=%d %s",reg.Code,reg.Body.String())}
  if rec:=send("GET","/api/v1/admin/orders",nil,cookieOf(reg));rec.Code!=403{t.Fatalf("customer admin access=%d",rec.Code)}
+
+ // Staff operations must be enforced by the API and write an audit trail.
+ if err=EnsureProductCatalogSchema(ctx,db);err!=nil{t.Fatal(err)}
+ product:=send("POST","/api/v1/admin/products",map[string]any{
+  "name":"Sprint 7 staff item","slug":"sprint7-"+time.Now().Format("150405000000000"),
+  "description":"Integration","category":"ao","collection":"Test",
+  "image_url":"","color":"Black","size":"M","price_vnd":199000,"opening_stock":6,"published":true,
+ },admin)
+ if product.Code!=201{t.Fatalf("staff fixture product=%d %s",product.Code,product.Body.String())}
+ var item struct{VariantID string `json:"variant_id"`}
+ if err=json.Unmarshal(product.Body.Bytes(),&item);err!=nil{t.Fatal(err)}
+ stock:=send("PATCH","/api/v1/admin/inventory/"+item.VariantID,map[string]any{"action":"RECEIVE","quantity":3,"reason":"Sprint 7 staff restock"},staffCookie)
+ if stock.Code!=200{t.Fatalf("staff stock update=%d %s",stock.Code,stock.Body.String())}
+ order:=send("POST","/api/v1/orders",map[string]any{
+  "client_order_key":"staff-test-"+time.Now().Format("150405.000000000"),
+  "customer_name":"Staff Test Customer","customer_phone":"0901234567",
+  "shipping_address":"Valid integration test address","payment_method":"COD",
+  "items":[]map[string]any{{"variant_id":item.VariantID,"quantity":1}},
+ },nil)
+ if order.Code!=201{t.Fatalf("staff fixture order=%d %s",order.Code,order.Body.String())}
+ var orderData struct{OrderNo string `json:"order_no"`}
+ if err=json.Unmarshal(order.Body.Bytes(),&orderData);err!=nil{t.Fatal(err)}
+ confirmed:=send("PATCH","/api/v1/admin/orders/"+orderData.OrderNo+"/status",map[string]string{"status":"CONFIRMED"},staffCookie)
+ if confirmed.Code!=200{t.Fatalf("staff order status=%d %s",confirmed.Code,confirmed.Body.String())}
+ if rec:=send("POST","/api/v1/admin/orders/"+orderData.OrderNo+"/paid",nil,staffCookie);rec.Code!=403{t.Fatalf("staff can mark COD paid: %d",rec.Code)}
+
  disabled:=true
  change:=send("PATCH","/api/v1/admin/staff/"+staff.ID,map[string]bool{"disabled":disabled},admin)
  if change.Code!=200{t.Fatalf("disable=%d %s",change.Code,change.Body.String())}
