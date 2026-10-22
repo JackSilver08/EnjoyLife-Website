@@ -516,7 +516,7 @@ html{scroll-padding-top:calc(82px + 18px)}
 .journal-article-meta time{white-space:nowrap;font-weight:400}
 .journal-article-card h3{font:normal clamp(28px,2.75vw,43px)/1.17 var(--serif);letter-spacing:-.035em;margin:0 0 14px}
 .journal-article-card h3 a:hover{color:var(--accent)}
-.journal-article-card>p{line-height:1.8;color:#75786f;font-size:14px;margin:0 0 20px;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+.journal-article-card>p{line-height:1.8;color:#75786f;font-size:14px;margin:0 0 20px;display:-webkit-box;line-clamp:3;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
 .journal-card-read{display:inline-flex;gap:8px;align-items:center;border-bottom:1px solid #8c8f87;padding-bottom:8px;font-size:10px;letter-spacing:.11em;font-weight:700}
 .journal-filters{padding:20px 0 26px;border-top:1px solid var(--line);border-bottom:1px solid var(--line);margin-bottom:26px}
 .journal-categories,.journal-tag-filter{display:flex;flex-wrap:wrap;align-items:center;gap:9px}
