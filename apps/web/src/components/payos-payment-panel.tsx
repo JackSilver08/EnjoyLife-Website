@@ -18,6 +18,7 @@ export function PayOSPaymentPanel({token,initialPaymentStatus,initialCheckoutURL
      const res=await fetch("/api/store/orders/"+token+"/payment-status",{cache:"no-store"});
      const data=await res.json();
      if(data.payment_status==="PAID"){setStatus("PAID");setError("");setNotice("Đã xác minh thanh toán thành công qua payOS.");router.refresh();return}
+     if(data.order_status==="CANCELLED"){setCancelled(true);setError("");setNotice("Giao dịch payOS đã kết thúc, đơn hàng đã được hủy và hoàn lại số lượng giữ kho.");router.refresh();return}
      if(!res.ok&&res.status!==503)return;
    }catch{ /* A transient offline state must not be interpreted as a successful payment. */ }
  }
