@@ -13,7 +13,7 @@ The home page `/#contact` embeds an AJAX contact form in the dark-green contact 
 ## Important Formspree account steps
 
 1. Open the form named **EnjoyLife Contact** in your Formspree dashboard.
-2. Confirm its **Target Email** or Workflow Email destination is the verified address `btkahthy0402@gmail.com`. Formspree controls mail delivery, not the website code.
+2. Confirm its **Target Email** or Workflow Email destination is the verified private email address you selected in Formspree. Formspree controls mail delivery, not the website code.
 3. Submit **one manual test message** from the running website in Microsoft Edge; verify it appears in the Formspree Submissions page and the email inbox (also check Spam/Junk).
 4. Enable Formspree spam protection and, on production, configure its domain restrictions for the real published domain.
 5. Never put Formspree management API tokens in frontend code. Do not run load tests against the live form endpoint.
