@@ -38,10 +38,8 @@ func (a *App) reconcileExpiredPayOS(parent context.Context){
   if ctx.Err()!=nil{return}
   status,err:=api.Get(ctx,p.code);if err!=nil||status.OrderCode!=p.code||status.Amount!=p.amount{continue}
   if status.Status=="PAID"&&status.AmountPaid>=p.amount{
-   _,_=a.DB.Exec(ctx,`UPDATE orders SET payment_status='PAID'
-    WHERE id=(SELECT order_id FROM payment_attempts WHERE provider='PAYOS' AND provider_order_code=$1)
-    AND payment_method='PAYOS' AND payment_status='UNPAID'`,p.code)
-   _,_=a.DB.Exec(ctx,`UPDATE payment_attempts SET status='PAID',updated_at=now() WHERE provider='PAYOS' AND provider_order_code=$1`,p.code)
+   // Shared transaction serializes reconciliation against webhook/cancellation.
+   _,_=a.recordProviderPaid(ctx,p.code,p.amount)
    continue
   }
   if status.AmountPaid>0{continue}
