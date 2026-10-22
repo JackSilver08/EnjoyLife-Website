@@ -3,8 +3,8 @@ import {useEffect,useState} from "react";
 import {useRouter} from "next/navigation";
 import {ArrowUpRight,CheckCircle2,RefreshCw} from "lucide-react";
 
-type Props={token:string;initialPaymentStatus:string;initialCheckoutURL:string};
-export function PayOSPaymentPanel({token,initialPaymentStatus,initialCheckoutURL}:Props){
+type Props={token:string;initialPaymentStatus:string;initialCheckoutURL:string;initialGatewayStatus?:string};
+export function PayOSPaymentPanel({token,initialPaymentStatus,initialCheckoutURL,initialGatewayStatus}:Props){
  const router=useRouter();
  const [status,setStatus]=useState(initialPaymentStatus);
  const [url,setURL]=useState(initialCheckoutURL);
@@ -12,18 +12,20 @@ export function PayOSPaymentPanel({token,initialPaymentStatus,initialCheckoutURL
  const [error,setError]=useState("");
  const [notice,setNotice]=useState("");
  const [cancelled,setCancelled]=useState(false);
+ const [review,setReview]=useState(initialPaymentStatus==="REVIEW_REQUIRED"||initialGatewayStatus==="REVIEW_REQUIRED");
  async function check(){
-   if(status==="PAID")return;
+   if(status==="PAID"||review||cancelled)return;
    try{
      const res=await fetch("/api/store/orders/"+token+"/payment-status",{cache:"no-store"});
      const data=await res.json();
      if(data.payment_status==="PAID"){setStatus("PAID");setError("");setNotice("Đã xác minh thanh toán thành công qua payOS.");router.refresh();return}
      if(data.order_status==="CANCELLED"){setCancelled(true);setError("");setNotice("Giao dịch payOS đã kết thúc, đơn hàng đã được hủy và hoàn lại số lượng giữ kho.");router.refresh();return}
+     if(data.payment_status==="REVIEW_REQUIRED"){setReview(true);setError("");router.refresh();return}
      if(!res.ok&&res.status!==503)return;
    }catch{ /* A transient offline state must not be interpreted as a successful payment. */ }
  }
- useEffect(()=>{if(status==="PAID")return;const timer=window.setInterval(()=>{void check()},20000);return()=>window.clearInterval(timer); // eslint-disable-next-line react-hooks/exhaustive-deps
- },[status,token]);
+ useEffect(()=>{if(status==="PAID"||cancelled||review)return;const timer=window.setInterval(()=>{void check()},20000);return()=>window.clearInterval(timer); // eslint-disable-next-line react-hooks/exhaustive-deps
+ },[status,token,review,cancelled]);
  async function cancelOrder(){
    if(!window.confirm("Hủy đơn thanh toán QR? Nếu payOS đã nhận tiền, đơn sẽ không thể hủy."))return;
    setBusy(true);setError("");
@@ -49,7 +51,7 @@ export function PayOSPaymentPanel({token,initialPaymentStatus,initialCheckoutURL
    }catch(e){setError(e instanceof Error?e.message:"Chưa mở được payOS.");setBusy(false)}
  }
  return <section className="payos-payment-panel" aria-label="Thanh toán payOS">
-  {cancelled?<div className="payos-payment-success"><CheckCircle2 size={24}/><strong>Đơn QR đã hủy an toàn.</strong></div>:status==="PAID"?<div className="payos-payment-success"><CheckCircle2 size={24}/><div><strong>Đã thanh toán thành công</strong><p>Giao dịch đã được xác nhận từ payOS. Cửa hàng sẽ xử lý đơn của bạn.</p></div></div>:
+  {review?<div role="alert" className="payos-payment-review"><strong>Giao dịch cần đối soát</strong><p>payOS ghi nhận tình huống thanh toán bất thường hoặc tiền đến sau khi hủy đơn. Vui lòng liên hệ cửa hàng kèm mã đơn; không chuyển khoản thêm và không đặt lại đơn cho tới khi được xác nhận.</p></div>:cancelled?<div className="payos-payment-success"><CheckCircle2 size={24}/><strong>Đơn QR đã hủy an toàn.</strong></div>:status==="PAID"?<div className="payos-payment-success"><CheckCircle2 size={24}/><div><strong>Đã thanh toán thành công</strong><p>Giao dịch đã được xác nhận từ payOS. Cửa hàng sẽ xử lý đơn của bạn.</p></div></div>:
   <>
    <strong>Thanh toán bằng QR qua payOS</strong>
    <p>Đơn của bạn đang <b>chưa thanh toán</b>. Mở trang payOS để quét mã bằng ứng dụng ngân hàng. Không chuyển khoản tới bất kỳ tài khoản nào ngoài thông tin chính thức do payOS hiển thị.</p>
