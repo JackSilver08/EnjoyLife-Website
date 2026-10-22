@@ -134,6 +134,22 @@ ensure(facets.status===200&&facets.json?.colors?.includes("Trắng")&&facets.jso
 const matchCatalog=await call("/api/store/products/search?category=ao&color=Tr%E1%BA%AFng&size=M&min_price=100000&max_price=200000&sort=price-asc&page=1");
 ensure(matchCatalog.status===200&&matchCatalog.json?.items?.some(x=>x.id===newItem.json.id)
  &&matchCatalog.json?.page_size===12,"Filtered catalog missing product: "+matchCatalog.text);
+// The card price must reflect the filtered variant (not a cheaper, other-size SKU).
+const distinctSize=await call("/api/store/admin/products/"+newItem.json.id+"/variants",{cookie});
+const sizeL=distinctSize.json?.items?.find(v=>v.size==="L");
+ensure(distinctSize.status===200&&sizeL,"Cannot find size L to verify facet pricing");
+const changedPrice=await call("/api/store/admin/variants/"+sizeL.id,{
+ method:"PATCH",cookie,body:{price_vnd:199000,active:true}
+});
+ensure(changedPrice.status===200,"Could not set size L price");
+const sizedCatalog=await call("/api/store/products/search?category=ao&color=Tr%E1%BA%AFng&size=L&min_price=180000&max_price=220000");
+const sizeCard=sizedCatalog.json?.items?.find(x=>x.id===newItem.json.id);
+ensure(sizedCatalog.status===200&&sizeCard?.price_vnd===199000&&sizeCard?.available===1,
+ "Filtered SKU price/stock mismatch: "+sizedCatalog.text);
+const excludedCheap=await call("/api/store/products/search?category=ao&color=Tr%E1%BA%AFng&size=M&min_price=180000&max_price=220000");
+ensure(excludedCheap.status===200&&!excludedCheap.json?.items?.some(x=>x.id===newItem.json.id),
+ "Price facet erroneously matched a different size");
+
 const filteredOut=await call("/api/store/products/search?category=ao&color=Tr%E1%BA%AFng&size=XXXL&min_price=100000&max_price=200000");
 ensure(filteredOut.status===200&&filteredOut.json?.total===0,"Unavailable size returned products");
 const badPricing=await call("/api/store/products/search?min_price=300000&max_price=100000");
