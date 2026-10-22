@@ -29,10 +29,11 @@ func(a *App) adminChangeOrderStatus(c *gin.Context){
  err=tx.QueryRow(ctx,`SELECT id::text,status FROM orders WHERE order_no=$1 FOR UPDATE`,c.Param("no")).Scan(&id,&current)
  if errors.Is(err,pgx.ErrNoRows){c.JSON(http.StatusNotFound,gin.H{"error":"Không tìm thấy đơn hàng."});return}
  if err!=nil{serverError(c,err);return}
- if req.Status=="CANCELLED"{
-  var method string
-  if err=tx.QueryRow(ctx,`SELECT payment_method FROM orders WHERE id=$1`,id).Scan(&method);err!=nil{serverError(c,err);return}
-  if method=="PAYOS"{c.JSON(409,gin.H{"error":"Đơn payOS cần hủy link tại cổng thanh toán trước; không thể hủy trực tiếp."});return}
+ var method,paymentState string
+ if err=tx.QueryRow(ctx,`SELECT payment_method,payment_status FROM orders WHERE id=$1`,id).Scan(&method,&paymentState);err!=nil{serverError(c,err);return}
+ if method=="PAYOS" {
+  if req.Status=="CANCELLED"{c.JSON(409,gin.H{"error":"Hủy link payOS và giải phóng kho tại cổng thanh toán trước."});return}
+  if paymentState!="PAID"{c.JSON(409,gin.H{"error":"Đơn payOS chưa xác nhận thanh toán; không được chuyển sang xử lý hoặc giao hàng."});return}
  }
  if !canTransition(current,req.Status){c.JSON(409,gin.H{"error":"Chuyển trạng thái không hợp lệ."});return}
  // Keep the original reservations until packing/shipping or cancellation.
