@@ -24,3 +24,16 @@
 .payos-embed-frame{width:100%;max-width:100%;overflow:hidden;margin-top:16px}
 .payos-embed-frame:not(:empty){min-height:560px;border:1px solid #d5dfd1;background:#fff}
 .payos-hosted-link{display:inline-flex;align-items:center;gap:8px;margin:12px 0 0;color:#275239;font-size:13px;text-decoration:underline;text-underline-offset:3px}
+
+/* Sprint 8.1: per-row order transitions, messages remain visible beside the edited order. */
+.order-status-actions{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:10px}
+.order-status-label{width:100%;font-size:11px;color:#59695d}
+.order-status-select{min-width:145px;max-width:220px;width:100%;min-height:40px;background:#fff;border:1px solid #b8c5b7;padding:8px 10px;color:#27372c;font-size:12px}
+.order-status-actions button,.order-cod-paid{border:0;background:#314d3b;color:#fff;padding:11px 14px;min-height:40px;font-size:12px;cursor:pointer}
+.order-status-actions button:disabled,.order-cod-paid:disabled{opacity:.5;cursor:not-allowed}
+.order-cod-paid{margin-top:10px;background:#294737;display:block}
+.order-status-guidance{display:block;margin-top:8px;font-size:11px;color:#716652;max-width:300px}
+.order-status-feedback{font-size:12px;line-height:1.6;margin:9px 0 0;max-width:340px;white-space:normal}
+.order-status-ok{color:#286239}
+.order-status-error{color:#a02e26}
+@media(max-width:650px){.order-status-actions{flex-direction:column;align-items:stretch}.order-status-select{max-width:none;width:100%}}

@@ -103,6 +103,7 @@ jobs:
         run: |
           node --check apps/web/scripts/journal-docker-e2e.mjs
           node --check apps/web/scripts/staff-docker-e2e.mjs
+          node --check apps/web/scripts/orders-payment-docker-e2e.mjs
           node --check apps/web/scripts/check-origin.mjs
       - name: Build web development image
         run: docker compose build web
@@ -135,6 +136,8 @@ jobs:
         run: node apps/web/scripts/journal-docker-e2e.mjs
       - name: Sprint 7 staff RBAC end-to-end via Next proxy and real PostgreSQL
         run: node apps/web/scripts/staff-docker-e2e.mjs
+      - name: Sprint 8.1 order status and payment readiness E2E via browser proxy
+        run: node apps/web/scripts/orders-payment-docker-e2e.mjs
       - name: Show container logs on failure
         if: failure()
         run: docker compose logs --tail=180 web api db
