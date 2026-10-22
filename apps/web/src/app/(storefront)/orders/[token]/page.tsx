@@ -21,7 +21,7 @@ export default async function OrderPage({params}:{params:Promise<{token:string}>
   <div className="status-check"><Check size={30}/></div>
   <span className="eyebrow">ĐƠN HÀNG / ENJOY LIFE</span>
   <h1>Đã nhận<br/><em>đơn hàng.</em></h1>
-  <p>{isPayOS&&!paid?"Đơn hàng đã được tạo, nhưng giao dịch QR chưa được xác nhận.":"Cửa hàng đã nhận đơn và sẽ liên hệ khi cần."}</p>
+  <p>{order.status==="CANCELLED"?"Đơn hàng đã được hủy.":isPayOS&&!paid?"Đơn hàng đã được tạo, nhưng giao dịch QR chưa được xác nhận.":"Cửa hàng đã nhận đơn và sẽ liên hệ khi cần."}</p>
   <div className="status-table">
    <div><span>Mã đơn</span><strong>{order.order_no}</strong></div>
    <div><span>Trạng thái</span><strong>{orderStatus[order.status]??order.status}</strong></div>
@@ -29,7 +29,7 @@ export default async function OrderPage({params}:{params:Promise<{token:string}>
    <div><span>Thanh toán</span><strong>{paymentStatus[order.payment_status]??order.payment_status}</strong></div>
    <div><span>Tổng tiền hàng</span><strong>{money(order.total_vnd)}</strong></div>
   </div>
-  {isPayOS&&<PayOSPaymentPanel token={token} initialPaymentStatus={order.payment_status} initialCheckoutURL={order.checkout_url??""}/>}
+  {isPayOS&&order.status!=="CANCELLED"&&<PayOSPaymentPanel token={token} initialPaymentStatus={order.payment_status} initialCheckoutURL={order.checkout_url??""}/>}
   <p className="status-note">Hãy giữ kín đường dẫn này vì nó dùng để tra cứu trạng thái đơn. Việc quay lại website không tự xác nhận đã nhận tiền.</p>
   <Link className="button-dark" href="/shop">TIẾP TỤC KHÁM PHÁ <ArrowUpRight size={16}/></Link>
  </div>
