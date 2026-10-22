@@ -11,7 +11,7 @@ export function useAdminData<T>(path:string){
  useEffect(()=>{const timer=window.setTimeout(()=>{void reload()},0);return()=>window.clearTimeout(timer)},[reload]);
  return {data,loading,error,reload};
 }
-export async function adminAction(path:string,method:"POST"|"PATCH",body?:unknown){
+export async function adminAction(path:string,method:"POST"|"PATCH"|"PUT",body?:unknown){
  const response=await fetch("/api/store/"+path,{method,headers:{"Content-Type":"application/json"},body:JSON.stringify(body??{})});
  const payload=await response.json();
  if(!response.ok)throw new Error(payload.error||"Thao tác thất bại.");
