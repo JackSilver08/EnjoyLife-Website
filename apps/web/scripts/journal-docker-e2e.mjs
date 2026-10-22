@@ -92,6 +92,37 @@ ensure(product&&!product.published&&product.category==="giay-dep"&&product.image
 ensure(!(await call("/shop")).text.includes(csvSlug),"Hidden imported product appeared in Shop");
 console.log("Sprint 5 media & content E2E PASSED: upload -> reject forged files/CSRF -> image roundtrip -> Hero -> CSV hidden import");
 
+const skuAutoSlug="auto-sku-"+key;
+const newItem=await call("/api/store/admin/products",{method:"POST",cookie,body:{
+ name:"Áo thử nghiệm mã SP",slug:skuAutoSlug,description:"Kiểm thử mã tự cấp và xóa mềm",
+ category:"ao",image_url:media.url,collection:"",color:"Trắng",size:"M",
+ price_vnd:129000,opening_stock:2,published:false,
+}});
+ensure(newItem.status===201&&/^SP-[0-9]{3,}$/.test(newItem.json?.sku),"No auto SKU from Go API: "+newItem.text);
+const more=await call("/api/store/admin/products/"+newItem.json.id+"/variants",{method:"POST",cookie,body:{
+ color:"Trắng",size:"L",price_vnd:129000,opening_stock:1,
+}});
+ensure(more.status===201&&/^SP-[0-9]{3,}$/.test(more.json?.sku)&&more.json.sku!==newItem.json.sku,
+ "Variant SKU not distinct: "+more.text);
+const noAdminDelete=await call("/api/store/admin/products/"+newItem.json.id,{method:"DELETE"});
+ensure([401,403].includes(noAdminDelete.status),"Unauthenticated user could delete product");
+const removedSKU=await call("/api/store/admin/products/"+newItem.json.id,{method:"DELETE",cookie});
+ensure(removedSKU.status===200,"Admin archive rejected: "+removedSKU.status+" "+removedSKU.text);
+const deletedList=await call("/api/store/admin/products?view=trash",{cookie});
+ensure(deletedList.status===200&&deletedList.json?.items?.some(item=>item.id===newItem.json.id),
+ "Archived product missing from trash");
+const activeList=await call("/api/store/admin/products",{cookie});
+ensure(!activeList.json?.items?.some(item=>item.id===newItem.json.id),
+ "Archived product visible in active catalog");
+ensure((await call("/api/store/products/"+skuAutoSlug)).status===404,"Archived product publicly accessible");
+const restoredSKU=await call("/api/store/admin/products/"+newItem.json.id+"/restore",{method:"POST",cookie,body:{}});
+ensure(restoredSKU.status===200,"Could not restore archived product: "+restoredSKU.status+" "+restoredSKU.text);
+const postRestore=await call("/api/store/admin/products",{cookie});
+ensure(postRestore.json?.items?.some(item=>item.id===newItem.json.id&&item.published===false),
+ "Restored product must remain hidden pending review");
+console.log("Sprint 6.1 E2E PASSED: auto SP SKU -> variant SKU -> archive -> trash -> restore hidden");
+
+
 const payload={
  title:"Bài kiểm thử trực tiếp từ PostgreSQL",
  slug,
