@@ -1,10 +1,12 @@
 "use client";
 import {useState} from "react";
 import {adminAction,moneyVND,useAdminData} from "@/components/admin/admin-data";
+import {useAdminRole} from "@/components/admin/admin-shell";
 type Order={order_no:string;customer_name:string;phone?:string;shipping_address?:string;status:string;payment_status:string;payment_method?:string;total_vnd:number;created_at:string};
 const transitions:Record<string,string[]>={PENDING_CONFIRMATION:["CONFIRMED","CANCELLED"],CONFIRMED:["PREPARING","CANCELLED"],PREPARING:["SHIPPING","CANCELLED"],SHIPPING:["DELIVERED"],DELIVERED:["COMPLETED"]};
 const status:Record<string,string>={PENDING_CONFIRMATION:"Chờ xác nhận",CONFIRMED:"Đã xác nhận",PREPARING:"Đang chuẩn bị",SHIPPING:"Đang giao",DELIVERED:"Đã giao",COMPLETED:"Hoàn tất",CANCELLED:"Đã hủy"};
 export default function OrdersPage(){
+ const role=useAdminRole();
  const {data,loading,error,reload}=useAdminData<{items:Order[]}>("admin/orders");
  const [filter,setFilter]=useState("ALL");const [working,setWorking]=useState("");const [feedback,setFeedback]=useState("");
  const orders=(data?.items??[]).filter(o=>filter==="ALL"||o.status===filter);
@@ -28,6 +30,6 @@ export default function OrdersPage(){
  <td>{o.customer_name}{o.phone&&<small>{o.phone}</small>}{o.shipping_address&&<small>{o.shipping_address}</small>}</td>
  <td>{moneyVND(o.total_vnd)}</td><td><span className="admin-pill">{o.payment_status==="PAID"?"Đã thu tiền":"Chưa thu tiền"}</span><small>{o.payment_method??"COD"}</small></td>
  <td><strong>{status[o.status]??o.status}</strong><div className="admin-row-actions">{(transitions[o.status]??[]).map(next=><button disabled={working===o.order_no} key={next} onClick={()=>void change(o,next)} className={next==="CANCELLED"?"admin-danger":""}>{status[next]}</button>)}
- {o.payment_method==="COD"&&o.payment_status==="UNPAID"&&["DELIVERED","COMPLETED"].includes(o.status)&&<button disabled={working===o.order_no} onClick={()=>void paid(o)}>Xác nhận thu COD</button>}</div></td></tr>)}</tbody></table></div>}</section>
+  {role==="ADMIN"&&o.payment_method==="COD"&&o.payment_status==="UNPAID"&&["DELIVERED","COMPLETED"].includes(o.status)&&<button disabled={working===o.order_no} onClick={()=>void paid(o)}>Xác nhận thu COD</button>}</div></td></tr>)}</tbody></table></div>}</section>
  </>;
 }
