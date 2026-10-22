@@ -93,7 +93,7 @@ func (a *App) publicCatalogSearch(c *gin.Context) {
  if val:=c.Query("max_price");val!=""{n,err:=strconv.ParseInt(val,10,64);if err!=nil||n<0||n>1000000000{c.JSON(400,gin.H{"error":"Giá đến không hợp lệ."});return};maxPrice=n}
  if minPrice>maxPrice{c.JSON(400,gin.H{"error":"Khoảng giá không hợp lệ."});return}
  sortKey:=c.DefaultQuery("sort","newest")
- sorts:=map[string]string{"newest":"created_at DESC,id DESC","price-asc":"price_vnd ASC,id ASC","price-desc":"price_vnd DESC,id DESC"}
+ sorts:=map[string]string{"newest":"p.created_at DESC,p.id DESC","price-asc":"MIN(v.price_vnd) ASC,p.id ASC","price-desc":"MIN(v.price_vnd) DESC,p.id DESC"}
  order,ok:=sorts[sortKey];if !ok{c.JSON(400,gin.H{"error":"Sắp xếp không hợp lệ."});return}
  page,_:=strconv.Atoi(c.DefaultQuery("page","1"));if page<1{page=1};if page>1000{page=1000}
  const pageSize=12
