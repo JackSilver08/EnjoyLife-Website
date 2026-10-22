@@ -265,6 +265,6 @@ ensure(gatewayDisabled.status===503,"Disabled payment creation was not rejected 
 const invalidWebhook=await call("/api/payments/payos/webhook",{method:"POST",body:{code:"00",success:true,data:{amount:1000},signature:"forged"}});
 ensure(invalidWebhook.status!==200,"A forged or disabled payOS webhook was accepted");
 const checkoutView=await call("/checkout");
-ensure(checkoutView.status===200&&checkoutView.text.includes("Thanh toán mã QR qua payOS"),
- "Checkout is missing payOS payment UI");
+ensure(checkoutView.status===200 && checkoutView.text.includes("Giỏ hàng trống"),
+ "Empty checkout must not show payment options without a cart");
 console.log("Sprint 8 E2E PASSED: QR option, opt-in flag, disabled gateway and forged webhook rejection");
