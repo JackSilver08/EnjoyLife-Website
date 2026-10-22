@@ -60,17 +60,29 @@ func(a *App) adminCreateVariant(c *gin.Context){
 }
 func(a *App) adminUpdateVariant(c *gin.Context){
  actor:=a.requireAdmin(c);if actor==nil{return}
- var in struct{Price int64 `json:"price_vnd"`;Active bool `json:"active"`}
+ var in struct{Price int64 `json:"price_vnd"`;Active bool `json:"active"`;Color string `json:"color"`;Size string `json:"size"`}
  if c.ShouldBindJSON(&in)!=nil||in.Price<=0||in.Price>=1000000000{c.JSON(400,gin.H{"error":"Giá không hợp lệ."});return}
  ctx,cancel:=context.WithTimeout(c.Request.Context(),5*time.Second);defer cancel()
  tx,err:=a.DB.Begin(ctx);if err!=nil{serverError(c,err);return};defer tx.Rollback(ctx)
  var reserved int
- err=tx.QueryRow(ctx,`SELECT i.reserved FROM inventory i JOIN product_variants v ON v.id=i.variant_id WHERE v.id::text=$1 AND EXISTS(SELECT 1 FROM products p WHERE p.id=v.product_id AND p.archived_at IS NULL) FOR UPDATE OF i,v`,c.Param("id")).Scan(&reserved)
+ var oldColor,oldSize string
+ err=tx.QueryRow(ctx,`SELECT i.reserved,v.color,v.size FROM inventory i JOIN product_variants v ON v.id=i.variant_id
+ WHERE v.id::text=$1 AND EXISTS(SELECT 1 FROM products p WHERE p.id=v.product_id AND p.archived_at IS NULL) FOR UPDATE OF i,v`,c.Param("id")).Scan(&reserved,&oldColor,&oldSize)
  if errors.Is(err,pgx.ErrNoRows){c.JSON(404,gin.H{"error":"Không tìm thấy SKU."});return}
  if err!=nil{serverError(c,err);return}
  if !in.Active&&reserved>0{c.JSON(409,gin.H{"error":"Không thể ngừng bán SKU khi còn đơn đang giữ hàng."});return}
- _,err=tx.Exec(ctx,`UPDATE product_variants SET price_vnd=$1,active=$2 WHERE id::text=$3`,in.Price,in.Active,c.Param("id"))
- if err!=nil{serverError(c,err);return}
+ color,size:=strings.TrimSpace(in.Color),strings.TrimSpace(in.Size)
+ // Existing callers that only update price/active are still supported.
+ if color==""{color=oldColor};if size==""{size=oldSize}
+ if len(color)>40||len(size)>20{c.JSON(400,gin.H{"error":"Màu hoặc size quá dài."});return}
+ if (color!=oldColor||size!=oldSize){
+  if reserved>0{c.JSON(409,gin.H{"error":"Không thể sửa màu/size khi có đơn đang giữ hàng."});return}
+  var used bool
+  if err=tx.QueryRow(ctx,`SELECT EXISTS(SELECT 1 FROM order_items WHERE variant_id::text=$1)`,c.Param("id")).Scan(&used);err!=nil{serverError(c,err);return}
+  if used{c.JSON(409,gin.H{"error":"SKU từng phát sinh đơn; hãy ngừng bán và tạo biến thể mới để giữ lịch sử."});return}
+ }
+ _,err=tx.Exec(ctx,`UPDATE product_variants SET price_vnd=$1,active=$2,color=$3,size=$4 WHERE id::text=$5`,in.Price,in.Active,color,size,c.Param("id"))
+ if err!=nil{c.JSON(409,gin.H{"error":"Màu/size trùng hoặc dữ liệu không hợp lệ."});return}
  _,err=tx.Exec(ctx,`INSERT INTO admin_audit_logs(actor_id,action,target_id,details) VALUES($1,'VARIANT_EDIT',$2,$3)`,actor.ID,c.Param("id"),"price or active updated")
  if err!=nil{serverError(c,err);return}
  if err=tx.Commit(ctx);err!=nil{serverError(c,err);return}
