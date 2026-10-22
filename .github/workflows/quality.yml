@@ -132,6 +132,9 @@ jobs:
           docker compose ps
           curl --fail --silent --show-error --max-time 15 http://127.0.0.1:3000/api/health | grep '"status":"ok"'
           docker compose exec -T web node -p 'require.resolve("@tiptap/extension-image")'
+      - name: Verify local payOS healthcheck script without secrets
+        run: |
+          pwsh -NoProfile -NonInteractive -File scripts/configure-payos.ps1 -CheckOnly
       - name: Published Journal end-to-end via real Go and PostgreSQL
         run: node apps/web/scripts/journal-docker-e2e.mjs
       - name: Sprint 7 staff RBAC end-to-end via Next proxy and real PostgreSQL
