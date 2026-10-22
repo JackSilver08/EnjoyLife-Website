@@ -124,5 +124,51 @@ func TestPayOSIntegration(t *testing.T){
  if rec:=send("POST","/api/v1/orders/"+next.Token+"/payment-link",nil);rec.Code!=409{t.Fatalf("canceled order can still create checkout: %d",rec.Code)}
  var state string
  if err=db.QueryRow(ctx,"SELECT status FROM orders WHERE public_token=$1",next.Token).Scan(&state);err!=nil||state!="CANCELLED"{t.Fatalf("cancel did not release order state: %s %v",state,err)}
+
+ // Regression: a transfer delivered AFTER a successful cancellation must not
+ // resurrect the order or reserve stock that has already been returned.
+ var canceledCode int64
+ if err=db.QueryRow(ctx,`SELECT pa.provider_order_code FROM payment_attempts pa
+  JOIN orders o ON o.id=pa.order_id WHERE o.public_token=$1`,next.Token).Scan(&canceledCode);err!=nil{t.Fatal(err)}
+ signed:=func(code,amount int64,reference string)map[string]any{
+  data:=map[string]any{"orderCode":code,"amount":amount,"currency":"VND","code":"00","paymentLinkId":fmt.Sprintf("link-%d",code),"reference":reference}
+  message:=fmt.Sprintf("amount=%d&code=00&currency=VND&orderCode=%d&paymentLinkId=link-%d&reference=%s",amount,code,code,reference)
+  mac:=hmac.New(sha256.New,[]byte("fake-checksum"));mac.Write([]byte(message))
+  return map[string]any{"code":"00","success":true,"data":data,"signature":hex.EncodeToString(mac.Sum(nil))}
+ }
+ late:=send("POST","/api/v1/payments/payos/webhook",signed(canceledCode,329000,"late-after-cancel"))
+ if late.Code!=200||!bytes.Contains(late.Body.Bytes(),[]byte("review_required")){t.Fatalf("late transfer mishandled: %d %s",late.Code,late.Body.String())}
+ var lateOrderState,latePaymentState string
+ if err=db.QueryRow(ctx,"SELECT status,payment_status FROM orders WHERE public_token=$1",next.Token).Scan(&lateOrderState,&latePaymentState);err!=nil{t.Fatal(err)}
+ if lateOrderState!="CANCELLED"||latePaymentState!="REVIEW_REQUIRED"{t.Fatalf("late funds resurrected canceled order: %s/%s",lateOrderState,latePaymentState)}
+ var reservedAfterLate int
+ if err=db.QueryRow(ctx,"SELECT reserved FROM inventory WHERE variant_id=$1","30000000-0000-4000-8000-000000000001").Scan(&reservedAfterLate);err!=nil{t.Fatal(err)}
+ if reservedAfterLate!=reservedAfter{t.Fatalf("late funds modified canceled stock: %d -> %d",reservedAfter,reservedAfterLate)}
+ if rec:=send("POST","/api/v1/orders/"+next.Token+"/payment-link",nil);rec.Code!=409{t.Fatalf("late canceled transfer got new QR: %d",rec.Code)}
+ // Regression: signed payment with a mismatched amount is not marked PAID.
+ mismatch:=newOrder();if mismatch.Code!=201{t.Fatalf("third order: %d %s",mismatch.Code,mismatch.Body.String())}
+ var mismatchOrder struct{Token string `json:"order_token"`}
+ if err=json.Unmarshal(mismatch.Body.Bytes(),&mismatchOrder);err!=nil{t.Fatal(err)}
+ mismatchLink:=send("POST","/api/v1/orders/"+mismatchOrder.Token+"/payment-link",nil)
+ if mismatchLink.Code!=200{t.Fatalf("third payment link: %d %s",mismatchLink.Code,mismatchLink.Body.String())}
+ var mismatchCheckout struct{Code int64 `json:"order_code"`}
+ if err=json.Unmarshal(mismatchLink.Body.Bytes(),&mismatchCheckout);err!=nil{t.Fatal(err)}
+ partial:=send("POST","/api/v1/payments/payos/webhook",signed(mismatchCheckout.Code,1000,"partial-transfer"))
+ if partial.Code!=200||!bytes.Contains(partial.Body.Bytes(),[]byte("review_required")){t.Fatalf("partial payment not isolated: %d %s",partial.Code,partial.Body.String())}
+ var mismatchState string
+ if err=db.QueryRow(ctx,"SELECT payment_status FROM orders WHERE public_token=$1",mismatchOrder.Token).Scan(&mismatchState);err!=nil{t.Fatal(err)}
+ if mismatchState!="REVIEW_REQUIRED"{t.Fatalf("partial payment incorrectly finalized: %s",mismatchState)}
+ if rec:=send("POST","/api/v1/orders/"+mismatchOrder.Token+"/payment-link",nil);rec.Code!=409{t.Fatalf("mismatched payment reused checkout link: %d",rec.Code)}
+ // Regression: authenticated payOS status reconciliation marks an unpaid order paid.
+ checked:=newOrder();if checked.Code!=201{t.Fatalf("fourth order: %d %s",checked.Code,checked.Body.String())}
+ var checkedOrder struct{Token string `json:"order_token"`}
+ _=json.Unmarshal(checked.Body.Bytes(),&checkedOrder)
+ checkedLink:=send("POST","/api/v1/orders/"+checkedOrder.Token+"/payment-link",nil)
+ if checkedLink.Code!=200{t.Fatalf("fourth payment link: %d",checkedLink.Code)}
+ var checkedCheckout struct{Code int64 `json:"order_code"`}
+ _=json.Unmarshal(checkedLink.Body.Bytes(),&checkedCheckout)
+ mu.Lock();statuses[checkedCheckout.Code]="PAID";mu.Unlock()
+ verifiedStatus:=send("GET","/api/v1/orders/"+checkedOrder.Token+"/payment-status",nil)
+ if verifiedStatus.Code!=200||!bytes.Contains(verifiedStatus.Body.Bytes(),[]byte(`"payment_status":"PAID"`)){t.Fatalf("provider-paid status not reconciled: %d %s",verifiedStatus.Code,verifiedStatus.Body.String())}
  // CI should never use real merchant credentials or touch a real bank account.
 }
