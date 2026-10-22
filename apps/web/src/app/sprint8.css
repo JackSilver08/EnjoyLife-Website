@@ -16,3 +16,6 @@
 
 .payos-cancel{margin-top:15px;background:transparent;border:1px solid #ac6b64;color:#883f36;font-size:12px;padding:11px 13px}
 .payos-cancel:hover{background:#f7e6e2}
+.payos-payment-review{background:#fff7e8;border:1px solid #e5c8a0;padding:16px 18px;color:#654b2b}
+.payos-payment-review strong{display:block;font-size:18px}
+.payos-payment-review p{font-size:14px;line-height:1.7;margin:8px 0 0}
