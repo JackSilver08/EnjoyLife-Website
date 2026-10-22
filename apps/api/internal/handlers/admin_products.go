@@ -2,6 +2,9 @@ package handlers
 
 import (
  "context"
+ "errors"
+ "net/http"
+ "github.com/jackc/pgx/v5"
  "regexp"
  "strings"
  "time"
@@ -26,15 +29,18 @@ type productForm struct{
  Published bool `json:"published"`
 }
 func validProduct(v productForm)bool{
- return len(strings.TrimSpace(v.Name))>=3&&len(v.Name)<=140&&len(v.Slug)<=100&&slugPattern.MatchString(v.Slug)&&len(v.Description)<=3000&&len(v.Collection)<=100&&len(v.ImageURL)<=500&&validManagedImageURL(v.ImageURL)&&skuPattern.MatchString(v.SKU)&&len(v.Color)>0&&len(v.Color)<=40&&len(v.Size)>0&&len(v.Size)<=20&&v.Price>0&&v.Price<1000000000&&v.Stock>=0&&v.Stock<=100000&&len(v.Category)>0
+ return len(strings.TrimSpace(v.Name))>=3&&len(v.Name)<=140&&len(v.Slug)<=100&&slugPattern.MatchString(v.Slug)&&len(v.Description)<=3000&&len(v.Collection)<=100&&len(v.ImageURL)<=500&&validManagedImageURL(v.ImageURL)&&(v.SKU==""||skuPattern.MatchString(v.SKU))&&len(v.Color)>0&&len(v.Color)<=40&&len(v.Size)>0&&len(v.Size)<=20&&v.Price>0&&v.Price<1000000000&&v.Stock>=0&&v.Stock<=100000&&len(v.Category)>0
 }
 func(a *App) adminProducts(c *gin.Context){
  if a.requireAdmin(c)==nil{return}
+ view:=c.Query("view")
+ if view!=""&&view!="trash"{c.JSON(400,gin.H{"error":"Bộ lọc không hợp lệ."});return}
  rows,err:=a.DB.Query(c.Request.Context(),`SELECT p.id::text,p.slug,p.name,p.description,p.image_url,p.collection_name,p.published,c.slug,
  COALESCE(MIN(v.price_vnd),0),COALESCE(SUM(GREATEST(i.on_hand-i.reserved-i.unavailable,0)),0)::int
  FROM products p LEFT JOIN categories c ON p.category_id=c.id
  LEFT JOIN product_variants v ON p.id=v.product_id AND v.active LEFT JOIN inventory i ON i.variant_id=v.id
- GROUP BY p.id,c.slug ORDER BY p.created_at DESC LIMIT 200`)
+ WHERE ($1 = 'trash' AND p.archived_at IS NOT NULL) OR ($1 <> 'trash' AND p.archived_at IS NULL)
+ GROUP BY p.id,c.slug ORDER BY p.created_at DESC LIMIT 200`,view)
  if err!=nil{serverError(c,err);return};defer rows.Close()
  items:=[]gin.H{}
  for rows.Next(){
@@ -52,6 +58,10 @@ func(a *App) adminCreateProduct(c *gin.Context){
  if c.ShouldBindJSON(&input)!=nil||!validProduct(input){c.JSON(400,gin.H{"error":"Sản phẩm không hợp lệ; kiểm tra tên, slug, SKU, giá và tồn."});return}
  ctx,cancel:=context.WithTimeout(c.Request.Context(),7*time.Second);defer cancel()
  tx,err:=a.DB.Begin(ctx);if err!=nil{serverError(c,err);return};defer tx.Rollback(ctx)
+ if input.SKU==""{
+  input.SKU,err=nextProductSKU(ctx,tx)
+  if err!=nil{serverError(c,err);return}
+ }
  productID,err:=uuid();if err!=nil{serverError(c,err);return}
  variantID,err:=uuid();if err!=nil{serverError(c,err);return}
  tag,err:=tx.Exec(ctx,`INSERT INTO products(id,category_id,slug,name,description,image_url,collection_name,published)
@@ -69,7 +79,7 @@ func(a *App) adminCreateProduct(c *gin.Context){
  _,err=tx.Exec(ctx,`INSERT INTO admin_audit_logs(actor_id,action,target_id,details) VALUES($1,'PRODUCT_CREATE',$2,$3)`,actor.ID,productID,input.SKU)
  if err!=nil{serverError(c,err);return}
  if err=tx.Commit(ctx);err!=nil{serverError(c,err);return}
- c.JSON(201,gin.H{"id":productID,"slug":input.Slug,"variant_id":variantID})
+ c.JSON(201,gin.H{"id":productID,"slug":input.Slug,"variant_id":variantID,"sku":input.SKU})
 }
 func(a *App) adminUpdateProduct(c *gin.Context){
  actor:=a.requireAdmin(c);if actor==nil{return}
@@ -83,11 +93,40 @@ func(a *App) adminUpdateProduct(c *gin.Context){
  if c.ShouldBindJSON(&input)!=nil||len(strings.TrimSpace(input.Name))<3||len(input.Name)>140||len(input.Description)>3000||len(input.Collection)>100||!validManagedImageURL(input.ImageURL){
   c.JSON(400,gin.H{"error":"Dữ liệu không hợp lệ."});return
  }
- cmd,err:=a.DB.Exec(c.Request.Context(),`UPDATE products SET name=$1,description=$2,collection_name=$3,published=$4,image_url=$5 WHERE id::text=$6`,strings.TrimSpace(input.Name),input.Description,input.Collection,input.Published,input.ImageURL,c.Param("id"))
+ cmd,err:=a.DB.Exec(c.Request.Context(),`UPDATE products SET name=$1,description=$2,collection_name=$3,published=$4,image_url=$5 WHERE id::text=$6 AND archived_at IS NULL`,strings.TrimSpace(input.Name),input.Description,input.Collection,input.Published,input.ImageURL,c.Param("id"))
  if err!=nil{serverError(c,err);return}
  if cmd.RowsAffected()==0{c.JSON(404,gin.H{"error":"Không tìm thấy sản phẩm."});return}
  _,_ = a.DB.Exec(c.Request.Context(),`INSERT INTO admin_audit_logs(actor_id,action,target_id,details) VALUES($1,'PRODUCT_EDIT',$2,$3)`,actor.ID,c.Param("id"),input.Name)
  c.JSON(200,gin.H{"status":"ok"})
+}
+// Admin "Xóa" is reversible archiving: foreign-keyed order history remains intact.
+func(a *App) adminArchiveProduct(c *gin.Context){
+ actor:=a.requireAdmin(c);if actor==nil{return}
+ ctx,cancel:=context.WithTimeout(c.Request.Context(),6*time.Second);defer cancel()
+ tx,err:=a.DB.Begin(ctx);if err!=nil{serverError(c,err);return};defer tx.Rollback(ctx)
+ var name string
+ err=tx.QueryRow(ctx,`UPDATE products SET archived_at=now(),published=false
+  WHERE id::text=$1 AND archived_at IS NULL RETURNING name`,c.Param("id")).Scan(&name)
+ if errors.Is(err,pgx.ErrNoRows){c.JSON(http.StatusNotFound,gin.H{"error":"Sản phẩm không tồn tại hoặc đã xóa."});return}
+ if err!=nil{serverError(c,err);return}
+ if _,err=tx.Exec(ctx,`INSERT INTO admin_audit_logs(actor_id,action,target_id,details)
+  VALUES($1,'PRODUCT_ARCHIVE',$2,$3)`,actor.ID,c.Param("id"),name);err!=nil{serverError(c,err);return}
+ if err=tx.Commit(ctx);err!=nil{serverError(c,err);return}
+ c.JSON(200,gin.H{"status":"archived","message":"Đã chuyển sản phẩm vào Thùng rác."})
+}
+func(a *App) adminRestoreProduct(c *gin.Context){
+ actor:=a.requireAdmin(c);if actor==nil{return}
+ ctx,cancel:=context.WithTimeout(c.Request.Context(),6*time.Second);defer cancel()
+ tx,err:=a.DB.Begin(ctx);if err!=nil{serverError(c,err);return};defer tx.Rollback(ctx)
+ var name string
+ err=tx.QueryRow(ctx,`UPDATE products SET archived_at=NULL,published=false
+  WHERE id::text=$1 AND archived_at IS NOT NULL RETURNING name`,c.Param("id")).Scan(&name)
+ if errors.Is(err,pgx.ErrNoRows){c.JSON(404,gin.H{"error":"Sản phẩm không có trong Thùng rác."});return}
+ if err!=nil{serverError(c,err);return}
+ if _,err=tx.Exec(ctx,`INSERT INTO admin_audit_logs(actor_id,action,target_id,details)
+  VALUES($1,'PRODUCT_RESTORE',$2,$3)`,actor.ID,c.Param("id"),name);err!=nil{serverError(c,err);return}
+ if err=tx.Commit(ctx);err!=nil{serverError(c,err);return}
+ c.JSON(200,gin.H{"status":"restored","message":"Đã khôi phục ở trạng thái Ẩn."})
 }
 func(a *App) adminReports(c *gin.Context){
  if a.requireAdmin(c)==nil{return}
