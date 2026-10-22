@@ -58,12 +58,15 @@ func (a *App) cancelPayOSOrder(c *gin.Context){
  if err!=nil||status.OrderCode!=*code||status.Amount!=amount{
   c.JSON(503,gin.H{"error":"Không xác minh được tình trạng thanh toán. Không hủy để tránh mất tiền."});return
  }
- if status.Status=="PAID"&&status.AmountPaid>=amount{
+ if status.Status=="PAID"&&status.AmountPaid==amount{
   _,err=a.recordProviderPaid(ctx,*code,amount)
   if err!=nil{serverError(c,err);return}
   c.JSON(409,gin.H{"error":"Thanh toán đã được ngân hàng xác nhận, không thể hủy."});return
  }
- if status.AmountPaid>0{c.JSON(409,gin.H{"error":"Giao dịch đã có tiền được ghi nhận. Cần đối soát thủ công."});return}
+ if status.AmountPaid>0||status.Status=="PAID"{
+  if err=a.recordProviderReview(ctx,*code,amount,status.AmountPaid);err!=nil{serverError(c,err);return}
+  c.JSON(409,gin.H{"error":"payOS ghi nhận số tiền không khớp hoặc thanh toán chưa hoàn tất. Đơn cần đối soát thủ công."});return
+ }
  if status.Status!="CANCELLED"&&status.Status!="EXPIRED"{
   cancelled,e:=a.payOS().Cancel(ctx,*code)
   if e!=nil||cancelled.Status!="CANCELLED"||cancelled.Amount!=amount{
