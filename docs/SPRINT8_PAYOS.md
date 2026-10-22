@@ -71,3 +71,35 @@ With `PAYMENT_ENABLED=false`, COD remains usable and QR is visibly disabled. See
 - Direct payOS status polling and the background reconciler use an order-row lock to avoid racing with cancellation.
 - The administrator sees `REVIEW_REQUIRED` explicitly, and processing actions are hidden for unpaid payOS orders.
 - Never infer payment success from the `returnUrl` query string or browser redirect alone.
+
+## Sprint 8.1 — payOS disabled on local checkout
+
+A gray payOS option with *"Chưa bật kênh payOS"* means the running **API container** has not loaded all four local settings: `PAYMENT_ENABLED=true`, `PAYOS_CLIENT_ID`, `PAYOS_API_KEY`, `PAYOS_CHECKSUM_KEY`. Code committed to GitHub cannot populate the untracked local `.env` automatically.
+
+In PowerShell from the repository root, run the **interactive local setup**:
+
+```powershell
+git switch main
+git pull origin main
+.\scripts\configure-payos.ps1
+```
+
+The script asks for the payOS keys using masked local terminal prompts, writes only to the gitignored project-root `.env`, sets `WEB_ORIGIN=http://localhost:3000` for local testing, and recreates the API container. Do not paste keys into GitHub, CI logs, screenshots, or a public `NEXT_PUBLIC_` variable. Since the previously shared keys were exposed in chat, rotating them is still recommended.
+
+To view a **non-sensitive status only**:
+
+```powershell
+Invoke-RestMethod http://localhost:3000/api/store/payments/config
+```
+
+Expected after a properly configured local API: `payos_enabled: true`, `status: enabled`. Other statuses: `disabled`, `missing_configuration`, `invalid_origin`. Do not treat `enabled` as evidence that an actual bank payment or webhook has been verified.
+
+**Localhost limitation**: payOS supports local return URLs for developing checkout flows, but cannot deliver an internet webhook to localhost. To receive external webhook notifications, deploy to a public HTTPS host (or a controlled HTTPS tunnel), register `https://<your-domain>/api/payments/payos/webhook` in the payOS channel, and verify with a low-value authorized payment. Only then enable public ordering.
+
+## Sprint 8.1 — updating Admin order statuses
+
+The order management page now provides a **next-state dropdown and an explicit Update button**. Order state must advance in sequence:
+`PENDING_CONFIRMATION → CONFIRMED → PREPARING → SHIPPING → DELIVERED → COMPLETED`.
+For COD, cancellation is available before shipping; payment collection can be confirmed after delivery. For payOS, unpaid orders may **not** be fulfilled; merchant must wait for an authenticated payment signal. Invalid transitions display an inline error on the affected order row.
+
+The CI regression goes through Next.js `/api/store/admin/orders/:no/status`, Gin, and disposable PostgreSQL; it tests the actual browser proxy rather than only calling Gin handlers directly. For a local environment that still fails, inspect the row's specific error, then use `docker compose logs --tail=100 api web`; update the source and recreate containers without deleting the PostgreSQL data volume.
