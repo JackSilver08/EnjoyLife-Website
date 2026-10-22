@@ -8,6 +8,13 @@ CREATE TABLE users (
   created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
+CREATE TABLE auth_login_attempts (
+  identifier_hash TEXT PRIMARY KEY,
+  failures INT NOT NULL DEFAULT 0,
+  locked_until TIMESTAMPTZ,
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
 CREATE TABLE user_sessions (
   id UUID PRIMARY KEY,
   token_hash TEXT NOT NULL UNIQUE,
