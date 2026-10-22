@@ -119,7 +119,10 @@
 .admin-toolbar input:not([type=checkbox]),.admin-toolbar select,.admin-create-form input:not([type=checkbox]),.admin-create-form select,.admin-create-form textarea,.admin-edit-panel input,.admin-edit-panel textarea,.admin-inline-form input{border:1px solid #cbcfc8;background:#fff;padding:10px 12px;min-width:0;border-radius:2px;font-size:13px}
 .admin-toolbar>input{flex:1;min-width:200px}
 .admin-toolbar button,.admin-row-actions button,.admin-inline-form button{border:1px solid #344437;background:#344437;color:white;padding:9px 12px;font-size:12px;white-space:nowrap}
-.admin-row-actions button.admin-danger{background:#fff;color:#a33734;border-color:#d8b1aa}
+.admin-row-actions button.admin-danger{background:#f4e7da;color:#a5261d;border-color:#e3c5b4;font-weight:700;cursor:pointer;transition:background-color .18s,border-color .18s}
+.admin-row-actions button.admin-danger:hover:not(:disabled){background:#ead3c1;border-color:#b94532;color:#8d1f17}
+.admin-row-actions button.admin-danger:focus-visible{outline:2px solid #a5261d;outline-offset:2px}
+.admin-row-actions button.admin-danger:disabled{opacity:.55;cursor:not-allowed}
 .admin-error{color:#983e2b;background:#f8e6e0;padding:14px;font-size:13px}
 .admin-notice{background:#e5eee3;color:#30553b;padding:13px 16px;font-size:13px}
 .admin-table-wrap{overflow-x:auto}
