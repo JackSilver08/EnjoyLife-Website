@@ -173,7 +173,7 @@ Requires locally installed Postgres 17, Go >=1.25, Node >=20.9 (Next 16), and In
 ## 7. Important limitations / production gates
 
 - **Accounts and the read-only admin overview are implemented for local development.** Password reset, email verification, rate limiting, audit logs, role management UI, refunds and shipment workflow are not yet implemented.
-- **PAYOS intentionally returns 501** even if credentials are accidentally entered. Do not flip an environment variable to attempt to take payments. Implement/verify signature, payment states, idempotency, timeouts, reconciliation, cancellation and refund handling before activation.
+- **payOS QR is implemented but disabled by default.** Online payment is enabled only with explicit `PAYMENT_ENABLED=true` and privately configured merchant keys. QR checkout uses the official payOS-hosted page, server-side webhook signature validation, per-order idempotency, and provider-confirmed reconciliation/cancellation. A public HTTPS webhook, rotated merchant credentials, and live acceptance testing are required before real payments. See [Sprint 8 payOS guide](docs/SPRINT8_PAYOS.md).
 - **COD demo order reservation exists; shipment, cancellation, expiry and reserve release do not.** Until these are implemented and tested, do not run the checkout against real stock.
 - The bootstrap administrator and local HTTP cookie setup are for development only; add HTTPS-only cookies, password reset/verification, rate limits and audit logs before production.
 - Browser cart prices are indicative; actual checkout price is always calculated from Postgres.
