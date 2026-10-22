@@ -7,6 +7,7 @@ import (
 func EnsureAccountSchema(ctx context.Context,db *pgxpool.Pool)error{
  statements:=[]string{
  `CREATE TABLE IF NOT EXISTS users(id UUID PRIMARY KEY,email TEXT NOT NULL UNIQUE,display_name TEXT NOT NULL,password_hash TEXT NOT NULL,role TEXT NOT NULL DEFAULT 'CUSTOMER' CHECK(role IN('CUSTOMER','ADMIN','STAFF')),disabled_at TIMESTAMPTZ,created_at TIMESTAMPTZ NOT NULL DEFAULT now())`,
+ `CREATE TABLE IF NOT EXISTS auth_login_attempts(identifier_hash TEXT PRIMARY KEY,failures INT NOT NULL DEFAULT 0,locked_until TIMESTAMPTZ,updated_at TIMESTAMPTZ NOT NULL DEFAULT now())`,
  `CREATE TABLE IF NOT EXISTS user_sessions(id UUID PRIMARY KEY,token_hash TEXT NOT NULL UNIQUE,user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,expires_at TIMESTAMPTZ NOT NULL,created_at TIMESTAMPTZ NOT NULL DEFAULT now())`,
  `ALTER TABLE users ADD COLUMN IF NOT EXISTS disabled_at TIMESTAMPTZ`,
  `ALTER TABLE users DROP CONSTRAINT IF EXISTS users_role_check`,
