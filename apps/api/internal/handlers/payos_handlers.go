@@ -100,6 +100,14 @@ func (a *App) payOSWebhook(c *gin.Context){
  if ref=="" || ref!=notice.Data.PaymentLinkID{
   c.JSON(409,gin.H{"error":"Webhook/order mismatch"});return
  }
+ // Persist every verified transfer (including partial or late funds) for audit.
+ reference:=notice.Data.Reference
+ if reference==""{sum:=sha256.Sum256(raw);reference=hex.EncodeToString(sum[:])}
+ key:=fmt.Sprintf("PAYOS:%d:%s",notice.Data.OrderCode,reference)
+ sanitized,_:=json.Marshal(gin.H{"order_code":notice.Data.OrderCode,"amount":notice.Data.Amount,"reference":notice.Data.Reference,"event":"VERIFIED_TRANSFER"})
+ _,err=tx.Exec(ctx,`INSERT INTO payment_events(attempt_id,external_event_key,provider,signature_verified,payload)
+ VALUES($1,$2,'PAYOS',true,$3) ON CONFLICT(external_event_key) DO NOTHING`,attemptID,key,sanitized)
+ if err!=nil{serverError(c,err);return}
  if amount!=notice.Data.Amount {
   // Valid signed partial/overpayments require a manual refund/reconciliation.
   // Never mark an order PAID for a transfer of a different amount.
@@ -110,13 +118,6 @@ func (a *App) payOSWebhook(c *gin.Context){
   if err=tx.Commit(ctx);err!=nil{serverError(c,err);return}
   c.JSON(200,gin.H{"status":"review_required"});return
  }
- reference:=notice.Data.Reference
- if reference==""{sum:=sha256.Sum256(raw);reference=hex.EncodeToString(sum[:])}
- key:=fmt.Sprintf("PAYOS:%d:%s",notice.Data.OrderCode,reference)
- sanitized,_:=json.Marshal(gin.H{"order_code":notice.Data.OrderCode,"amount":notice.Data.Amount,"reference":notice.Data.Reference,"status":"PAID"})
- _,err=tx.Exec(ctx,`INSERT INTO payment_events(attempt_id,external_event_key,provider,signature_verified,payload)
- VALUES($1,$2,'PAYOS',true,$3) ON CONFLICT(external_event_key) DO NOTHING`,attemptID,key,sanitized)
- if err!=nil{serverError(c,err);return}
  if orderState=="CANCELLED"||oldStatus=="REVIEW_REQUIRED"{
   // Never silently resurrect an order whose reserved stock was already released.
   _,err=tx.Exec(ctx,`UPDATE orders SET payment_status='REVIEW_REQUIRED' WHERE id=$1`,orderID)
@@ -172,11 +173,11 @@ func (a *App) cancelPayOS(c *gin.Context){
  // never automatic reinstatement or fulfilment.
 func (a *App) recordProviderPaid(ctx context.Context,code,amount int64)(string,error){
  tx,err:=a.DB.Begin(ctx);if err!=nil{return "",err};defer tx.Rollback(ctx)
- var orderID,orderState,paymentState string;var storedAmount int64
- err=tx.QueryRow(ctx,`SELECT o.id::text,o.status,o.payment_status,o.total_vnd
+ var attemptID,orderID,orderState,paymentState string;var storedAmount int64
+ err=tx.QueryRow(ctx,`SELECT pa.id::text,o.id::text,o.status,o.payment_status,o.total_vnd
  FROM payment_attempts pa JOIN orders o ON o.id=pa.order_id
  WHERE pa.provider='PAYOS' AND pa.provider_order_code=$1 FOR UPDATE OF pa,o`,code).
- Scan(&orderID,&orderState,&paymentState,&storedAmount)
+ Scan(&attemptID,&orderID,&orderState,&paymentState,&storedAmount)
  if err!=nil{return "",err}
  if storedAmount!=amount{return "",errors.New("payOS amount mismatch")}
  result:="PAID"
@@ -191,6 +192,12 @@ func (a *App) recordProviderPaid(ctx context.Context,code,amount int64)(string,e
   return "",errors.New("unexpected payment state")
  }
  _,err=tx.Exec(ctx,`UPDATE payment_attempts SET status=$2,updated_at=now() WHERE provider='PAYOS' AND provider_order_code=$1`,code,result)
+ if err!=nil{return "",err}
+ // Explicitly record authenticated provider checks. Unlike a verified webhook
+ // signature, this evidence is server-to-server and signature_verified=false.
+ audit,_:=json.Marshal(gin.H{"order_code":code,"amount":amount,"event":"PROVIDER_STATUS_PAID","result":result})
+ _,err=tx.Exec(ctx,`INSERT INTO payment_events(attempt_id,external_event_key,provider,signature_verified,payload)
+ VALUES($1,$2,'PAYOS',false,$3) ON CONFLICT(external_event_key) DO NOTHING`,attemptID,fmt.Sprintf("PAYOS:%d:PROVIDER_STATUS_PAID",code),audit)
  if err!=nil{return "",err}
  if err=tx.Commit(ctx);err!=nil{return "",err}
  return result,nil
