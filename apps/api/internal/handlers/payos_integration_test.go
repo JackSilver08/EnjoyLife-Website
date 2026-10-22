@@ -91,6 +91,15 @@ func TestPayOSIntegration(t *testing.T){
  var checkout struct{Code int64 `json:"order_code"`;URL string `json:"checkout_url"`;QR string `json:"qr_code"`}
  if err=json.Unmarshal(link.Body.Bytes(),&checkout);err!=nil{t.Fatal(err)}
  if checkout.Code==0||checkout.QR==""||!strings.HasPrefix(checkout.URL,"https://pay.payos.vn/"){t.Fatalf("invalid QR: %s",link.Body.String())}
+ // The first-party VietQR UI must receive the exact, unmodified provider data
+ // from order status, including refresh/back-navigation after link creation.
+ orderDetail:=send("GET","/api/v1/orders/"+order.Token,nil)
+ if orderDetail.Code!=200{t.Fatalf("QR order detail unavailable: %d",orderDetail.Code)}
+ var qrOrder struct{QR string `json:"qr_code"`;URL string `json:"checkout_url"`;Payment string `json:"payment_status"`}
+ if err=json.Unmarshal(orderDetail.Body.Bytes(),&qrOrder);err!=nil{t.Fatal(err)}
+ if qrOrder.QR!=checkout.QR||qrOrder.URL!=checkout.URL||qrOrder.Payment!="UNPAID"{
+  t.Fatalf("Persisted first-party QR differs from payOS link response: %s",orderDetail.Body.String())
+ }
  second:=send("POST","/api/v1/orders/"+order.Token+"/payment-link",nil)
  if second.Code!=200||second.Body.String()!=link.Body.String(){t.Fatalf("retry created a different link: %d %s",second.Code,second.Body.String())}
  redirect:=send("GET","/api/v1/orders/"+order.Token+"?status=PAID",nil)
