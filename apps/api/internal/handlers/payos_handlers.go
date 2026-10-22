@@ -49,11 +49,11 @@ func (a *App) createPayOSLink(c *gin.Context){
  err=a.DB.QueryRow(ctx,`SELECT provider_order_code,COALESCE(checkout_url,''),COALESCE(qr_code,''),status,updated_at
  FROM payment_attempts WHERE order_id=$1 AND provider='PAYOS'`,id).Scan(&code,&checkout,&qr,&state,&updated)
  if err!=nil{serverError(c,err);return}
- if checkout!=""{
-  c.JSON(200,gin.H{"checkout_url":checkout,"qr_code":qr,"order_code":code,"payment_status":paymentState});return
- }
  if state=="ERROR"||state=="REVIEW_REQUIRED"{
   c.JSON(409,gin.H{"error":"Giao dịch cần được đối soát trước khi thử lại. Vui lòng liên hệ cửa hàng."});return
+ }
+ if checkout!=""{
+  c.JSON(200,gin.H{"checkout_url":checkout,"qr_code":qr,"order_code":code,"payment_status":paymentState});return
  }
  if state=="CREATING"&&!created&&time.Since(updated)<20*time.Second{
   c.JSON(202,gin.H{"error":"Đang chuẩn bị mã QR. Vui lòng thử lại trong giây lát."});return
@@ -88,17 +88,27 @@ func (a *App) payOSWebhook(c *gin.Context){
  if notice.Data.Currency!="VND"{c.JSON(400,gin.H{"error":"Invalid currency"});return}
  ctx,cancel:=context.WithTimeout(c.Request.Context(),7*time.Second);defer cancel()
  tx,err:=a.DB.Begin(ctx);if err!=nil{serverError(c,err);return};defer tx.Rollback(ctx)
- var attemptID,orderID,ref,oldStatus string;var amount int64
- err=tx.QueryRow(ctx,`SELECT pa.id::text,pa.order_id::text,COALESCE(pa.provider_reference,''),o.payment_status,o.total_vnd
+ var attemptID,orderID,ref,oldStatus,orderState string;var amount int64
+ err=tx.QueryRow(ctx,`SELECT pa.id::text,pa.order_id::text,COALESCE(pa.provider_reference,''),o.payment_status,o.status,o.total_vnd
  FROM payment_attempts pa JOIN orders o ON o.id=pa.order_id
- WHERE pa.provider='PAYOS' AND pa.provider_order_code=$1 FOR UPDATE OF pa,o`,notice.Data.OrderCode).Scan(&attemptID,&orderID,&ref,&oldStatus,&amount)
+ WHERE pa.provider='PAYOS' AND pa.provider_order_code=$1 FOR UPDATE OF pa,o`,notice.Data.OrderCode).Scan(&attemptID,&orderID,&ref,&oldStatus,&orderState,&amount)
  if errors.Is(err,pgx.ErrNoRows){
   // Unknown signed test events do not modify any real orders.
   c.JSON(200,gin.H{"status":"ignored"});return
  }
  if err!=nil{serverError(c,err);return}
- if amount!=notice.Data.Amount || ref=="" || ref!=notice.Data.PaymentLinkID{
+ if ref=="" || ref!=notice.Data.PaymentLinkID{
   c.JSON(409,gin.H{"error":"Webhook/order mismatch"});return
+ }
+ if amount!=notice.Data.Amount {
+  // Valid signed partial/overpayments require a manual refund/reconciliation.
+  // Never mark an order PAID for a transfer of a different amount.
+  _,err=tx.Exec(ctx,`UPDATE payment_attempts SET status='REVIEW_REQUIRED',updated_at=now() WHERE id=$1`,attemptID)
+  if err!=nil{serverError(c,err);return}
+  _,err=tx.Exec(ctx,`UPDATE orders SET payment_status='REVIEW_REQUIRED' WHERE id=$1 AND payment_status='UNPAID'`,orderID)
+  if err!=nil{serverError(c,err);return}
+  if err=tx.Commit(ctx);err!=nil{serverError(c,err);return}
+  c.JSON(200,gin.H{"status":"review_required"});return
  }
  reference:=notice.Data.Reference
  if reference==""{sum:=sha256.Sum256(raw);reference=hex.EncodeToString(sum[:])}
@@ -107,6 +117,15 @@ func (a *App) payOSWebhook(c *gin.Context){
  _,err=tx.Exec(ctx,`INSERT INTO payment_events(attempt_id,external_event_key,provider,signature_verified,payload)
  VALUES($1,$2,'PAYOS',true,$3) ON CONFLICT(external_event_key) DO NOTHING`,attemptID,key,sanitized)
  if err!=nil{serverError(c,err);return}
+ if orderState=="CANCELLED"||oldStatus=="REVIEW_REQUIRED"{
+  // Never silently resurrect an order whose reserved stock was already released.
+  _,err=tx.Exec(ctx,`UPDATE orders SET payment_status='REVIEW_REQUIRED' WHERE id=$1`,orderID)
+  if err!=nil{serverError(c,err);return}
+  _,err=tx.Exec(ctx,`UPDATE payment_attempts SET status='REVIEW_REQUIRED',updated_at=now() WHERE id=$1`,attemptID)
+  if err!=nil{serverError(c,err);return}
+  if err=tx.Commit(ctx);err!=nil{serverError(c,err);return}
+  c.JSON(200,gin.H{"status":"review_required"});return
+ }
  if oldStatus!="PAID"{
   _,err=tx.Exec(ctx,`UPDATE orders SET payment_status='PAID' WHERE id=$1 AND payment_method='PAYOS' AND payment_status='UNPAID'`,orderID)
   if err!=nil{serverError(c,err);return}
@@ -118,24 +137,23 @@ func (a *App) payOSWebhook(c *gin.Context){
 }
 func (a *App) payOSStatus(c *gin.Context){
  token:=c.Param("token");if !validToken(token){c.JSON(404,gin.H{"error":"Không tìm thấy đơn."});return}
- var code *int64;var state string;var amount int64
- err:=a.DB.QueryRow(c.Request.Context(),`SELECT pa.provider_order_code,o.payment_status,o.total_vnd
- FROM payment_attempts pa JOIN orders o ON o.id=pa.order_id WHERE o.public_token=$1 AND pa.provider='PAYOS'`,token).Scan(&code,&state,&amount)
+ var code *int64;var state,attemptState string;var amount int64
+ err:=a.DB.QueryRow(c.Request.Context(),`SELECT pa.provider_order_code,o.payment_status,pa.status,o.total_vnd
+ FROM payment_attempts pa JOIN orders o ON o.id=pa.order_id WHERE o.public_token=$1 AND pa.provider='PAYOS'`,token).Scan(&code,&state,&attemptState,&amount)
  if errors.Is(err,pgx.ErrNoRows){c.JSON(404,gin.H{"error":"Không có giao dịch payOS."});return}
  if err!=nil{serverError(c,err);return}
  if state=="PAID"{c.JSON(200,gin.H{"payment_status":"PAID"});return}
+ if state=="REVIEW_REQUIRED"||attemptState=="REVIEW_REQUIRED"{c.JSON(200,gin.H{"payment_status":"REVIEW_REQUIRED"});return}
  if !a.payOSReady()||code==nil{c.JSON(503,gin.H{"error":"Kênh thanh toán chưa khả dụng."});return}
  ctx,cancel:=context.WithTimeout(c.Request.Context(),7*time.Second);defer cancel()
  provider,err:=a.payOS().Get(ctx,*code)
  if err!=nil{c.JSON(503,gin.H{"payment_status":state,"error":"Chưa xác minh được trạng thái từ payOS."});return}
  if provider.Amount!=amount || provider.OrderCode!=*code {c.JSON(409,gin.H{"error":"Thông tin giao dịch không khớp."});return}
  if provider.Status=="PAID"&&provider.AmountPaid>=amount{
-  // Trusted server-to-server reconciliation for delayed webhook delivery.
-  _,err=a.DB.Exec(ctx,`UPDATE orders SET payment_status='PAID' WHERE public_token=$1 AND payment_method='PAYOS' AND payment_status='UNPAID'`,token)
+  // Lock both order and attempt: cancellation may race this provider check.
+  finalState,err:=a.recordProviderPaid(ctx,*code,amount)
   if err!=nil{serverError(c,err);return}
-  _,err=a.DB.Exec(ctx,`UPDATE payment_attempts SET status='PAID',updated_at=now() WHERE provider='PAYOS' AND provider_order_code=$1`,*code)
-  if err!=nil{serverError(c,err);return}
-  c.JSON(200,gin.H{"payment_status":"PAID"});return
+  c.JSON(200,gin.H{"payment_status":finalState});return
  }
  if (provider.Status=="CANCELLED"||provider.Status=="EXPIRED")&&provider.AmountPaid==0 {
   if err=a.finalizePayOSCancellation(ctx,*code);err!=nil{
@@ -147,4 +165,33 @@ func (a *App) payOSStatus(c *gin.Context){
 }
 func (a *App) cancelPayOS(c *gin.Context){
  a.cancelPayOSOrder(c)
+}
+
+ // recordProviderPaid atomically reconciles a trusted payOS status response.
+ // A canceled order can have its stock released; a late transfer needs a human,
+ // never automatic reinstatement or fulfilment.
+func (a *App) recordProviderPaid(ctx context.Context,code,amount int64)(string,error){
+ tx,err:=a.DB.Begin(ctx);if err!=nil{return "",err};defer tx.Rollback(ctx)
+ var orderID,orderState,paymentState string;var storedAmount int64
+ err=tx.QueryRow(ctx,`SELECT o.id::text,o.status,o.payment_status,o.total_vnd
+ FROM payment_attempts pa JOIN orders o ON o.id=pa.order_id
+ WHERE pa.provider='PAYOS' AND pa.provider_order_code=$1 FOR UPDATE OF pa,o`,code).
+ Scan(&orderID,&orderState,&paymentState,&storedAmount)
+ if err!=nil{return "",err}
+ if storedAmount!=amount{return "",errors.New("payOS amount mismatch")}
+ result:="PAID"
+ if orderState=="CANCELLED"||paymentState=="REVIEW_REQUIRED"{
+  result="REVIEW_REQUIRED"
+  _,err=tx.Exec(ctx,`UPDATE orders SET payment_status='REVIEW_REQUIRED' WHERE id=$1`,orderID)
+  if err!=nil{return "",err}
+ }else if paymentState=="UNPAID"{
+  _,err=tx.Exec(ctx,`UPDATE orders SET payment_status='PAID' WHERE id=$1`,orderID)
+  if err!=nil{return "",err}
+ }else if paymentState!="PAID"{
+  return "",errors.New("unexpected payment state")
+ }
+ _,err=tx.Exec(ctx,`UPDATE payment_attempts SET status=$2,updated_at=now() WHERE provider='PAYOS' AND provider_order_code=$1`,code,result)
+ if err!=nil{return "",err}
+ if err=tx.Commit(ctx);err!=nil{return "",err}
+ return result,nil
 }
