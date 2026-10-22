@@ -6,6 +6,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"net/http"
+	"os"
 	"strings"
 	"time"
 
@@ -40,11 +41,13 @@ func EnsureAdmin(ctx context.Context, db *pgxpool.Pool, email, password string) 
 	if email == "" || len(password) < 8 {
 		return nil
 	}
-	var exists string
-	err := db.QueryRow(ctx, "SELECT id::text FROM users WHERE email=$1", email).Scan(&exists)
+	var exists,role string
+	err := db.QueryRow(ctx, "SELECT id::text,role FROM users WHERE email=$1", email).Scan(&exists,&role)
 	if err == nil {
-		_, err = db.Exec(ctx, "UPDATE users SET role='ADMIN' WHERE id=$1", exists)
-		return err
+		if role != "ADMIN" {
+			return errors.New("configured admin email belongs to a non-admin user; refusing automatic privilege escalation")
+		}
+		return nil
 	}
 	if !errors.Is(err, pgx.ErrNoRows) {
 		return err
@@ -102,7 +105,7 @@ func (a *App) createSession(c *gin.Context, user currentUser) {
 		serverError(c, err)
 		return
 	}
-	http.SetCookie(c.Writer, &http.Cookie{Name: sessionCookie, Value: token, Path: "/", HttpOnly: true, Secure: c.Request.TLS != nil, SameSite: http.SameSiteLaxMode, MaxAge: 24 * 60 * 60})
+	http.SetCookie(c.Writer, &http.Cookie{Name: sessionCookie, Value: token, Path: "/", HttpOnly: true, Secure: c.Request.TLS != nil || os.Getenv("APP_ENV") == "production", SameSite: http.SameSiteLaxMode, MaxAge: 24 * 60 * 60})
 	c.JSON(http.StatusOK, gin.H{"user": user})
 }
 func (a *App) register(c *gin.Context) {
