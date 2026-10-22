@@ -44,6 +44,7 @@ type Product struct {
 	Available    int       `json:"available"`
 	PriceVND     int64     `json:"price_vnd"`
 	Variants     []Variant `json:"variants"`
+ Images       []GalleryImage `json:"images"`
 }
 type OrderItemRequest struct {
 	VariantID string `json:"variant_id" binding:"required"`
@@ -73,6 +74,8 @@ func Router(a *App) *gin.Engine {
 	api.GET("/media/:filename", a.publicMedia)
 	api.GET("/site/content", a.siteContentGet)
 	api.GET("/products", a.products)
+	api.GET("/products/search", a.publicCatalogSearch)
+	api.GET("/products/filters", a.publicCatalogFilters)
 	api.GET("/products/:slug", a.product)
     // Enjoy Journal public: only published, non-archived articles.
     api.GET("/blog/articles", a.blogFeed)
@@ -107,6 +110,7 @@ func Router(a *App) *gin.Engine {
 	api.GET("/admin/dashboard", a.adminDashboard)
 	api.GET("/admin/inventory", a.adminInventory)
 	api.PATCH("/admin/inventory/:id", a.adminAdjustInventory)
+	api.GET("/admin/inventory/:id/history", a.adminInventoryHistory)
 	api.PATCH("/admin/orders/:no/status", a.adminChangeOrderStatus)
 	api.POST("/admin/orders/:no/paid", a.adminMarkCODPaid)
 	api.GET("/admin/products", a.adminProducts)
@@ -125,6 +129,8 @@ func Router(a *App) *gin.Engine {
     api.DELETE("/admin/blog/articles/:id", a.adminBlogArchive)
     api.POST("/admin/blog/categories", a.adminBlogCategoryCreate)
     api.POST("/admin/blog/tags", a.adminBlogTagCreate)
+	api.GET("/admin/products/:id/images", a.adminGetGallery)
+	api.PUT("/admin/products/:id/images", a.adminSaveGallery)
 	api.GET("/admin/products/:id/variants", a.adminVariants)
 	api.POST("/admin/products/:id/variants", a.adminCreateVariant)
 	api.PATCH("/admin/variants/:id", a.adminUpdateVariant)
@@ -208,7 +214,17 @@ func (a *App) product(c *gin.Context) {
 		serverError(c, err)
 		return
 	}
-	c.JSON(http.StatusOK, p)
+	p.Images=[]GalleryImage{}
+ imageRows,imageErr:=a.DB.Query(ctx,`SELECT url,alt FROM product_images WHERE product_id=$1 ORDER BY position`,p.ID)
+ if imageErr!=nil{serverError(c,imageErr);return}
+ for imageRows.Next(){var img GalleryImage
+  if err=imageRows.Scan(&img.URL,&img.Alt);err!=nil{imageRows.Close();serverError(c,err);return}
+  p.Images=append(p.Images,img)
+ }
+ imageErr=imageRows.Err();imageRows.Close()
+ if imageErr!=nil{serverError(c,imageErr);return}
+ if len(p.Images)==0&&p.ImageURL!=""{p.Images=append(p.Images,GalleryImage{URL:p.ImageURL,Alt:p.Name})}
+ c.JSON(http.StatusOK, p)
 }
 
 func randomHex(n int) (string, error) {

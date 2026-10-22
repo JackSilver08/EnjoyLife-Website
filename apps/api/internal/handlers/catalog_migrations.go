@@ -38,6 +38,15 @@ func EnsureProductCatalogSchema(ctx context.Context, db *pgxpool.Pool) error {
    EXISTS(SELECT 1 FROM product_variants WHERE sku ~ '^SP-[0-9]{3,}$'))`)
   if err!=nil{return err}
  }
+ if _,err=tx.Exec(ctx,`CREATE TABLE IF NOT EXISTS product_images (
+  id UUID PRIMARY KEY, product_id UUID NOT NULL REFERENCES products(id),
+  url TEXT NOT NULL, alt TEXT NOT NULL DEFAULT '',
+  position INTEGER NOT NULL CHECK (position >= 0),
+  UNIQUE(product_id,position)
+ )`);err!=nil{return err}
+ if _,err=tx.Exec(ctx,`CREATE INDEX IF NOT EXISTS idx_product_images_product ON product_images(product_id,position)`);err!=nil{return err}
+ if _,err=tx.Exec(ctx,`ALTER TABLE stock_movements ADD COLUMN IF NOT EXISTS reason TEXT NOT NULL DEFAULT ''`);err!=nil{return err}
+ if _,err=tx.Exec(ctx,`ALTER TABLE stock_movements ADD COLUMN IF NOT EXISTS actor_id UUID`);err!=nil{return err}
  return tx.Commit(ctx)
 }
 
