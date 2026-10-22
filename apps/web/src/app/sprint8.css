@@ -1,29 +1,63 @@
-
-/* Sprint 8 — payOS hosted QR checkout, payment truth shown in order status */
-.payos-payment-panel{background:#eef1e9;color:#233128;text-align:left;padding:30px;max-width:660px;margin:28px auto 40px;border:1px solid #d5dfd1}
-.payos-payment-panel>strong{font:normal 28px/1.2 var(--serif)}
-.payos-payment-panel>p{font-size:14px;line-height:1.75;color:#536154;margin:17px 0}
-.payos-payment-panel small{display:block;color:#5b6b5f;font-size:11px;line-height:1.7;margin-top:16px}
-.payos-payment-actions{display:flex;flex-wrap:wrap;gap:12px;align-items:center;margin-top:24px}
-.payos-payment-actions .button-dark{display:inline-flex;align-items:center;gap:18px}
-.payos-refresh{display:inline-flex;align-items:center;gap:8px;border:1px solid #b5c3b2;background:#fafbf8;padding:15px;color:#284431;font-size:12px}
+/* Sprint 8: full-size first-party VietQR from payOS data, no embedded iframe or inner scrolling. */
+.payos-payment-panel{
+ width:100%;max-width:780px;margin:32px auto 44px;padding:clamp(20px,4vw,38px);
+ background:#eff2ed;border:1px solid #d6e0d4;color:#26372b;text-align:left;overflow:visible
+}
+.payos-qr-heading{display:flex;align-items:flex-start;justify-content:space-between;gap:18px}
+.payos-qr-heading h2{font:normal clamp(27px,4vw,37px)/1.2 var(--serif);margin:7px 0 0}
+.payos-qr-heading p{font-size:13px;line-height:1.7;color:#526154;margin:12px 0 0}
+.payos-qr-heading svg{flex-shrink:0;margin-top:6px;color:#41674d}
+.payos-qr-eyebrow{font-size:10px;font-weight:700;letter-spacing:.17em;color:#657d69}
+.payos-qr-amount{
+ display:flex;align-items:center;justify-content:space-between;gap:16px;
+ margin:24px 0 18px;padding:15px 18px;background:#fcfdfa;border:1px solid #d7dfd2
+}
+.payos-qr-amount span{font-size:13px;color:#526154}
+.payos-qr-amount strong{font-size:clamp(20px,3.2vw,29px);white-space:nowrap;color:#233e2c}
+.payos-qr-display{
+ display:flex;flex-direction:column;align-items:center;text-align:center;
+ background:white;border:1px solid #d5ded1;padding:24px 18px 21px;overflow:visible
+}
+.payos-qr-paper{width:100%;max-width:390px;background:#fff;flex:0 0 auto}
+.payos-qr-svg{width:100%;height:auto;aspect-ratio:1/1;display:block;shape-rendering:crispEdges}
+.payos-qr-display>p{font-size:14px;font-weight:600;line-height:1.6;margin:16px 0 5px;color:#2c3d30}
+.payos-qr-display>small{font-size:12px;line-height:1.6;color:#6b7669}
+.payos-qr-error{font-size:13px;color:#9e3c32;line-height:1.6}
+.payos-qr-placeholder{
+ padding:70px 22px;min-height:220px;display:flex;flex-direction:column;align-items:center;
+ justify-content:center;text-align:center;background:#fff;border:1px dashed #b8c9b8
+}
+.payos-qr-placeholder span{font:normal 21px/1.3 var(--serif);color:#3f5945}
+.payos-qr-placeholder p{font-size:13px;color:#6b7669;line-height:1.7;margin:10px 0 0}
+.payos-payment-actions{display:flex;flex-wrap:wrap;gap:12px;align-items:center;margin-top:20px}
+.payos-payment-actions .button-dark{display:inline-flex;align-items:center;justify-content:center;gap:14px}
+.payos-refresh{
+ display:inline-flex;align-items:center;justify-content:center;gap:8px;
+ border:1px solid #b5c3b2;background:#fafbf8;padding:15px;color:#284431;font-size:12px
+}
 .payos-refresh:hover{background:#e1eadd}
+.payos-hosted-link{
+ display:inline-flex;align-items:center;gap:8px;margin:18px 0 0;color:#275239;
+ font-size:13px;text-decoration:underline;text-underline-offset:3px
+}
+.payos-cancel{display:block;margin-top:18px;background:transparent;border:1px solid #ac6b64;color:#883f36;font-size:12px;padding:11px 13px}
+.payos-cancel:hover{background:#f7e6e2}
+.payos-qr-footnote{display:block;margin-top:18px;color:#687769;font-size:11px;line-height:1.7}
+.payos-note{color:#236339;font-size:13px;margin:12px 0 0}
 .payos-payment-success{display:flex;gap:14px;align-items:flex-start;color:#2a6238}
 .payos-payment-success strong{font-size:18px}
 .payos-payment-success p{font-size:13px;line-height:1.7;margin:9px 0 0;color:#3d6948}
-.payos-note{color:#236339}
-@media(max-width:650px){.payos-payment-panel{padding:20px}.payos-payment-actions{flex-direction:column;align-items:stretch}.payos-payment-actions .button-dark,.payos-refresh{width:100%;justify-content:center}}
-
-.payos-cancel{margin-top:15px;background:transparent;border:1px solid #ac6b64;color:#883f36;font-size:12px;padding:11px 13px}
-.payos-cancel:hover{background:#f7e6e2}
 .payos-payment-review{background:#fff7e8;border:1px solid #e5c8a0;padding:16px 18px;color:#654b2b}
 .payos-payment-review strong{display:block;font-size:18px}
 .payos-payment-review p{font-size:14px;line-height:1.7;margin:8px 0 0}
-
-/* Official payOS iframe is created by payOS Checkout Script (not by user HTML). */
-.payos-embed-frame{width:100%;max-width:100%;overflow:hidden;margin-top:16px}
-.payos-embed-frame:not(:empty){min-height:560px;border:1px solid #d5dfd1;background:#fff}
-.payos-hosted-link{display:inline-flex;align-items:center;gap:8px;margin:12px 0 0;color:#275239;font-size:13px;text-decoration:underline;text-underline-offset:3px}
+@media(max-width:650px){
+ .payos-qr-paper{max-width:340px}
+ .payos-qr-display{padding:16px 12px}
+ .payos-qr-amount{padding:12px 14px}
+ .payos-payment-actions{flex-direction:column;align-items:stretch}
+ .payos-payment-actions .button-dark,.payos-refresh{width:100%}
+}
+@media(max-width:390px){.payos-qr-amount{flex-direction:column;align-items:flex-start;gap:5px}}
 
 /* Sprint 8.1: per-row order transitions, messages remain visible beside the edited order. */
 .order-status-actions{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:10px}
