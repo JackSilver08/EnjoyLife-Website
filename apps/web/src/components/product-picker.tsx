@@ -16,7 +16,7 @@ export function ProductPicker({product}:{product:Product}){
  const selected=useMemo(()=>product.variants.find(v=>v.color===color&&v.size===size),[product,color,size]);
  const chooseColor=(c:string)=>{setColor(c);const vs=product.variants.filter(v=>v.color===c);setSize(vs.find(v=>v.available>0)?.size??vs[0]?.size??"");setAdded(false)};
  function addToBag(){if(!selected||selected.available<=0)return;add({variantId:selected.id,productSlug:product.slug,name:product.name,sku:selected.sku,color:selected.color,size:selected.size,price:selected.price_vnd,image:product.image_url,quantity:1});setAdded(true)}
- return <div className="picker"><span className="eyebrow">ENJOY LIFE / {product.collection}</span><h1 className="detail-title">{product.name}</h1><p className="detail-price">{money(selected?.price_vnd??product.price_vnd)}</p>
+ return <div className="picker"><span className="eyebrow">ENJOY LIFE / SẢN PHẨM</span><h1 className="detail-title">{product.name}</h1><p className="detail-price">{money(selected?.price_vnd??product.price_vnd)}</p>
  <div className="long-rule"/><p className="detail-description">{product.description}</p>
  <div className="option-set"><div className="option-title"><strong>MÀU SẮC</strong><span>{color}</span></div><div className="option-row">{colors.map(c=><button type="button" key={c} className={"pill "+(c===color?"selected":"")} onClick={()=>chooseColor(c)} aria-pressed={c===color}>{c}</button>)}</div></div>
  <div className="option-set"><div className="option-title"><strong>KÍCH THƯỚC</strong><button className="size-guide-toggle" type="button" aria-expanded={guide} onClick={()=>setGuide(!guide)}><HelpCircle size={15}/> Hướng dẫn chọn size</button></div>
