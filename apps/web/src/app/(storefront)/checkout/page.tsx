@@ -49,16 +49,7 @@ export default function CheckoutPage() {
       if(!order.order_token) throw new Error("API không trả mã tra cứu đơn.");
       try{sessionStorage.removeItem("enjoylife_checkout_draft")}catch{}
       clear();
-      if(method==="PAYOS"){
-        try{
-          const linkResponse=await fetch("/api/store/orders/"+order.order_token+"/payment-link",{method:"POST"});
-          const link=await linkResponse.json();
-          if(linkResponse.ok&&typeof link.checkout_url==="string"&&new URL(link.checkout_url).hostname==="pay.payos.vn"){
-            window.location.assign(link.checkout_url);
-            return;
-          }
-        }catch{ /* Order was created; keep its status page available for retry. */ }
-      }
+      // The status page renders official embedded payOS QR, with hosted fallback.
       router.push(`/orders/${encodeURIComponent(order.order_token)}`);
     } catch(err) { setError(err instanceof Error?err.message:"Lỗi kết nối, hãy kiểm tra API."); }
     finally { setBusy(false); }
