@@ -45,6 +45,7 @@ func EnsureProductCatalogSchema(ctx context.Context, db *pgxpool.Pool) error {
   UNIQUE(product_id,position)
  )`);err!=nil{return err}
  if _,err=tx.Exec(ctx,`CREATE INDEX IF NOT EXISTS idx_product_images_product ON product_images(product_id,position)`);err!=nil{return err}
+ if _,err=tx.Exec(ctx,`ALTER TABLE product_variants ADD COLUMN IF NOT EXISTS low_stock_threshold INTEGER NOT NULL DEFAULT 3 CHECK (low_stock_threshold BETWEEN 0 AND 100000)`);err!=nil{return err}
  if _,err=tx.Exec(ctx,`ALTER TABLE stock_movements ADD COLUMN IF NOT EXISTS reason TEXT NOT NULL DEFAULT ''`);err!=nil{return err}
  if _,err=tx.Exec(ctx,`ALTER TABLE stock_movements ADD COLUMN IF NOT EXISTS actor_id UUID`);err!=nil{return err}
  return tx.Commit(ctx)

@@ -6,7 +6,7 @@ import {adminAction,useAdminData} from "@/components/admin/admin-data";
 type Stock={
  variant_id:string;product_id:string;product_slug:string;
  sku:string;name:string;color:string;size:string;active:boolean;archived:boolean;
- on_hand:number;reserved:number;unavailable:number;available:number
+ on_hand:number;reserved:number;unavailable:number;available:number;low_stock_threshold:number
 };
 type Movement={id:number;type:string;on_hand_delta:number;reserved_delta:number;reason:string;order_no:string;created_at:string};
 type Action="RECEIVE"|"ISSUE"|"COUNT";
@@ -51,7 +51,7 @@ export default function Inventory(){
  const rows=useMemo(()=>(data?.items??[]).filter(x=>
   (!productFilter||x.product_id===productFilter)
   &&(showInactive||(!x.archived&&x.active))
-  &&(!low||(!x.archived&&x.active&&x.available<=3))
+  &&(!low||(!x.archived&&x.active&&x.available<=x.low_stock_threshold))
   &&(x.sku+" "+x.name+" "+x.color+" "+x.size).toLowerCase().includes(search.trim().toLowerCase())
  ),[data,productFilter,showInactive,low,search]);
  const productName=data?.items?.find(x=>x.product_id===productFilter)?.name;
@@ -77,7 +77,7 @@ export default function Inventory(){
    <button type="button" onClick={()=>{setProductFilter("");window.history.replaceState(null,"","/admin/inventory")}}>Xem toàn bộ kho ×</button></div>}
   <div className="admin-toolbar">
    <input aria-label="Tìm kiếm SKU" placeholder="Tìm mã hàng, tên sản phẩm, màu, size..." value={search} onChange={e=>setSearch(e.target.value)}/>
-   <label><input type="checkbox" checked={low} onChange={e=>setLow(e.target.checked)}/> Sắp hết (≤ 3)</label>
+   <label><input type="checkbox" checked={low} onChange={e=>setLow(e.target.checked)}/> Sắp hết (theo SKU)</label>
    <label><input type="checkbox" checked={showInactive} onChange={e=>setShowInactive(e.target.checked)}/> Cả hàng ngừng bán / đã xóa</label>
    <button type="button" onClick={()=>void reload()}>Làm mới</button>
   </div>
@@ -92,7 +92,7 @@ export default function Inventory(){
       <small>{x.sku}</small>{(x.archived||!x.active)&&<small className="admin-low">{x.archived?"Đã chuyển Thùng rác":"Ngừng bán"}</small>}</td>
      <td>{x.color} / {x.size}</td>
      <td>{x.on_hand}</td><td>{x.reserved}</td><td>{x.unavailable}</td>
-     <td><strong className={x.available<=3?"admin-low":""}>{x.available}</strong></td>
+     <td><strong className={x.available<=x.low_stock_threshold?"admin-low":""}>{x.available}</strong></td>
      <td><div className="inventory-actions">
       <button type="button" disabled={busy} onClick={()=>{setEdit(edit===x.variant_id?null:x.variant_id);setHistory(null);setAction("RECEIVE");setQuantity("");setReason("");setNotice("")}}>
        {edit===x.variant_id?"Đóng thao tác":"Nhập / Xuất"}

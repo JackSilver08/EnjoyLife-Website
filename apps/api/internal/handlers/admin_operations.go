@@ -18,7 +18,7 @@ func (a *App) adminDashboard(c *gin.Context) {
  err:=a.DB.QueryRow(ctx,`SELECT count(*),count(*) FILTER (WHERE status='PENDING_CONFIRMATION'),COALESCE(sum(total_vnd) FILTER (WHERE status <> 'CANCELLED'),0) FROM orders`).Scan(&orders,&pending,&orderValue)
  if err!=nil {serverError(c,err);return}
  var lowStock int64
- err=a.DB.QueryRow(ctx,`SELECT count(*) FROM inventory i JOIN product_variants v ON v.id=i.variant_id JOIN products p ON p.id=v.product_id WHERE p.archived_at IS NULL AND v.active AND (i.on_hand-i.reserved-i.unavailable)<=3`).Scan(&lowStock)
+ err=a.DB.QueryRow(ctx,`SELECT count(*) FROM inventory i JOIN product_variants v ON v.id=i.variant_id JOIN products p ON p.id=v.product_id WHERE p.archived_at IS NULL AND v.active AND (i.on_hand-i.reserved-i.unavailable)<=v.low_stock_threshold`).Scan(&lowStock)
  if err!=nil {serverError(c,err);return}
  var products int64
  err=a.DB.QueryRow(ctx,`SELECT count(*) FROM products WHERE archived_at IS NULL`).Scan(&products)
@@ -29,7 +29,7 @@ func (a *App) adminDashboard(c *gin.Context) {
 func (a *App) adminInventory(c *gin.Context) {
  if a.requireAdmin(c)==nil {return}
  rows,err:=a.DB.Query(c.Request.Context(),`SELECT v.id::text,v.sku,p.id::text,p.slug,p.name,v.color,v.size,v.active,
- (p.archived_at IS NOT NULL),i.on_hand,i.reserved,i.unavailable,(i.on_hand-i.reserved-i.unavailable)::int
+ (p.archived_at IS NOT NULL),i.on_hand,i.reserved,i.unavailable,(i.on_hand-i.reserved-i.unavailable)::int,v.low_stock_threshold
  FROM inventory i JOIN product_variants v ON v.id=i.variant_id JOIN products p ON p.id=v.product_id
  ORDER BY p.name,v.color,v.size LIMIT 500`)
  if err!=nil {serverError(c,err);return};defer rows.Close()
@@ -37,11 +37,11 @@ func (a *App) adminInventory(c *gin.Context) {
  for rows.Next(){
   var id,sku,productID,slug,name,color,size string
   var active,archived bool
-  var onHand,reserved,unavailable,available int
-  if err=rows.Scan(&id,&sku,&productID,&slug,&name,&color,&size,&active,&archived,&onHand,&reserved,&unavailable,&available);err!=nil {serverError(c,err);return}
+  var onHand,reserved,unavailable,available,threshold int
+  if err=rows.Scan(&id,&sku,&productID,&slug,&name,&color,&size,&active,&archived,&onHand,&reserved,&unavailable,&available,&threshold);err!=nil {serverError(c,err);return}
   items=append(items,gin.H{"variant_id":id,"sku":sku,"product_id":productID,"product_slug":slug,
     "name":name,"color":color,"size":size,"active":active,"archived":archived,
-    "on_hand":onHand,"reserved":reserved,"unavailable":unavailable,"available":available})
+    "on_hand":onHand,"reserved":reserved,"unavailable":unavailable,"available":available,"low_stock_threshold":threshold})
  }
  if err=rows.Err();err!=nil{serverError(c,err);return}
  c.JSON(200,gin.H{"items":items})
