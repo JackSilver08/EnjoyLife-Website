@@ -1,0 +1,15 @@
+
+/* Sprint 8 — payOS hosted QR checkout, payment truth shown in order status */
+.payos-payment-panel{background:#eef1e9;color:#233128;text-align:left;padding:30px;max-width:660px;margin:28px auto 40px;border:1px solid #d5dfd1}
+.payos-payment-panel>strong{font:normal 28px/1.2 var(--serif)}
+.payos-payment-panel>p{font-size:14px;line-height:1.75;color:#536154;margin:17px 0}
+.payos-payment-panel small{display:block;color:#5b6b5f;font-size:11px;line-height:1.7;margin-top:16px}
+.payos-payment-actions{display:flex;flex-wrap:wrap;gap:12px;align-items:center;margin-top:24px}
+.payos-payment-actions .button-dark{display:inline-flex;align-items:center;gap:18px}
+.payos-refresh{display:inline-flex;align-items:center;gap:8px;border:1px solid #b5c3b2;background:#fafbf8;padding:15px;color:#284431;font-size:12px}
+.payos-refresh:hover{background:#e1eadd}
+.payos-payment-success{display:flex;gap:14px;align-items:flex-start;color:#2a6238}
+.payos-payment-success strong{font-size:18px}
+.payos-payment-success p{font-size:13px;line-height:1.7;margin:9px 0 0;color:#3d6948}
+.payos-note{color:#236339}
+@media(max-width:650px){.payos-payment-panel{padding:20px}.payos-payment-actions{flex-direction:column;align-items:stretch}.payos-payment-actions .button-dark,.payos-refresh{width:100%;justify-content:center}}
