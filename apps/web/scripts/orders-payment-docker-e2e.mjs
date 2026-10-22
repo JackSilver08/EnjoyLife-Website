@@ -19,10 +19,17 @@ assert(config.code===200&&typeof config.data?.payos_enabled==="boolean"&&typeof 
 assert(config.data.payos_enabled===false&&config.data.status==="disabled","CI must not enable real-money payOS: "+config.text);
 const auth=await req("/api/store/auth/admin-demo",{method:"POST",body:{username:"admin",password:"admin"}});
 assert(auth.code===200&&auth.cookie,"Admin login through browser proxy failed: "+auth.text);
-const catalog=await req("/api/store/products/everyday-oxford");
-assert(catalog.code===200,"Fixture product unavailable: "+catalog.text);
-const sku=catalog.data?.variants?.find(x=>x.sku==="EL-OXF-IV-M");
-assert(sku&&sku.available>=2,"No stock for COD proxy fixture");
+// Journal tests may archive demo catalog products. Create a disposable test
+// product rather than depending on mutable global fixture visibility.
+const seed=Date.now().toString(36);
+const fixture=await req("/api/store/admin/products",{method:"POST",cookie:auth.cookie,body:{
+ name:"Payment Status E2E Fixture",slug:"ci-payment-"+seed,
+ description:"Disposable product for the order-status CI test",
+ image_url:"",collection:"CI",category:"ao",color:"Vàng",size:"M",
+ price_vnd:15000,opening_stock:6,published:true
+}});
+assert(fixture.code===201&&fixture.data?.variant_id,"Unable to create dedicated CI fixture: "+fixture.code+" "+fixture.text);
+const sku={id:fixture.data.variant_id,available:6};
 let counter=0;
 async function create(){
  const key="ci-bff-order-"+Date.now().toString(36)+"-"+(++counter);
