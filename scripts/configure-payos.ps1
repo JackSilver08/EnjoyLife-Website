@@ -1,10 +1,28 @@
 # Configure a private local payOS payment channel for EnjoyLife.
 # Credentials are entered in a masked terminal prompt and never pushed to Git.
-param([switch]$NoRestart)
+param([switch]$NoRestart,[switch]$CheckOnly)
 $ErrorActionPreference = "Stop"
 $root = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
 $envPath = Join-Path $root ".env"
 $examplePath = Join-Path $root ".env.example"
+function Read-GatewayStatus([string]$uri,[string]$label,[int]$attempts) {
+  $lastError = ""
+  for ($n=1; $n -le $attempts; $n++) {
+    try {
+      $data = Invoke-RestMethod -Uri $uri -TimeoutSec 8 -ErrorAction Stop
+      if ($null -eq $data -or $null -eq $data.payos_enabled -or -not $data.status) {
+        throw "Gateway returned no payment readiness status."
+      }
+      return $data
+    } catch {
+      $lastError = $_.Exception.Message
+      if ($n -lt $attempts) { Start-Sleep -Seconds 3 }
+    }
+  }
+  throw "$label was not ready after $attempts checks. Last error: $lastError"
+}
+
+if (-not $CheckOnly) {
 if (-not (Test-Path $envPath)) {
   if (-not (Test-Path $examplePath)) { throw "Missing .env.example. Run this script from a full repository checkout." }
   Copy-Item $examplePath $envPath
@@ -46,20 +64,48 @@ $raw = Set-Env $raw "PAYMENT_ENABLED" "true"
 $client = $api = $checksum = $null
 Write-Host "Saved private configuration in .env (values hidden)." -ForegroundColor Green
 
-if (-not $NoRestart) {
-  Push-Location $root
-  try {
-    docker compose up -d --build --force-recreate api
-    if ($LASTEXITCODE -ne 0) { throw "Docker API restart failed. Check Docker Desktop and run: docker compose logs --tail=100 api" }
-    Write-Host "Restarted API. Checking non-sensitive gateway readiness..." -ForegroundColor Cyan
-    $result = Invoke-RestMethod "http://localhost:3000/api/store/payments/config" -TimeoutSec 20
-    if ($result.payos_enabled) {
-      Write-Host "payOS enabled. Reopen the Checkout page." -ForegroundColor Green
-    } else {
-      Write-Warning ("payOS remains unavailable; status: " + $result.status + ". Confirm the web container is running and has loaded the API.")
-    }
-  } finally { Pop-Location }
-} else {
-  Write-Host "Run: docker compose up -d --force-recreate api"
+} elseif (-not (Test-Path $envPath)) {
+  throw "Private local .env is missing. Run the script without -CheckOnly first."
 }
-Write-Host "When hosting publicly, update WEB_ORIGIN to your HTTPS domain and register its payOS webhook."
+Push-Location $root
+try {
+  if (-not $CheckOnly -and -not $NoRestart) {
+    Write-Host "Restarting and waiting for API Docker HEALTHY state..." -ForegroundColor Cyan
+    docker compose up -d --build --force-recreate --wait --wait-timeout 180 api
+    if ($LASTEXITCODE -ne 0) {
+      throw "API healthcheck failed. Run: docker compose ps ; docker compose logs --tail=80 api"
+    }
+  } elseif ($NoRestart -and -not $CheckOnly) {
+    Write-Host "Saved keys, restart API with: docker compose up -d --wait --force-recreate api"
+    Write-Host "Then verify without re-entering keys: .\scripts\configure-payos.ps1 -CheckOnly"
+    exit 0
+  }
+  Write-Host "Checking direct Go API (localhost:8081)..." -ForegroundColor Cyan
+  try {
+    $apiStatus = Read-GatewayStatus "http://localhost:8081/api/v1/payments/config" "Go API" 12
+  } catch {
+    Write-Warning $_.Exception.Message
+    throw "API not available. Run: docker compose ps ; docker compose logs --tail=80 api"
+  }
+  Write-Host ("API payment status: " + $apiStatus.status)
+  Write-Host "Checking Next.js proxy (localhost:3000)..." -ForegroundColor Cyan
+  try {
+    $webStatus = Read-GatewayStatus "http://localhost:3000/api/store/payments/config" "Website proxy" 15
+  } catch {
+    Write-Warning $_.Exception.Message
+    throw "API is responding but website proxy is not. Run: docker compose up -d --wait web ; docker compose logs --tail=80 web"
+  }
+  if ($apiStatus.status -ne $webStatus.status -or $apiStatus.payos_enabled -ne $webStatus.payos_enabled) {
+    throw "API and website report different payment states. Check Docker Compose services."
+  }
+  Write-Host ("Website payment status: " + $webStatus.status)
+  if ($webStatus.payos_enabled) {
+    Write-Host "payOS configuration enabled in API and website. Refresh Checkout." -ForegroundColor Green
+    Write-Host "Configuration enabled does not verify merchant credentials or a bank transfer."
+  } else {
+    Write-Warning ("payOS not enabled, status: " + $webStatus.status + ". Check your private .env and restart API.")
+  }
+} finally {
+  Pop-Location
+}
+Write-Host "Public payOS webhooks require an HTTPS domain, not localhost."
