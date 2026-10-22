@@ -17,7 +17,7 @@ import (
 )
 
 func (a *App) payOS() payment.PayOS {
- return payment.PayOS{ClientID:a.Config.PayOSClientID,APIKey:a.Config.PayOSAPIKey,ChecksumKey:a.Config.PayOSChecksumKey}
+ return payment.PayOS{ClientID:a.Config.PayOSClientID,APIKey:a.Config.PayOSAPIKey,ChecksumKey:a.Config.PayOSChecksumKey,BaseURL:a.Config.PayOSBaseURL}
 }
 func (a *App) payOSReady()bool{
  u:=strings.TrimSuffix(a.Config.WebOrigin,"/")
