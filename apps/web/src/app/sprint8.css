@@ -19,3 +19,8 @@
 .payos-payment-review{background:#fff7e8;border:1px solid #e5c8a0;padding:16px 18px;color:#654b2b}
 .payos-payment-review strong{display:block;font-size:18px}
 .payos-payment-review p{font-size:14px;line-height:1.7;margin:8px 0 0}
+
+/* Official payOS iframe is created by payOS Checkout Script (not by user HTML). */
+.payos-embed-frame{width:100%;max-width:100%;overflow:hidden;margin-top:16px}
+.payos-embed-frame:not(:empty){min-height:560px;border:1px solid #d5dfd1;background:#fff}
+.payos-hosted-link{display:inline-flex;align-items:center;gap:8px;margin:12px 0 0;color:#275239;font-size:13px;text-decoration:underline;text-underline-offset:3px}
