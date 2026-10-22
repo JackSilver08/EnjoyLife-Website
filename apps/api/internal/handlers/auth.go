@@ -143,13 +143,19 @@ func (a *App) login(c *gin.Context) {
 	}
 	in.Email = cleanEmail(in.Email)
     if in.Email==demoAdminEmail { c.JSON(401,gin.H{"error":"Vui lòng đăng nhập qua trang quản trị."});return }
+    if len(in.Email)>254||len(in.Password)>72||len(in.Email)<5 {c.JSON(401,gin.H{"error":"Email hoặc mật khẩu không đúng."});return}
+    allowed,checkErr:=a.authAllowed(c,in.Email)
+    if checkErr!=nil{serverError(c,checkErr);return}
+    if !allowed{c.JSON(429,gin.H{"error":"Quá nhiều lần đăng nhập không thành công. Thử lại sau 15 phút."});return}
 	var user currentUser
 	var hash string
 	err := a.DB.QueryRow(c.Request.Context(), "SELECT id::text,email,display_name,role,password_hash FROM users WHERE email=$1 AND disabled_at IS NULL", in.Email).Scan(&user.ID, &user.Email, &user.Name, &user.Role, &hash)
 	if err != nil || bcrypt.CompareHashAndPassword([]byte(hash), []byte(in.Password)) != nil {
+		if err=a.authFailed(c,in.Email);err!=nil{serverError(c,err);return}
 		c.JSON(401, gin.H{"error": "Email hoặc mật khẩu không đúng."})
 		return
 	}
+	if err=a.authSucceeded(c,in.Email);err!=nil{serverError(c,err);return}
 	a.createSession(c, user)
 }
 func (a *App) logout(c *gin.Context) {
