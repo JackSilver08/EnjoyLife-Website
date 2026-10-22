@@ -625,3 +625,36 @@ html{scroll-padding-top:calc(82px + 18px)}
 /* Bulk ZIP media intake */
 .media-bulk-actions{display:flex;flex-wrap:wrap;align-items:center;gap:12px}
 @media(max-width:720px){.media-bulk-actions{width:100%}.media-bulk-actions button{flex:1;min-width:180px}}
+
+/* Sprint 6.1: balanced Admin product form. Scoped to creation only. */
+.admin-product-create h2{margin-bottom:9px}
+.admin-product-create .admin-product-form-intro{font-size:13px;line-height:1.65;color:#666e65;margin:0 0 22px;max-width:830px}
+.admin-product-create .admin-form-grid{column-gap:20px;row-gap:18px;align-items:start}
+.admin-product-create .admin-form-grid>label,.admin-product-create .admin-form-grid>.media-picker-field{min-width:0}
+.admin-product-create .admin-form-grid>label>input,
+.admin-product-create .admin-form-grid>label>select{height:50px;width:100%}
+.admin-product-create .admin-form-grid .admin-product-slug-note{font-size:11px;font-weight:400;color:#687168;line-height:1.35;overflow-wrap:anywhere}
+.admin-product-create .admin-product-slug-note button{appearance:none;border:0;background:none;color:#354d3b;font:inherit;text-decoration:underline;text-underline-offset:3px;cursor:pointer;padding:0}
+.admin-product-create .admin-product-slug-note button:focus-visible{outline:2px solid #354d3b;outline-offset:3px}
+.admin-product-create .admin-product-description{margin-top:0}
+.admin-product-create .admin-product-description textarea{min-height:110px;resize:vertical;width:100%}
+.admin-product-create .admin-product-form-footer{display:flex;gap:16px;align-items:center;justify-content:space-between;flex-wrap:wrap;margin-top:18px}
+.admin-product-create .admin-product-form-footer .admin-help{margin:0;flex:1;min-width:230px}
+.admin-product-create .admin-product-form-footer .button-dark{margin-top:0}
+.admin-product-create .media-picker-field{border:0;padding:0;margin:0;background:transparent;display:flex;flex-direction:column;gap:8px}
+.admin-product-create .media-picker-field-top{height:16px;display:flex;justify-content:space-between;align-items:center;gap:8px}
+.admin-product-create .media-picker-field-label{font-size:12px;font-weight:600;color:inherit}
+.admin-product-create .media-picker-library-link{display:inline-flex;gap:5px;align-items:center;flex-shrink:0;background:none;border:0;padding:0;color:#4d6454;font-size:11px;text-decoration:underline;text-underline-offset:3px;cursor:pointer}
+.admin-product-create .media-picker-library-link:hover{color:#203729}
+.admin-product-create .media-picker-library-link:focus-visible{outline:2px solid #304c36;outline-offset:3px}
+.admin-product-create .media-picker-upload-field{width:100%;min-height:50px;border:1px solid #cbcfc8;border-radius:2px;background:#fff;color:#344a3a;display:flex;align-items:center;justify-content:center;gap:10px;padding:10px 14px;font-size:13px;font-weight:600;cursor:pointer;transition:background-color .18s,border-color .18s}
+.admin-product-create .media-picker-upload-field:hover:not(:disabled){background:#f1f4ed;border-color:#7c9480}
+.admin-product-create .media-picker-upload-field:focus-visible{outline:2px solid #344a3a;outline-offset:2px}
+.admin-product-create .media-picker-upload-field:disabled,.admin-product-create .media-picker-library-link:disabled{opacity:.55;cursor:not-allowed}
+.admin-product-create .media-picked{margin-top:4px;border:1px solid #e4e7e1}
+.admin-product-create .media-gallery-panel{margin-top:4px}
+@media(max-width:760px){
+ .admin-product-create .admin-form-grid{grid-template-columns:minmax(0,1fr);gap:17px}
+ .admin-product-create .admin-product-form-footer{align-items:stretch}
+ .admin-product-create .admin-product-form-footer .button-dark{width:100%}
+}

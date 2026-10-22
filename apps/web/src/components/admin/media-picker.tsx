@@ -5,9 +5,9 @@ import {fetchMediaAssets,uploadMedia,type MediaAsset} from "@/lib/media-api";
 
 type Props={
  label?:string;value:string;onSelect:(url:string)=>void;
- onUpload?:(asset:MediaAsset)=>void;compact?:boolean;
+ onUpload?:(asset:MediaAsset)=>void;compact?:boolean;field?:boolean;
 };
-export function MediaPicker({label="Ảnh",value,onSelect,onUpload,compact=false}:Props){
+export function MediaPicker({label="Ảnh",value,onSelect,onUpload,compact=false,field=false}:Props){
  const [open,setOpen]=useState(false);
  const [items,setItems]=useState<MediaAsset[]>([]);
  const [error,setError]=useState("");
@@ -35,14 +35,23 @@ export function MediaPicker({label="Ảnh",value,onSelect,onUpload,compact=false
   }catch(e){setError(e instanceof Error?e.message:"Tải ảnh thất bại.")}
   finally{setBusy(false);if(input.current)input.current.value="";}
  }
- return <div className={compact?"media-picker media-picker-compact":"media-picker"}>
-  <div className="media-picker-top">
-   <span>{label}</span>
-   <div className="media-picker-actions">
-    <button type="button" disabled={busy} onClick={()=>input.current?.click()}><UploadCloud size={16}/> Chọn ảnh từ máy</button>
-    <button type="button" disabled={busy} onClick={()=>setOpen(o=>!o)}><FolderOpen size={16}/> {open?"Đóng thư viện":"Thư viện ảnh"}</button>
+ return <div className={field?"media-picker media-picker-field":compact?"media-picker media-picker-compact":"media-picker"}>
+  {field?<div className="media-picker-field-top">
+    <span className="media-picker-field-label">{label}</span>
+    <button className="media-picker-library-link" type="button" disabled={busy}
+     onClick={()=>setOpen(o=>!o)}><FolderOpen size={14}/>{open?"Đóng thư viện":"Thư viện ảnh"}</button>
    </div>
-  </div>
+   :<div className="media-picker-top">
+    <span>{label}</span>
+    <div className="media-picker-actions">
+     <button type="button" disabled={busy} onClick={()=>input.current?.click()}><UploadCloud size={16}/> Chọn ảnh từ máy</button>
+     <button type="button" disabled={busy} onClick={()=>setOpen(o=>!o)}><FolderOpen size={16}/> {open?"Đóng thư viện":"Thư viện ảnh"}</button>
+    </div>
+   </div>}
+  {field&&<button className="media-picker-upload-field" type="button" disabled={busy}
+   onClick={()=>input.current?.click()}><UploadCloud size={18}/>
+   <span>{busy?"Đang tải ảnh lên...":value?"Thay ảnh đại diện từ máy":"Chọn ảnh từ máy"}</span>
+  </button>}
   <input ref={input} type="file" accept="image/jpeg,image/png,image/webp,.jpg,.jpeg,.png,.webp" hidden
    onChange={e=>void uploadFiles(e.target.files)}/>
   {value&&<div className="media-picked">
