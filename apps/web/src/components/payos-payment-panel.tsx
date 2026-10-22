@@ -1,9 +1,11 @@
 "use client";
 import {useEffect,useState} from "react";
+import {useRouter} from "next/navigation";
 import {ArrowUpRight,CheckCircle2,RefreshCw} from "lucide-react";
 
 type Props={token:string;initialPaymentStatus:string;initialCheckoutURL:string};
 export function PayOSPaymentPanel({token,initialPaymentStatus,initialCheckoutURL}:Props){
+ const router=useRouter();
  const [status,setStatus]=useState(initialPaymentStatus);
  const [url,setURL]=useState(initialCheckoutURL);
  const [busy,setBusy]=useState(false);
@@ -15,7 +17,7 @@ export function PayOSPaymentPanel({token,initialPaymentStatus,initialCheckoutURL
    try{
      const res=await fetch("/api/store/orders/"+token+"/payment-status",{cache:"no-store"});
      const data=await res.json();
-     if(data.payment_status==="PAID"){setStatus("PAID");setError("");setNotice("Đã xác minh thanh toán thành công qua payOS.");return}
+     if(data.payment_status==="PAID"){setStatus("PAID");setError("");setNotice("Đã xác minh thanh toán thành công qua payOS.");router.refresh();return}
      if(!res.ok&&res.status!==503)return;
    }catch{ /* A transient offline state must not be interpreted as a successful payment. */ }
  }
@@ -28,7 +30,7 @@ export function PayOSPaymentPanel({token,initialPaymentStatus,initialCheckoutURL
      const res=await fetch("/api/store/orders/"+token+"/cancel-payment",{method:"POST"});
      const data=await res.json();
      if(!res.ok)throw Error(data.error||"Không thể hủy giao dịch.");
-     setCancelled(true);setNotice("Đơn đã được hủy trên payOS; số hàng đã giữ được trả về kho.");
+     setCancelled(true);setNotice("Đơn đã được hủy trên payOS; số hàng đã giữ được trả về kho.");router.refresh();
    }catch(err){setError(err instanceof Error?err.message:"Chưa hủy được đơn.");}
    finally{setBusy(false)}
  }
