@@ -66,7 +66,7 @@ With `PAYMENT_ENABLED=false`, COD remains usable and QR is visibly disabled. See
 
 - Integration tests use an isolated PostgreSQL schema and fake payOS HTTPS checkout links, never the live merchant keys.
 - A signed success webhook marks a pending payOS order paid once, even if delivered twice.
-- A correctly signed transaction with the wrong amount is flagged for manual review and cannot generate a second QR checkout link.
+- A correctly signed transaction with the wrong amount, or a provider-reported partial/overpayment, is flagged for manual review and cannot generate a second QR checkout link. Verified unusual transfers and server-side payment checks are retained in the audit log.
 - Money received after a successfully canceled order never reactivates fulfillment or reserves stock again; the order remains canceled and payment becomes `REVIEW_REQUIRED`.
 - Direct payOS status polling and the background reconciler use an order-row lock to avoid racing with cancellation.
 - The administrator sees `REVIEW_REQUIRED` explicitly, and processing actions are hidden for unpaid payOS orders.
