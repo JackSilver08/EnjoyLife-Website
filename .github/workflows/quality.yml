@@ -99,6 +99,10 @@ jobs:
           assert b"\r\nset -eu\r\n" in source
           print("Created Windows CRLF test fixture for bind-mounted script")
           PY
+      - name: Validate JavaScript integration tests before Docker boot
+        run: |
+          node --check apps/web/scripts/journal-docker-e2e.mjs
+          node --check apps/web/scripts/check-origin.mjs
       - name: Build web development image
         run: docker compose build web
       - name: Simulate a stale node_modules named volume
