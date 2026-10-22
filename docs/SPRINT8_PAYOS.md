@@ -5,7 +5,7 @@
 - Customer checkout offers COD (unchanged) or payOS QR when enabled.
 - Prices and stock are recalculated and reserved in PostgreSQL; browser totals are never trusted.
 - Each order has at most one provider payment attempt and unique numeric payOS orderCode.
-- The backend creates signed payment links and returns the official `https://pay.payos.vn/` checkout URL; customers can scan VietQR directly on the order page through payOS's official embedded Checkout Script.
+- The backend creates signed payment links and returns the official `https://pay.payos.vn/` checkout URL and the original `qrCode` payload; the storefront renders that VietQR value locally as a large, responsive SVG with a four-module quiet zone, avoiding an iframe's internal scrollbar.
 - Unpaid order status includes a recovery button and server-verified payment polling, never marking paid merely from returnUrl query parameters.
 - Public webhook: `POST /api/payments/payos/webhook`. Next.js forwards to Gin; Gin checks the HMAC-SHA256 signature with the checksum key, payment link ID, unique provider order code, amount and VND currency, then records a deduplicated payment event in PostgreSQL.
 - Customer can cancel unpaid checkout only after payOS confirms cancellation; stock is released in a single transaction. Existing Admin/Staff order-status action refuses to bypass payOS cancellation.
@@ -45,8 +45,8 @@ Manual pre-release acceptance with a protected payment channel and controlled en
 
 ## Current scope limits
 
-- The QR is displayed through **payOS's official embedded Checkout Script** on the Enjoy Life order page, without generating or editing bank QR data in a third-party service. If that script is unavailable, the customer can use the official payOS-hosted checkout fallback.
-- The payOS script is loaded from `https://cdn.payos.vn/payos-checkout/v1/stable/payos-initialize.js` per official payOS documentation. Production CSP must allow this script and payOS frame endpoints. Browser SDK success/cancel callbacks only trigger a server-side status refresh; they never mark the order paid.
+- The QR is generated in the browser from the **exact `qrCode` field returned by payOS** (and persisted in the order), using the MIT-licensed Project Nayuki QR encoder vendored in this repository. No iframe, external QR image URL, third-party data processor, SDK or checkout-script dependency is used to draw the QR.
+- The official payOS-hosted checkout URL remains available as a safe fallback. A visually displayed QR is **not** evidence of completed payment; only a signed webhook or verified server-side payOS status may mark an order paid.
 - A real production domain and verified webhook are required before public use. Do not expose the existing development-only Docker Compose as a payment production server.
 - Bank refunds, chargeback disputes and settlement accounting require a separate controlled admin workflow. An unexpected late payment on a canceled order is explicitly marked `REVIEW_REQUIRED`, leaves the order canceled, and needs manual review before any refund or fulfillment.
 - A merchant admin should investigate `REVIEW_REQUIRED` attempts; do not manually mark an unpaid payOS order as paid.
@@ -125,3 +125,9 @@ Invoke-RestMethod http://localhost:3000/api/store/payments/config
 ```
 
 If the direct API fails, run `docker compose ps` and `docker compose logs --tail=80 api`. If direct API succeeds and proxy fails, run `docker compose up -d --wait web` and `docker compose logs --tail=80 web`. Redact credentials, personal data, and URLs containing private order tokens before sharing any log. A `payos_enabled: true` response only confirms configuration, **not** the validity of the merchant keys with payOS or receipt of money.
+
+## Large scroll-free VietQR (Sprint 8 UI refresh)
+
+The old embedded payOS Checkout Script created a narrow iframe with an internal scrollbar. This has been replaced with a responsive first-party SVG sized for easy banking-app scanning (up to 390px on desktop, 340px on smaller screens). The QR contains the *unmodified* payOS payment payload, with four blank modules on every edge, on a white square background. It reappears on refresh using `qr_code` from the backend's stored payment attempt, and no new payment link is created just by refreshing the page. The QR panel also shows the server-calculated total and the official hosted payOS fallback link.
+
+Safety checks: `node apps/web/scripts/test-payos-qr.mjs` validates QR encoding structure and no-iframe UI wiring; existing PostgreSQL/provider integration tests check the persisted `qr_code` is identical to payOS's link response. CI does not use merchant keys or perform any real bank transfers.
