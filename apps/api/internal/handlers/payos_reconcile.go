@@ -37,12 +37,19 @@ func (a *App) reconcileExpiredPayOS(parent context.Context){
  for _,p:=range list{
   if ctx.Err()!=nil{return}
   status,err:=api.Get(ctx,p.code);if err!=nil||status.OrderCode!=p.code||status.Amount!=p.amount{continue}
-  if status.Status=="PAID"&&status.AmountPaid>=p.amount{
+  if (status.AmountPaid>0&&status.AmountPaid!=p.amount)||(status.Status=="PAID"&&status.AmountPaid!=p.amount){
+   _=a.recordProviderReview(ctx,p.code,p.amount,status.AmountPaid)
+   continue
+  }
+  if status.Status=="PAID"&&status.AmountPaid==p.amount{
    // Shared transaction serializes reconciliation against webhook/cancellation.
    _,_=a.recordProviderPaid(ctx,p.code,p.amount)
    continue
   }
-  if status.AmountPaid>0{continue}
+  if status.AmountPaid>0{
+   _=a.recordProviderReview(ctx,p.code,p.amount,status.AmountPaid)
+   continue
+  }
   if status.Status=="CANCELLED"||status.Status=="EXPIRED"{
    _=a.finalizePayOSCancellation(ctx,p.code)
    continue
