@@ -126,8 +126,8 @@ const publishSKU=await call("/api/store/admin/products/"+newItem.json.id,{
   collection:"",image_url:media.url,published:true,
  }});
 ensure(publishSKU.status===200,"Could not publish SKU test product");
-const detail=await call("/api/store/products/"+skuAutoSlug);
-ensure(detail.status===200&&detail.json?.images?.length===2,"Public product image gallery not returned");
+const sprint6Detail=await call("/api/store/products/"+skuAutoSlug);
+ensure(sprint6Detail.status===200&&sprint6Detail.json?.images?.length===2,"Public product image gallery not returned");
 const facets=await call("/api/store/products/filters");
 ensure(facets.status===200&&facets.json?.colors?.includes("Trắng")&&facets.json?.sizes?.includes("M"),
  "Catalog filter options not data-derived");
