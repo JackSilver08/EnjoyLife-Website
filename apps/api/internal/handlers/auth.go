@@ -6,6 +6,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"net/http"
+	"os"
 	"strings"
 	"time"
 
@@ -40,11 +41,13 @@ func EnsureAdmin(ctx context.Context, db *pgxpool.Pool, email, password string) 
 	if email == "" || len(password) < 8 {
 		return nil
 	}
-	var exists string
-	err := db.QueryRow(ctx, "SELECT id::text FROM users WHERE email=$1", email).Scan(&exists)
+	var exists,role string
+	err := db.QueryRow(ctx, "SELECT id::text,role FROM users WHERE email=$1", email).Scan(&exists,&role)
 	if err == nil {
-		_, err = db.Exec(ctx, "UPDATE users SET role='ADMIN' WHERE id=$1", exists)
-		return err
+		if role != "ADMIN" {
+			return errors.New("configured admin email belongs to a non-admin user; refusing automatic privilege escalation")
+		}
+		return nil
 	}
 	if !errors.Is(err, pgx.ErrNoRows) {
 		return err
@@ -69,7 +72,7 @@ func (a *App) loadUser(c *gin.Context) *currentUser {
 	ctx, cancel := context.WithTimeout(c.Request.Context(), 2*time.Second)
 	defer cancel()
 	var user currentUser
-	err = a.DB.QueryRow(ctx, `SELECT u.id::text,u.email,u.display_name,u.role FROM user_sessions s JOIN users u ON u.id=s.user_id WHERE s.token_hash=$1 AND s.expires_at>now()`, tokenHash(token)).Scan(&user.ID, &user.Email, &user.Name, &user.Role)
+	err = a.DB.QueryRow(ctx, `SELECT u.id::text,u.email,u.display_name,u.role FROM user_sessions s JOIN users u ON u.id=s.user_id WHERE s.token_hash=$1 AND s.expires_at>now() AND u.disabled_at IS NULL`, tokenHash(token)).Scan(&user.ID, &user.Email, &user.Name, &user.Role)
 	if err != nil || (user.Email==demoAdminEmail && !devAdminEnabled()) {
 		return nil
 	}
@@ -87,7 +90,7 @@ func (a *App) requireAdmin(c *gin.Context) *currentUser {
 	if u == nil {
 		return nil
 	}
-	if u.Role != "ADMIN" {
+	if u.Role != "ADMIN" && !(u.Role == "STAFF" && c.GetBool(staffPermissionKey)) {
 		c.AbortWithStatusJSON(http.StatusForbidden, gin.H{"error": "Bạn không có quyền quản trị."})
 		return nil
 	}
@@ -102,7 +105,7 @@ func (a *App) createSession(c *gin.Context, user currentUser) {
 		serverError(c, err)
 		return
 	}
-	http.SetCookie(c.Writer, &http.Cookie{Name: sessionCookie, Value: token, Path: "/", HttpOnly: true, Secure: c.Request.TLS != nil, SameSite: http.SameSiteLaxMode, MaxAge: 24 * 60 * 60})
+	http.SetCookie(c.Writer, &http.Cookie{Name: sessionCookie, Value: token, Path: "/", HttpOnly: true, Secure: c.Request.TLS != nil || os.Getenv("APP_ENV") == "production", SameSite: http.SameSiteLaxMode, MaxAge: 24 * 60 * 60})
 	c.JSON(http.StatusOK, gin.H{"user": user})
 }
 func (a *App) register(c *gin.Context) {
@@ -143,13 +146,19 @@ func (a *App) login(c *gin.Context) {
 	}
 	in.Email = cleanEmail(in.Email)
     if in.Email==demoAdminEmail { c.JSON(401,gin.H{"error":"Vui lòng đăng nhập qua trang quản trị."});return }
+    if len(in.Email)>254||len(in.Password)>72||len(in.Email)<5 {c.JSON(401,gin.H{"error":"Email hoặc mật khẩu không đúng."});return}
+    allowed,checkErr:=a.authAllowed(c,in.Email)
+    if checkErr!=nil{serverError(c,checkErr);return}
+    if !allowed{c.JSON(429,gin.H{"error":"Quá nhiều lần đăng nhập không thành công. Thử lại sau 15 phút."});return}
 	var user currentUser
 	var hash string
-	err := a.DB.QueryRow(c.Request.Context(), "SELECT id::text,email,display_name,role,password_hash FROM users WHERE email=$1", in.Email).Scan(&user.ID, &user.Email, &user.Name, &user.Role, &hash)
+	err := a.DB.QueryRow(c.Request.Context(), "SELECT id::text,email,display_name,role,password_hash FROM users WHERE email=$1 AND disabled_at IS NULL", in.Email).Scan(&user.ID, &user.Email, &user.Name, &user.Role, &hash)
 	if err != nil || bcrypt.CompareHashAndPassword([]byte(hash), []byte(in.Password)) != nil {
+		if err=a.authFailed(c,in.Email);err!=nil{serverError(c,err);return}
 		c.JSON(401, gin.H{"error": "Email hoặc mật khẩu không đúng."})
 		return
 	}
+	if err=a.authSucceeded(c,in.Email);err!=nil{serverError(c,err);return}
 	a.createSession(c, user)
 }
 func (a *App) logout(c *gin.Context) {

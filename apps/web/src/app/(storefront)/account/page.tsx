@@ -5,8 +5,9 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { LogIn, UserPlus, LogOut, ShieldCheck } from "lucide-react";
 import { money } from "@/lib/format";
+import {ChangePasswordForm} from "@/components/admin/change-password-form";
 
-type User = { id: string; email: string; name: string; role: "ADMIN" | "CUSTOMER" };
+type User = { id: string; email: string; name: string; role: "ADMIN" | "STAFF" | "CUSTOMER" };
 type Order = { order_no: string; status: string; payment_status: string; total_vnd: number; created_at: string };
 type AuthResponse = { user?: User | null; error?: string };
 
@@ -25,7 +26,7 @@ export default function AccountPage() {
       const result: AuthResponse = await response.json();
       const currentUser = result.user ?? null;
       setUser(currentUser);
-      if (currentUser?.role === "ADMIN") {
+      if ((currentUser?.role === "ADMIN" || currentUser?.role === "STAFF")) {
         router.replace("/admin");
         return;
       }
@@ -94,7 +95,7 @@ export default function AccountPage() {
 
       setUser(result.user);
       setOrders([]);
-      if (result.user.role === "ADMIN") {
+      if ((result.user.role === "ADMIN" || result.user.role === "STAFF")) {
         router.replace("/admin");
         router.refresh();
       } else {
@@ -129,7 +130,8 @@ export default function AccountPage() {
       <button className="text-button" onClick={() => void logout()}><LogOut size={16}/> Đăng xuất</button>
     </div>
     {error && <p className="form-error" role="alert">{error}</p>}
-    {user.role === "ADMIN" && <Link className="button-dark" href="/admin"><ShieldCheck size={17}/> ĐẾN TRANG QUẢN TRỊ</Link>}
+    {(user.role === "ADMIN" || user.role === "STAFF") && <Link className="button-dark" href="/admin"><ShieldCheck size={17}/> ĐẾN TRANG QUẢN TRỊ</Link>}
+    <h2>Bảo mật tài khoản</h2><ChangePasswordForm/>
     <h2>Đơn hàng của tôi</h2>
     {orders.length
       ? <div className="account-orders">{orders.map(o => <article key={o.order_no}>

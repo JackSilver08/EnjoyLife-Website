@@ -2,6 +2,7 @@
 import {useEffect,useMemo,useState,type FormEvent} from "react";
 import Link from "next/link";
 import {adminAction,useAdminData} from "@/components/admin/admin-data";
+import {useAdminRole} from "@/components/admin/admin-shell";
 
 type Stock={
  variant_id:string;product_id:string;product_slug:string;
@@ -30,6 +31,7 @@ function StockHistory({variantId}:{variantId:string}){
  </div>;
 }
 export default function Inventory(){
+ const role=useAdminRole();
  const {data,error,loading,reload}=useAdminData<{items:Stock[]}>("admin/inventory");
  const [search,setSearch]=useState("");
  const [low,setLow]=useState(false);
@@ -88,7 +90,7 @@ export default function Inventory(){
    :<div className="admin-table-wrap"><table className="admin-table">
     <thead><tr><th>Sản phẩm / Mã hàng</th><th>Màu / Size</th><th>Tồn thực tế</th><th>Đã giữ</th><th>Không khả dụng</th><th>Có thể bán</th><th>Thao tác</th></tr></thead>
     <tbody>{rows.map(x=><tr key={x.variant_id}>
-     <td><Link className="inventory-product-link" href={"/admin/products?edit="+x.product_id}><strong>{x.name}</strong></Link>
+     <td><Link className="inventory-product-link" href={role==="STAFF"?"/admin/catalog":"/admin/products?edit="+x.product_id}><strong>{x.name}</strong></Link>
       <small>{x.sku}</small>{(x.archived||!x.active)&&<small className="admin-low">{x.archived?"Đã chuyển Thùng rác":"Ngừng bán"}</small>}</td>
      <td>{x.color} / {x.size}</td>
      <td>{x.on_hand}</td><td>{x.reserved}</td><td>{x.unavailable}</td>

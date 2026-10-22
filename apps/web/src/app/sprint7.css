@@ -1,0 +1,18 @@
+/* Sprint 7: staff administration and account security. */
+.sprint7-panel{margin-top:24px}
+.sprint7-panel h2{margin:0 0 22px}
+.sprint7-panel .admin-help{margin-top:14px}
+.sprint7-form{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;align-items:end}
+.sprint7-form label,.sprint7-reset label{display:flex;flex-direction:column;gap:9px;font-size:12px;font-weight:600;color:#344839;min-width:0}
+.sprint7-form input,.sprint7-reset input{min-height:46px;background:#fff;border:1px solid #cdd6cb;padding:12px 13px;width:100%;border-radius:4px;font-size:14px}
+.sprint7-form input:focus-visible,.sprint7-reset input:focus-visible{outline:2px solid #31573d;outline-offset:2px}
+.sprint7-form button{min-height:46px;justify-content:center}
+.sprint7-reset{margin-top:22px;background:#f4f6f1;border:1px solid #d9e0d6;padding:22px;max-width:570px;display:grid;gap:14px}
+.sprint7-reset h3{font-size:19px;margin:0}.sprint7-reset p{font-size:13px;color:#5d695e;margin:0}
+.sprint7-reset .admin-row-actions{display:flex;gap:12px;flex-wrap:wrap}
+.sprint7-reset .admin-row-actions button{min-height:42px}
+.sprint7-password-form{grid-template-columns:repeat(2,minmax(0,1fr));max-width:820px}
+.sprint7-password-form button{max-width:220px}
+.sprint7-password-form .admin-notice,.sprint7-password-form .admin-error{grid-column:1/-1}
+@media(max-width:900px){.sprint7-form{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:600px){.sprint7-form,.sprint7-password-form{grid-template-columns:1fr}.sprint7-panel{padding:18px}.sprint7-reset{padding:16px}}
