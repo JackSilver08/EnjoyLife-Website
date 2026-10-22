@@ -1,10 +1,10 @@
 import {NextRequest,NextResponse} from "next/server";
 const base=process.env.API_INTERNAL_URL??"http://localhost:8081";
 function allowed(path:string,method:string){
- if(method==="GET")return ["blog/articles","blog/categories","blog/tags","admin/blog/articles","admin/media","site/content"].includes(path)||/^blog\/articles\/[a-z0-9-]{3,140}$/.test(path)||/^admin\/blog\/articles\/[a-f0-9-]{36}$/.test(path)||path==="products"||path==="policies"||/^products\/[a-z0-9-]{1,100}$/.test(path)||/^orders\/[a-f0-9]{48}$/.test(path)||["auth/me","account/orders","admin/summary","admin/dashboard","admin/orders","admin/users","admin/inventory","admin/products","admin/reports"].includes(path)||/^admin\/products\/[a-f0-9-]{36}\/variants$/.test(path);
+ if(method==="GET")return ["blog/articles","blog/categories","blog/tags","admin/blog/articles","admin/media","site/content"].includes(path)||/^blog\/articles\/[a-z0-9-]{3,140}$/.test(path)||/^admin\/blog\/articles\/[a-f0-9-]{36}$/.test(path)||path==="products"||path==="policies"||/^products\/[a-z0-9-]{1,100}$/.test(path)||/^orders\/[a-f0-9]{48}$/.test(path)||["auth/me","account/orders","admin/summary","admin/dashboard","admin/orders","admin/users","admin/inventory","admin/products","admin/reports"].includes(path)||/^admin\/products\/[a-f0-9-]{36}\/variants$/.test(path)||/^admin\/products\/[a-f0-9-]{36}\/restore$/.test(path);
  if(method==="POST")return ["admin/blog/articles","admin/blog/categories","admin/blog/tags","admin/media","admin/media/bulk","admin/products/import","orders","auth/register","auth/login","auth/logout","auth/admin-demo","admin/products"].includes(path)||/^admin\/orders\/EL-[A-F0-9]{8}\/paid$/.test(path)||/^admin\/products\/[a-f0-9-]{36}\/variants$/.test(path);
  if(method==="PUT")return path==="admin/site/content"||/^admin\/blog\/articles\/[a-f0-9-]{36}$/.test(path);
- if(method==="DELETE")return /^admin\/blog\/articles\/[a-f0-9-]{36}$/.test(path);
+ if(method==="DELETE")return /^admin\/blog\/articles\/[a-f0-9-]{36}$/.test(path)||/^admin\/products\/[a-f0-9-]{36}$/.test(path);
  if(method==="PATCH")return /^admin\/blog\/articles\/[a-f0-9-]{36}\/status$/.test(path)||/^admin\/orders\/EL-[A-F0-9]{8}\/status$/.test(path)||/^admin\/inventory\/[a-f0-9-]{36}$/.test(path)||/^admin\/products\/[a-f0-9-]{36}$/.test(path)||/^admin\/variants\/[a-f0-9-]{36}$/.test(path);
  return false;
 }
@@ -31,7 +31,7 @@ async function forward(req:NextRequest,params:Promise<{path:string[]}>,method:"G
  try{
   const url=new URL(base+"/api/v1/"+path);
   if(method==="GET"){
-   for(const key of ["q","limit","offset","category","tag","status"]){
+   for(const key of ["q","limit","offset","category","tag","status","view"]){
     const v=req.nextUrl.searchParams.get(key);
     if(v!==null)url.searchParams.set(key,v.slice(0,100));
    }

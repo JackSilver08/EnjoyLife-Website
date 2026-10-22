@@ -113,6 +113,8 @@ func Router(a *App) *gin.Engine {
 	api.POST("/admin/products", a.adminCreateProduct)
 	api.POST("/admin/products/import", a.adminImportProducts)
 	api.PATCH("/admin/products/:id", a.adminUpdateProduct)
+	api.DELETE("/admin/products/:id", a.adminArchiveProduct)
+	api.POST("/admin/products/:id/restore", a.adminRestoreProduct)
 	api.GET("/admin/reports", a.adminReports)
     // Enjoy Journal admin: session/role checked inside every handler.
     api.GET("/admin/blog/articles", a.adminBlogFeed)
@@ -147,7 +149,7 @@ func (a *App) products(c *gin.Context) {
       FROM products p JOIN categories c ON c.id=p.category_id
       JOIN product_variants v ON v.product_id=p.id AND v.active
       LEFT JOIN inventory i ON i.variant_id=v.id
-      WHERE p.published AND ($1 = '' OR p.name ILIKE '%' || $1 || '%' OR p.collection_name ILIKE '%' || $1 || '%')
+      WHERE p.published AND p.archived_at IS NULL AND ($1 = '' OR p.name ILIKE '%' || $1 || '%' OR p.collection_name ILIKE '%' || $1 || '%')
       GROUP BY p.id,c.slug ORDER BY p.created_at DESC LIMIT 60`, query)
 	if err != nil {
 		serverError(c, err)
@@ -176,7 +178,7 @@ func (a *App) product(c *gin.Context) {
 	p := Product{Variants: []Variant{}}
 	err := a.DB.QueryRow(ctx, `SELECT p.id::text,p.slug,p.name,p.description,p.image_url,p.collection_name,c.slug,
       COALESCE((SELECT MIN(price_vnd) FROM product_variants WHERE product_id=p.id AND active),0)
-      FROM products p JOIN categories c ON c.id=p.category_id WHERE p.slug=$1 AND p.published`, c.Param("slug")).Scan(
+      FROM products p JOIN categories c ON c.id=p.category_id WHERE p.slug=$1 AND p.published AND p.archived_at IS NULL`, c.Param("slug")).Scan(
 		&p.ID, &p.Slug, &p.Name, &p.Description, &p.ImageURL, &p.Collection, &p.CategorySlug, &p.PriceVND)
 	if errors.Is(err, pgx.ErrNoRows) {
 		c.JSON(http.StatusNotFound, gin.H{"error": "Không tìm thấy sản phẩm"})
@@ -302,7 +304,7 @@ func (a *App) createOrder(c *gin.Context) {
           i.on_hand,i.reserved,i.unavailable
           FROM product_variants v JOIN products p ON p.id=v.product_id
           JOIN inventory i ON i.variant_id=v.id
-          WHERE v.id::text=$1 AND v.active AND p.published FOR UPDATE OF i`, item.VariantID).Scan(
+          WHERE v.id::text=$1 AND v.active AND p.published AND p.archived_at IS NULL FOR UPDATE OF i`, item.VariantID).Scan(
 			&snap.id, &snap.sku, &snap.name, &snap.color, &snap.size, &snap.price, &onHand, &reserved, &unavailable)
 		if errors.Is(err, pgx.ErrNoRows) {
 			c.JSON(http.StatusBadRequest, gin.H{"error": "Sản phẩm không còn khả dụng"})

@@ -36,6 +36,7 @@ func main() {
 	if err = handlers.EnsureAdminAudit(ctx, db); err != nil { slog.Error("admin audit migration", "error", err); os.Exit(1) }
 	if err = handlers.EnsureBlogSchema(ctx, db); err != nil { slog.Error("blog migration", "error", err); os.Exit(1) }
 	if err = handlers.EnsureMediaSchema(ctx, db); err != nil { slog.Error("media migration", "error", err); os.Exit(1) }
+	if err = handlers.EnsureProductCatalogSchema(ctx, db); err != nil { slog.Error("catalog migration", "error", err); os.Exit(1) }
 	if err = handlers.EnsureAdmin(ctx, db, cfg.AdminEmail, cfg.AdminPassword); err != nil {
 		slog.Error("admin bootstrap", "error", err)
 		os.Exit(1)
