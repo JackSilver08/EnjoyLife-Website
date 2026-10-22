@@ -98,16 +98,17 @@ func (a *App) publicCatalogSearch(c *gin.Context) {
  page,_:=strconv.Atoi(c.DefaultQuery("page","1"));if page<1{page=1};if page>1000{page=1000}
  const pageSize=12
  args:=[]any{q,category,color,size,minPrice,maxPrice}
+ // Apply ALL filters to the same available variant. Otherwise a cheap,
+ // out-of-stock size can make a filtered result show a misleading "price from".
  query:=`FROM products p JOIN categories c ON c.id=p.category_id
  JOIN product_variants v ON v.product_id=p.id AND v.active
- LEFT JOIN inventory i ON i.variant_id=v.id
+ JOIN inventory i ON i.variant_id=v.id
  WHERE p.published AND p.archived_at IS NULL
  AND ($1='' OR p.name ILIKE '%'||$1||'%' OR p.description ILIKE '%'||$1||'%')
  AND ($2='' OR c.slug=$2)
- AND EXISTS(SELECT 1 FROM product_variants vf JOIN inventory iff ON iff.variant_id=vf.id
-   WHERE vf.product_id=p.id AND vf.active
-   AND ($3='' OR vf.color=$3) AND ($4='' OR vf.size=$4)
-   AND vf.price_vnd BETWEEN $5 AND $6 AND iff.on_hand-iff.reserved-iff.unavailable>0)
+ AND ($3='' OR v.color=$3) AND ($4='' OR v.size=$4)
+ AND v.price_vnd BETWEEN $5 AND $6
+ AND i.on_hand-i.reserved-i.unavailable>0
  `
  ctx,cancel:=context.WithTimeout(c.Request.Context(),6*time.Second);defer cancel()
  var total int64
