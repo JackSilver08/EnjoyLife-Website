@@ -104,10 +104,85 @@ const more=await call("/api/store/admin/products/"+newItem.json.id+"/variants",{
 }});
 ensure(more.status===201&&/^SP-[0-9]{3,}$/.test(more.json?.sku)&&more.json.sku!==newItem.json.sku,
  "Variant SKU not distinct: "+more.text);
+// Sprint 6.2–6.4: real gallery -> storefront facets -> physical stock -> archive lifecycle.
+const gallerySecond=mediaList.json.items.find(item=>item.original_name==="sprint5-zip-additional.png")?.url;
+ensure(gallerySecond?.startsWith("/media/"),"Missing additional gallery image");
+const galleryWrite=await call("/api/store/admin/products/"+newItem.json.id+"/images",{
+ method:"PUT",cookie,body:{images:[{url:media.url,alt:"Ảnh chính"},{url:gallerySecond,alt:"Ảnh phụ"}]},
+});
+ensure(galleryWrite.status===200&&galleryWrite.json?.cover===media.url,
+ "Gallery write failed: "+galleryWrite.status+" "+galleryWrite.text);
+const galleryRead=await call("/api/store/admin/products/"+newItem.json.id+"/images",{cookie});
+ensure(galleryRead.status===200&&galleryRead.json?.images?.length===2,"Gallery metadata missing");
+const galleryDuplicate=await call("/api/store/admin/products/"+newItem.json.id+"/images",{
+ method:"PUT",cookie,body:{images:[{url:media.url,alt:"A"},{url:media.url,alt:"B"}]},
+});
+ensure(galleryDuplicate.status===400,"Duplicate gallery URLs were accepted");
+const galleryUnauth=await call("/api/store/admin/products/"+newItem.json.id+"/images",{method:"PUT",body:{images:[]}});
+ensure([401,403].includes(galleryUnauth.status),"Unauthorized gallery change accepted");
+const publishSKU=await call("/api/store/admin/products/"+newItem.json.id,{
+ method:"PATCH",cookie,body:{
+  name:"Áo thử nghiệm mã SP",description:"Kiểm thử sản phẩm có nhiều ảnh",
+  collection:"",image_url:media.url,published:true,
+ }});
+ensure(publishSKU.status===200,"Could not publish SKU test product");
+const detail=await call("/api/store/products/"+skuAutoSlug);
+ensure(detail.status===200&&detail.json?.images?.length===2,"Public product image gallery not returned");
+const facets=await call("/api/store/products/filters");
+ensure(facets.status===200&&facets.json?.colors?.includes("Trắng")&&facets.json?.sizes?.includes("M"),
+ "Catalog filter options not data-derived");
+const matchCatalog=await call("/api/store/products/search?category=ao&color=Tr%E1%BA%AFng&size=M&min_price=100000&max_price=200000&sort=price-asc&page=1");
+ensure(matchCatalog.status===200&&matchCatalog.json?.items?.some(x=>x.id===newItem.json.id)
+ &&matchCatalog.json?.page_size===12,"Filtered catalog missing product: "+matchCatalog.text);
+const filteredOut=await call("/api/store/products/search?category=ao&color=Tr%E1%BA%AFng&size=XXXL&min_price=100000&max_price=200000");
+ensure(filteredOut.status===200&&filteredOut.json?.total===0,"Unavailable size returned products");
+const badPricing=await call("/api/store/products/search?min_price=300000&max_price=100000");
+ensure(badPricing.status===400,"Invalid catalog price interval accepted");
+const shopSSR=await call("/shop?category=ao&color=Tr%E1%BA%AFng&size=M");
+ensure(shopSSR.status===200&&shopSSR.text.includes("Áo thử nghiệm mã SP"),"Shop SSR did not render filtered database catalog");
+const currentStocks=await call("/api/store/admin/inventory",{cookie});
+const chosen=currentStocks.json?.items?.find(x=>x.product_id===newItem.json.id&&x.size==="M");
+ensure(chosen?.variant_id===newItem.json.variant_id&&chosen?.on_hand===2,
+ "Product variant and warehouse are not sharing inventory");
+const received=await call("/api/store/admin/inventory/"+chosen.variant_id,{
+ method:"PATCH",cookie,body:{action:"RECEIVE",quantity:4,reason:"Demo goods received"},
+});
+ensure(received.status===200&&received.json?.on_hand===6,"Physical goods receipt inaccurate: "+received.text);
+const issued=await call("/api/store/admin/inventory/"+chosen.variant_id,{
+ method:"PATCH",cookie,body:{action:"ISSUE",quantity:2,reason:"Physical sample sale"},
+});
+ensure(issued.status===200&&issued.json?.on_hand===4,"Physical stock issue inaccurate");
+const counted=await call("/api/store/admin/inventory/"+chosen.variant_id,{
+ method:"PATCH",cookie,body:{action:"COUNT",quantity:3,reason:"Real count after stocktake"},
+});
+ensure(counted.status===200&&counted.json?.available===3,"Stocktake did not reconcile");
+const oversell=await call("/api/store/admin/inventory/"+chosen.variant_id,{
+ method:"PATCH",cookie,body:{action:"ISSUE",quantity:9000,reason:"Must be rejected shortage"},
+});
+ensure(oversell.status===409,"Stock movement allowed negative inventory");
+const movements=await call("/api/store/admin/inventory/"+chosen.variant_id+"/history",{cookie});
+ensure(movements.status===200&&movements.json?.items?.some(x=>x.type==="COUNT"&&x.reason.includes("stocktake")),
+ "Inventory history did not persist stocktake reason");
+const stopped=await call("/api/store/admin/variants/"+more.json.variant_id,{
+ method:"PATCH",cookie,body:{price_vnd:129000,active:false},
+});
+ensure(stopped.status===200,"Could not stop selling variation");
+const stoppedStock=await call("/api/store/admin/inventory",{cookie});
+ensure(stoppedStock.json?.items?.some(x=>x.variant_id===more.json.variant_id&&x.active===false&&x.on_hand===1),
+ "Inactive physical inventory was hidden from warehouse API");
+console.log("Sprint 6 catalog E2E PASSED: gallery, filters, warehouse receipt/issue/count, history, stopped SKU");
+
 const noAdminDelete=await call("/api/store/admin/products/"+newItem.json.id,{method:"DELETE"});
 ensure([401,403].includes(noAdminDelete.status),"Unauthenticated user could delete product");
 const removedSKU=await call("/api/store/admin/products/"+newItem.json.id,{method:"DELETE",cookie});
 ensure(removedSKU.status===200,"Admin archive rejected: "+removedSKU.status+" "+removedSKU.text);
+const archivedStock=await call("/api/store/admin/inventory",{cookie});
+ensure(archivedStock.status===200&&archivedStock.json?.items?.some(item=>
+ item.variant_id===newItem.json.variant_id&&item.archived===true&&item.on_hand===3),
+ "Archived physical stock disappeared from warehouse");
+const archiveCatalog=await call("/api/store/products/search?category=ao&color=Tr%E1%BA%AFng&size=M");
+ensure(!archiveCatalog.json?.items?.some(item=>item.id===newItem.json.id),
+ "Archived product leaked into customer catalog");
 const deletedList=await call("/api/store/admin/products?view=trash",{cookie});
 ensure(deletedList.status===200&&deletedList.json?.items?.some(item=>item.id===newItem.json.id),
  "Archived product missing from trash");
