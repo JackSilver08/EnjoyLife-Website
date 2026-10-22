@@ -92,6 +92,7 @@ func Router(a *App) *gin.Engine {
 	api.GET("/account/orders", a.myOrders)
 	api.POST("/orders", a.createOrder)
     api.POST("/orders/:token/payment-link",a.createPayOSLink)
+    api.POST("/orders/:token/cancel-payment",a.cancelPayOS)
     api.GET("/orders/:token/payment-status",a.payOSStatus)
     api.POST("/payments/payos/webhook",a.payOSWebhook)
 	api.GET("/orders/:token", a.orderStatus)
