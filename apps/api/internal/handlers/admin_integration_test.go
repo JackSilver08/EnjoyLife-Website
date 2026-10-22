@@ -66,6 +66,26 @@ func TestAdminIntegration(t *testing.T){
  if err=json.Unmarshal(product.Body.Bytes(),&p);err!=nil{t.Fatal(err)}
  variant:=send("POST","/api/v1/admin/products/"+p.ID+"/variants",map[string]any{"sku":"CI-INTEG-L","color":"Be","size":"L","price_vnd":99000,"opening_stock":2},cookie)
  if variant.Code!=201{t.Fatalf("variant=%d %s",variant.Code,variant.Body.String())}
+ // Sprint 6: gallery metadata and public catalog filtering are backed by PostgreSQL.
+ gallery:=send("PUT","/api/v1/admin/products/"+p.ID+"/images",map[string]any{"images":[]map[string]string{
+  {"url":"https://images.unsplash.com/ci-catalog-1","alt":"Main test image"},
+  {"url":"https://images.unsplash.com/ci-catalog-2","alt":"Detail test image"},
+ }},cookie)
+ if gallery.Code!=200{t.Fatalf("gallery update=%d %s",gallery.Code,gallery.Body.String())}
+ publicDetail:=send("GET","/api/v1/products/ci-integration-tee",nil,nil)
+ if publicDetail.Code!=200||!bytes.Contains(publicDetail.Body.Bytes(),[]byte("Detail test image")){
+  t.Fatalf("public gallery missing=%d %s",publicDetail.Code,publicDetail.Body.String())
+ }
+ filtered:=send("GET","/api/v1/products/search?category=ao&size=M&color=Be&min_price=50000&max_price=120000&sort=price-asc",nil,nil)
+ if filtered.Code!=200||!bytes.Contains(filtered.Body.Bytes(),[]byte(p.ID)){
+  t.Fatalf("PostgreSQL price + SKU filtering failed=%d %s",filtered.Code,filtered.Body.String())
+ }
+ invalidPrices:=send("GET","/api/v1/products/search?min_price=200000&max_price=50000",nil,nil)
+ if invalidPrices.Code!=400{t.Fatalf("invalid price interval accepted=%d",invalidPrices.Code)}
+ colorFilters:=send("GET","/api/v1/products/filters",nil,nil)
+ if colorFilters.Code!=200||!bytes.Contains(colorFilters.Body.Bytes(),[]byte("Be")){
+  t.Fatalf("product facets missing=%d %s",colorFilters.Code,colorFilters.Body.String())
+ }
  adjust:=send("PATCH","/api/v1/admin/inventory/"+p.VariantID,map[string]any{"delta":2,"reason":"CI Restock verification"},cookie)
  if adjust.Code!=200{t.Fatalf("adjust=%d %s",adjust.Code,adjust.Body.String())}
  order:=send("POST","/api/v1/orders",map[string]any{
@@ -85,6 +105,27 @@ func TestAdminIntegration(t *testing.T){
  var hand,reserved int
  if err=db.QueryRow(ctx,"SELECT on_hand,reserved FROM inventory WHERE variant_id=$1",p.VariantID).Scan(&hand,&reserved);err!=nil{t.Fatal(err)}
  if hand!=6||reserved!=0{t.Fatalf("incorrect stock hand=%d reserved=%d",hand,reserved)}
+ // Warehouse is linked to variants, including explicit receipt, issue and counting.
+ lowThreshold:=send("PATCH","/api/v1/admin/variants/"+p.VariantID,map[string]any{
+  "price_vnd":99000,"active":true,"low_stock_threshold":5,
+ },cookie)
+ if lowThreshold.Code!=200{t.Fatalf("custom low stock threshold=%d %s",lowThreshold.Code,lowThreshold.Body.String())}
+ inventory:=send("GET","/api/v1/admin/inventory",nil,cookie)
+ if inventory.Code!=200||!bytes.Contains(inventory.Body.Bytes(),[]byte(p.ID)){
+  t.Fatalf("product and inventory unlinked: %d %s",inventory.Code,inventory.Body.String())
+ }
+ for _,movement:=range []struct{Action string;Quantity int}{
+  {"RECEIVE",2},{"ISSUE",2},{"COUNT",6},
+ }{
+  changed:=send("PATCH","/api/v1/admin/inventory/"+p.VariantID,map[string]any{
+   "action":movement.Action,"quantity":movement.Quantity,"reason":"CI inventory operation verification",
+  },cookie)
+  if changed.Code!=200{t.Fatalf("%s adjustment=%d %s",movement.Action,changed.Code,changed.Body.String())}
+ }
+ warehouseHistory:=send("GET","/api/v1/admin/inventory/"+p.VariantID+"/history",nil,cookie)
+ if warehouseHistory.Code!=200||!bytes.Contains(warehouseHistory.Body.Bytes(),[]byte("COUNT")){
+  t.Fatalf("Stock ledger audit missing=%d %s",warehouseHistory.Code,warehouseHistory.Body.String())
+ }
  // Database generates unique SKU codes and preserves old ones.
  skuProduct:=send("POST","/api/v1/admin/products",map[string]any{
    "name":"Auto SKU integration","slug":"auto-sku-integration","description":"Test","category":"ao",
