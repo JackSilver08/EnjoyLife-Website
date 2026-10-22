@@ -16,10 +16,10 @@ type variantInput struct{
  Price int64 `json:"price_vnd"`
  Stock int `json:"opening_stock"`
 }
-func validVariant(v variantInput)bool{return skuPattern.MatchString(v.SKU)&&len(strings.TrimSpace(v.Color))>0&&len(v.Color)<=40&&len(strings.TrimSpace(v.Size))>0&&len(v.Size)<=20&&v.Price>0&&v.Price<1000000000&&v.Stock>=0&&v.Stock<=100000}
+func validVariant(v variantInput)bool{return (v.SKU==""||skuPattern.MatchString(v.SKU))&&len(strings.TrimSpace(v.Color))>0&&len(v.Color)<=40&&len(strings.TrimSpace(v.Size))>0&&len(v.Size)<=20&&v.Price>0&&v.Price<1000000000&&v.Stock>=0&&v.Stock<=100000}
 func(a *App) adminVariants(c *gin.Context){
  if a.requireAdmin(c)==nil{return}
- rows,err:=a.DB.Query(c.Request.Context(),`SELECT v.id::text,v.sku,v.color,v.size,v.price_vnd,v.active,i.on_hand,i.reserved,i.unavailable FROM product_variants v JOIN inventory i ON v.id=i.variant_id WHERE v.product_id::text=$1 ORDER BY v.color,v.size`,c.Param("id"))
+ rows,err:=a.DB.Query(c.Request.Context(),`SELECT v.id::text,v.sku,v.color,v.size,v.price_vnd,v.active,i.on_hand,i.reserved,i.unavailable FROM product_variants v JOIN inventory i ON v.id=i.variant_id WHERE v.product_id::text=$1 AND EXISTS(SELECT 1 FROM products p WHERE p.id=v.product_id AND p.archived_at IS NULL) ORDER BY v.color,v.size`,c.Param("id"))
  if err!=nil{serverError(c,err);return};defer rows.Close()
  items:=[]gin.H{}
  for rows.Next(){
@@ -37,9 +37,13 @@ func(a *App) adminCreateVariant(c *gin.Context){
  ctx,cancel:=context.WithTimeout(c.Request.Context(),6*time.Second);defer cancel()
  tx,err:=a.DB.Begin(ctx);if err!=nil{serverError(c,err);return};defer tx.Rollback(ctx)
  var pid string
- err=tx.QueryRow(ctx,`SELECT id::text FROM products WHERE id::text=$1`,c.Param("id")).Scan(&pid)
+ err=tx.QueryRow(ctx,`SELECT id::text FROM products WHERE id::text=$1 AND archived_at IS NULL`,c.Param("id")).Scan(&pid)
  if errors.Is(err,pgx.ErrNoRows){c.JSON(404,gin.H{"error":"Không tìm thấy sản phẩm."});return}
  if err!=nil{serverError(c,err);return}
+ if in.SKU==""{
+  in.SKU,err=nextProductSKU(ctx,tx)
+  if err!=nil{serverError(c,err);return}
+ }
  id,err:=uuid();if err!=nil{serverError(c,err);return}
  _,err=tx.Exec(ctx,`INSERT INTO product_variants(id,product_id,sku,color,size,price_vnd) VALUES($1,$2,$3,$4,$5,$6)`,id,pid,in.SKU,strings.TrimSpace(in.Color),strings.TrimSpace(in.Size),in.Price)
  if err!=nil{c.JSON(409,gin.H{"error":"SKU hoặc cặp màu-size đã tồn tại."});return}
@@ -52,7 +56,7 @@ func(a *App) adminCreateVariant(c *gin.Context){
  _,err=tx.Exec(ctx,`INSERT INTO admin_audit_logs(actor_id,action,target_id,details) VALUES($1,'VARIANT_CREATE',$2,$3)`,actor.ID,id,in.SKU)
  if err!=nil{serverError(c,err);return}
  if err=tx.Commit(ctx);err!=nil{serverError(c,err);return}
- c.JSON(201,gin.H{"variant_id":id})
+ c.JSON(201,gin.H{"variant_id":id,"sku":in.SKU})
 }
 func(a *App) adminUpdateVariant(c *gin.Context){
  actor:=a.requireAdmin(c);if actor==nil{return}
@@ -61,7 +65,7 @@ func(a *App) adminUpdateVariant(c *gin.Context){
  ctx,cancel:=context.WithTimeout(c.Request.Context(),5*time.Second);defer cancel()
  tx,err:=a.DB.Begin(ctx);if err!=nil{serverError(c,err);return};defer tx.Rollback(ctx)
  var reserved int
- err=tx.QueryRow(ctx,`SELECT i.reserved FROM inventory i JOIN product_variants v ON v.id=i.variant_id WHERE v.id::text=$1 FOR UPDATE OF i,v`,c.Param("id")).Scan(&reserved)
+ err=tx.QueryRow(ctx,`SELECT i.reserved FROM inventory i JOIN product_variants v ON v.id=i.variant_id WHERE v.id::text=$1 AND EXISTS(SELECT 1 FROM products p WHERE p.id=v.product_id AND p.archived_at IS NULL) FOR UPDATE OF i,v`,c.Param("id")).Scan(&reserved)
  if errors.Is(err,pgx.ErrNoRows){c.JSON(404,gin.H{"error":"Không tìm thấy SKU."});return}
  if err!=nil{serverError(c,err);return}
  if !in.Active&&reserved>0{c.JSON(409,gin.H{"error":"Không thể ngừng bán SKU khi còn đơn đang giữ hàng."});return}

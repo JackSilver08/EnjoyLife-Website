@@ -45,12 +45,17 @@ func(a *App) adminImportProducts(c *gin.Context){
    if err!=nil{serverError(c,err);return}
    row.ImageURL="/media/"+filename
   }
-  if !validProduct(*row)||seenSlug[row.Slug]||seenSKU[row.SKU]{
+  if !validProduct(*row)||seenSlug[row.Slug]||(row.SKU!=""&&seenSKU[row.SKU]){
    c.JSON(400,gin.H{"error":"Dòng import sai thông tin hoặc trùng slug/SKU.","row":index+1});return
   }
-  seenSlug[row.Slug]=true;seenSKU[row.SKU]=true
+  seenSlug[row.Slug]=true
+  if row.SKU!=""{seenSKU[row.SKU]=true}
  }
  for index,row:=range input.Rows{
+  if row.SKU==""{
+   row.SKU,err=nextProductSKU(ctx,tx)
+   if err!=nil{serverError(c,err);return}
+  }
   id,err:=uuid();if err!=nil{serverError(c,err);return}
   variant,err:=uuid();if err!=nil{serverError(c,err);return}
   tag,err:=tx.Exec(ctx,`INSERT INTO products(id,category_id,slug,name,description,image_url,collection_name,published)
