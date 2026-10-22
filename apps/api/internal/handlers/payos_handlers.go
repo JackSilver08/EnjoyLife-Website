@@ -42,9 +42,10 @@ func (a *App) createPayOSLink(c *gin.Context){
  }
  attemptID,err:=uuid();if err!=nil{serverError(c,err);return}
  // Unique order constraint prevents multiple links when customer retries.
- _,err=a.DB.Exec(ctx,`INSERT INTO payment_attempts(id,order_id,provider,status,provider_order_code)
+ inserted,err:=a.DB.Exec(ctx,`INSERT INTO payment_attempts(id,order_id,provider,status,provider_order_code)
  VALUES($1,$2,'PAYOS','CREATING',nextval('payos_order_code_seq')) ON CONFLICT DO NOTHING`,attemptID,id)
  if err!=nil{serverError(c,err);return}
+ created:=inserted.RowsAffected()>0
  var code int64;var checkout,qr,state string;var updated time.Time
  err=a.DB.QueryRow(ctx,`SELECT provider_order_code,COALESCE(checkout_url,''),COALESCE(qr_code,''),status,updated_at
  FROM payment_attempts WHERE order_id=$1 AND provider='PAYOS'`,id).Scan(&code,&checkout,&qr,&state,&updated)
@@ -55,7 +56,7 @@ func (a *App) createPayOSLink(c *gin.Context){
  if state=="ERROR"||state=="REVIEW_REQUIRED"{
   c.JSON(409,gin.H{"error":"Giao dịch cần được đối soát trước khi thử lại. Vui lòng liên hệ cửa hàng."});return
  }
- if state=="CREATING"&&time.Since(updated)<20*time.Second{
+ if state=="CREATING"&&!created&&time.Since(updated)<20*time.Second{
   c.JSON(202,gin.H{"error":"Đang chuẩn bị mã QR. Vui lòng thử lại trong giây lát."});return
  }
  _,err=a.DB.Exec(ctx,`UPDATE payment_attempts SET status='CREATING',updated_at=now() WHERE order_id=$1 AND provider='PAYOS'`,id)
