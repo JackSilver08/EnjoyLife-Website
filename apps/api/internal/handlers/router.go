@@ -95,9 +95,10 @@ func Router(a *App) *gin.Engine {
     api.GET("/orders/:token/payment-status",a.payOSStatus)
     api.POST("/payments/payos/webhook",a.payOSWebhook)
 	api.GET("/orders/:token", a.orderStatus)
+	api.GET("/payments/config",func(c *gin.Context){c.JSON(200,gin.H{"payos_enabled":a.payOSReady()})})
 	api.GET("/policies", func(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{"policies": []gin.H{
-			{"title": "Thanh toán", "content": "Enjoy Life hỗ trợ COD. Thanh toán tự động đang được tích hợp."},
+			{"title": "Thanh toán", "content": "Enjoy Life hỗ trợ COD và thanh toán QR payOS khi kênh được bật."},
 			{"title": "Giao hàng", "content": "Thời gian và phí giao hàng được xác nhận khi cửa hàng liên hệ xử lý đơn."},
 			{"title": "Đổi trả", "content": "Vui lòng liên hệ cửa hàng để xác minh điều kiện đổi trả. Chính sách chính thức sẽ được công bố trước khi mở bán."},
 		}})
