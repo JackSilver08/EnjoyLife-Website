@@ -102,6 +102,7 @@ jobs:
       - name: Validate JavaScript integration tests before Docker boot
         run: |
           node --check apps/web/scripts/journal-docker-e2e.mjs
+          node --check apps/web/scripts/staff-docker-e2e.mjs
           node --check apps/web/scripts/check-origin.mjs
       - name: Build web development image
         run: docker compose build web
@@ -132,6 +133,8 @@ jobs:
           docker compose exec -T web node -p 'require.resolve("@tiptap/extension-image")'
       - name: Published Journal end-to-end via real Go and PostgreSQL
         run: node apps/web/scripts/journal-docker-e2e.mjs
+      - name: Sprint 7 staff RBAC end-to-end via Next proxy and real PostgreSQL
+        run: node apps/web/scripts/staff-docker-e2e.mjs
       - name: Show container logs on failure
         if: failure()
         run: docker compose logs --tail=180 web api db
