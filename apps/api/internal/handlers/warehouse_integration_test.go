@@ -37,7 +37,7 @@ func TestSprint9WarehouseIntegration(t *testing.T){
  for _,v:=range login.Result().Cookies(){if v.Name=="enjoy_life_session"{cookie=v}}
  if cookie==nil{t.Fatal("missing admin cookie")}
  fixture:="wh-"+fmt.Sprint(time.Now().UnixNano())
- product:=send("POST","/api/v1/admin/products",map[string]any{"name":"Warehouse Women Dress", "slug":fixture,"description":"warehouse test","category":"vay-dam","color":"Đen","size":"M","price_vnd":250000,"opening_stock":0,"published":true},cookie)
+ product:=send("POST","/api/v1/admin/products",map[string]any{"name":"Warehouse Women Dress", "slug":fixture,"description":"warehouse test","category":"ao","color":"Đen","size":"M","price_vnd":250000,"opening_stock":0,"published":true},cookie)
  if product.Code!=201{t.Fatalf("product %d %s",product.Code,product.Body)}
  var p struct{VariantID string `json:"variant_id"`}
  if err=json.Unmarshal(product.Body.Bytes(),&p);err!=nil||p.VariantID==""{t.Fatalf("product variant %v %s",err,product.Body)}
