@@ -71,10 +71,10 @@ try{
   "Primary sidebar navigation is not AI-first: "+JSON.stringify(sidebar));
  assert(sidebar.groupCount===2&&sidebar.closed&&JSON.stringify(sidebar.active)==='["/admin"]',
   "Sidebar collapsed groups or dashboard active route failed: "+JSON.stringify(sidebar));
- const expand=await run('(()=>{const group=[...document.querySelectorAll("details.admin-nav-group")].find(x=>x.textContent.includes("Quản lý khác"));if(!group)return false;group.querySelector("summary").click();return group.open&&group.querySelector("a[href=\"/admin/reports\"]")!==null})()');
+ const expand=await run(`(()=>{const group=[...document.querySelectorAll("details.admin-nav-group")].find(x=>x.textContent.includes("Quản lý khác"));if(!group)return false;group.querySelector("summary").click();return group.open&&group.querySelector('a[href="/admin/reports"]')!==null})()`);
  assert(expand,"Management menu disclosure does not open and expose reports");
- await run('document.querySelector("details.admin-nav-group[open] a[href=\"/admin/reports\"]").click()');
- await until('location.pathname==="/admin/reports"&&!!document.querySelector("a[href=\"/admin/reports\"][aria-current=page]")',
+ await run(`document.querySelector('details.admin-nav-group[open] a[href="/admin/reports"]').click()`);
+ await until(`location.pathname==="/admin/reports"&&!!document.querySelector('a[href="/admin/reports"][aria-current=page]')`,
   "Reports nested navigation and active highlighting");
  console.log("ADMIN SIDEBAR E2E PASSED: five primary links, two disclosure groups, active dashboard and nested reports.");
  await call("Page.navigate",{url:browserOrigin+"/admin/products?edit="+product.data.id});
