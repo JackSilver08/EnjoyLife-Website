@@ -1,5 +1,5 @@
 "use client";
-import {useState,type FormEvent} from "react";
+import {Fragment,useState,type FormEvent} from "react";
 import Link from "next/link";
 import {adminAction,moneyVND,useAdminData} from "@/components/admin/admin-data";
 type Variant={id:string;sku:string;color:string;size:string;price_vnd:number;active:boolean;on_hand:number;reserved:number;available:number;low_stock_threshold:number};
@@ -19,14 +19,28 @@ export function VariantManager({productId}:{productId:string}){
   }catch(err){setMessage(err instanceof Error?err.message:"Không thêm được size/màu mới.")}
   finally{setBusy(false)}
  }
- async function update(e:FormEvent<HTMLFormElement>,v:Variant){
-  e.preventDefault();if(busy)return;
-  if(!draft.color.trim()||!draft.size.trim()||!Number.isSafeInteger(draft.price_vnd)||draft.price_vnd<=0){
-   setMessage("Màu, size và giá phải hợp lệ.");return
+ function startEdit(v:Variant){
+  if(busy)return;
+  // A separate editing row prevents a rapid second click on "Edit"
+  // from hitting a newly-rendered submit button at the same position.
+  setDraft({color:v.color,size:v.size,price_vnd:v.price_vnd,low_stock_threshold:v.low_stock_threshold});
+  setEditing(v.id);
+  setMessage("");
+ }
+ async function update(v:Variant){
+  if(busy||editing!==v.id)return;
+  if(!draft.color.trim()||!draft.size.trim()||
+    !Number.isSafeInteger(draft.price_vnd)||draft.price_vnd<=0||draft.price_vnd>=1000000000||
+    !Number.isSafeInteger(draft.low_stock_threshold)||draft.low_stock_threshold<0||draft.low_stock_threshold>100000){
+   setMessage("Màu, size, giá bán hoặc ngưỡng cảnh báo không hợp lệ.");return;
   }
   setBusy(true);setMessage("");
-  try{await adminAction("admin/variants/"+v.id,"PATCH",{...draft,color:draft.color.trim(),size:draft.size.trim(),active:v.active});
-   setEditing(null);setMessage("Đã cập nhật biến thể "+v.sku+".");await reload();
+  try{
+   await adminAction("admin/variants/"+v.id,"PATCH",{
+    ...draft,color:draft.color.trim(),size:draft.size.trim(),active:v.active
+   });
+   setMessage("Đã cập nhật biến thể "+v.sku+".");
+   setEditing(null);await reload();
   }catch(err){setMessage(err instanceof Error?err.message:"Không thể cập nhật biến thể.")}
   finally{setBusy(false)}
  }
@@ -46,24 +60,47 @@ export function VariantManager({productId}:{productId:string}){
  {message&&<p role="status" className="admin-notice">{message}</p>}{error&&<p role="alert" className="admin-error">{error}</p>}
  {loading?<p>Đang tải biến thể...</p>:<div className="admin-table-wrap"><table className="admin-table">
   <thead><tr><th>Mã hàng</th><th>Màu / Size</th><th>Giá bán</th><th>Kho</th><th>Trạng thái / Thao tác</th></tr></thead>
-  <tbody>{(data?.items??[]).map(v=><tr key={v.id}>
-   <td>{v.sku}</td>
-   <td>{editing===v.id?<form id={"edit-"+v.id} className="admin-variant-inline" onSubmit={e=>void update(e,v)}>
-    <label>Màu<input autoFocus required maxLength={40} value={draft.color} onChange={e=>setDraft(d=>({...d,color:e.target.value}))}/></label>
-    <label>Size<input required maxLength={20} value={draft.size} onChange={e=>setDraft(d=>({...d,size:e.target.value}))}/></label>
-    <label>Giá bán (VND)<input required type="number" min={1} max={999999999} value={draft.price_vnd} onChange={e=>setDraft(d=>({...d,price_vnd:Number(e.target.value)}))}/></label>
-    <label>Cảnh báo khi còn ≤<input required type="number" min={0} max={100000} value={draft.low_stock_threshold} onChange={e=>setDraft(d=>({...d,low_stock_threshold:Number(e.target.value)}))}/></label>
-   </form>:v.color+" / "+v.size}</td>
-   <td>{moneyVND(v.price_vnd)}</td>
-   <td>{v.on_hand} thực tế <small>{v.available} có thể bán · {v.reserved} đã giữ · Cảnh báo ≤ {v.low_stock_threshold}</small></td>
-   <td><span className="admin-pill">{v.active?"Đang bán":"Ngừng bán"}</span>
-    <div className="admin-row-actions">
-     {editing===v.id?<><button type="submit" form={"edit-"+v.id} disabled={busy}>Lưu</button>
-       <button type="button" disabled={busy} onClick={()=>setEditing(null)}>Hủy</button></>
-       :<><button type="button" disabled={busy} onClick={()=>{setEditing(v.id);setDraft({color:v.color,size:v.size,price_vnd:v.price_vnd,low_stock_threshold:v.low_stock_threshold});setMessage("")}}>Chỉnh sửa</button>
-        <button type="button" disabled={busy} onClick={()=>void toggle(v)}>{v.active?"Ngừng bán":"Mở bán"}</button></>}
-    </div></td>
-  </tr>)}</tbody></table></div>}
+  <tbody>{(data?.items??[]).map(v=><Fragment key={v.id}>
+   <tr>
+    <td>{v.sku}</td>
+    <td>{v.color} / {v.size}</td>
+    <td>{moneyVND(v.price_vnd)}</td>
+    <td>{v.on_hand} thực tế <small>{v.available} có thể bán · {v.reserved} đã giữ · Cảnh báo ≤ {v.low_stock_threshold}</small></td>
+    <td><span className="admin-pill">{v.active?"Đang bán":"Ngừng bán"}</span>
+     <div className="admin-row-actions">
+      {editing===v.id?<span className="admin-variant-editing-label">Đang chỉnh sửa bên dưới ↓</span>
+       :<button type="button" disabled={busy} onClick={()=>startEdit(v)}>Chỉnh sửa</button>}
+      <button type="button" disabled={busy||editing===v.id} onClick={()=>void toggle(v)}>{v.active?"Ngừng bán":"Mở bán"}</button>
+     </div>
+    </td>
+   </tr>
+   {editing===v.id&&<tr className="admin-variant-editor-row">
+    <td colSpan={5}>
+     <section className="admin-variant-editor" role="region" aria-label={"Chỉnh sửa biến thể "+v.sku}>
+      <div className="admin-variant-editor-head">
+       <strong>Chỉnh sửa giá bán & biến thể {v.sku}</strong>
+       <small>Chỉnh số lượng kho tại Kho hàng. Các thay đổi bên dưới chưa được lưu.</small>
+      </div>
+      <div className="admin-variant-editor-fields">
+       <label>Màu<input maxLength={40} value={draft.color}
+        onChange={e=>setDraft(d=>({...d,color:e.target.value}))}/></label>
+       <label>Size<input maxLength={20} value={draft.size}
+        onChange={e=>setDraft(d=>({...d,size:e.target.value}))}/></label>
+       <label>Giá bán (VND)<input type="number" min={1} max={999999999} step={1}
+        value={draft.price_vnd} onChange={e=>setDraft(d=>({...d,price_vnd:Number(e.target.value)}))}/></label>
+       <label>Cảnh báo khi còn ≤<input type="number" min={0} max={100000} step={1}
+        value={draft.low_stock_threshold} onChange={e=>setDraft(d=>({...d,low_stock_threshold:Number(e.target.value)}))}/></label>
+      </div>
+      <div className="admin-variant-editor-actions">
+       <button type="button" className="button-dark" disabled={busy} onClick={()=>void update(v)}>
+        {busy?"ĐANG LƯU...":"LƯU THAY ĐỔI"}
+       </button>
+       <button type="button" disabled={busy} onClick={()=>setEditing(null)}>Hủy chỉnh sửa</button>
+      </div>
+     </section>
+    </td>
+   </tr>}
+  </Fragment>)}</tbody></table></div>}
  <form onSubmit={create} className="admin-variant-add">
   <h3>Thêm size / màu mới</h3>
   <div className="admin-form-grid">
