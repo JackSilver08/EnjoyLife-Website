@@ -105,7 +105,7 @@ try{
  await until('document.querySelectorAll("dialog.admin-modal[open]").length===0',"Escape closes unsaved new product");
  // Inventory adjustments also open modal, and cancelling must not create a transaction.
  await call("Page.navigate",{url:browserOrigin+"/admin/inventory"});
- await until('document.querySelector(".inventory-actions button")!==null',"stock table loaded");
+ await until('location.pathname==="/admin/inventory"&&document.querySelector(".inventory-actions button")!==null',"stock table loaded");
  const invClicked=await run('(()=>{const b=document.querySelector(".inventory-actions button");if(!b)return false;b.click();return true})()');
  assert(invClicked,"Cannot open stock operation");
  await until('!!document.querySelector("dialog.admin-modal[open] .inventory-operation-form")',"inventory form modal");
@@ -114,7 +114,7 @@ try{
  await until('document.querySelectorAll("dialog.admin-modal[open]").length===0',"stock form dismissal");
  // Create and password-reset staff forms are no longer permanent inline forms.
  await call("Page.navigate",{url:browserOrigin+"/admin/staff"});
- await until('document.querySelector(".admin-toolbar button")!==null',"staff management loaded");
+ await until('location.pathname==="/admin/staff"&&[...document.querySelectorAll(".admin-toolbar button")].some(x=>x.textContent.includes("Thêm nhân viên"))',"staff management loaded");
  await run('(()=>{const b=[...document.querySelectorAll(".admin-toolbar button")].find(x=>x.textContent.includes("Thêm nhân viên"));if(b)b.click()})()');
  await until('!!document.querySelector("dialog.admin-modal[open] .sprint7-form")',"staff creation modal");
  await run('document.querySelector("dialog.admin-modal[open] .admin-modal-close").click()');
@@ -122,7 +122,7 @@ try{
  // New Journal articles use a fully sized editor dialog instead of navigating
  // away from the management list.
  await call("Page.navigate",{url:browserOrigin+"/admin/blog"});
- await until('document.querySelector(".cms-primary-action")!==null',"Journal dashboard");
+ await until('location.pathname==="/admin/blog"&&[...document.querySelectorAll("button")].some(x=>x.textContent.includes("Viết bài mới"))',"Journal dashboard");
  const blogOpened=await run('(()=>{const b=[...document.querySelectorAll("button")].find(x=>x.textContent.includes("Viết bài mới"));if(!b)return false;b.click();return true})()');
  assert(blogOpened,"Cannot open Journal creation modal");
  await until('!!document.querySelector("dialog.admin-modal[open] .cms-page")',"Journal rich-text editor modal");
@@ -130,7 +130,7 @@ try{
  await until('document.querySelectorAll("dialog.admin-modal[open]").length===0',"Journal modal close");
  // Procurement forms must be actionable from large popups as well.
  await call("Page.navigate",{url:browserOrigin+"/admin/warehouse"});
- await until('document.querySelector(".admin-toolbar button")!==null',"warehouse page");
+ await until('location.pathname==="/admin/warehouse"&&[...document.querySelectorAll("button")].some(x=>x.textContent.trim()==="+ Nhà cung cấp")',"warehouse page");
  const supplierOpened=await run('(()=>{const b=[...document.querySelectorAll("button")].find(x=>x.textContent.trim()==="+ Nhà cung cấp");if(!b)return false;b.click();return true})()');
  assert(supplierOpened,"Warehouse supplier modal opener missing");
  await until('!!document.querySelector("dialog.admin-modal[open] form.warehouse-form")',"supplier form modal");
