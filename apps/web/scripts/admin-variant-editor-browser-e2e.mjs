@@ -3,7 +3,8 @@ import {spawn,execFileSync} from "node:child_process";
 import {mkdtempSync,readFileSync,rmSync,existsSync} from "node:fs";
 import {tmpdir} from "node:os";
 import {join} from "node:path";
-const origin="http://127.0.0.1:3000";
+const origin="http://127.0.0.1:3000"; // Host-to-Docker BFF
+const browserOrigin="http://localhost:3000"; // Next.js dev allows localhost JS/HMR
 const assert=(v,msg)=>{if(!v)throw Error(msg)};
 const delay=n=>new Promise(r=>setTimeout(r,n));
 async function api(path,method="GET",cookie="",body){
@@ -58,9 +59,14 @@ async function until(js,label,seconds=30){const end=Date.now()+seconds*1000;whil
 try{
  await call("Page.enable");await call("Runtime.enable");await call("Network.enable");
  const [cn,cv]=cookie.split("=");
- await call("Network.setCookie",{name:cn,value:cv,url:origin,httpOnly:true,sameSite:"Lax"});
- await call("Page.navigate",{url:origin+"/admin/products?edit="+product.data.id});
- await until('document.querySelector(".admin-variants .admin-table tbody button")!==null',"variants loaded");
+ await call("Network.setCookie",{name:cn,value:cv,url:browserOrigin,httpOnly:true,sameSite:"Lax"});
+ await call("Page.navigate",{url:browserOrigin+"/admin/products?edit="+product.data.id});
+ try{
+  await until('document.querySelector(".admin-variants .admin-table tbody button")!==null',"variants loaded");
+ }catch(err){
+  const debug=await run('({url:location.href,title:document.title,body:document.body?.innerText?.slice(0,600)||""})()');
+  throw Error(String(err)+" page="+JSON.stringify(debug));
+ }
  const editClicked=await run('(()=>{const b=[...document.querySelectorAll(".admin-variants button")].find(x=>x.textContent.trim()==="Chỉnh sửa");if(!b)return false;b.click();return true})()');
  assert(editClicked,"Cannot find edit button");
  await until('document.querySelector(".admin-variant-editor")!==null',"edit area opened");
