@@ -61,6 +61,22 @@ try{
  await call("Page.enable");await call("Runtime.enable");await call("Network.enable");
  const [cn,cv]=cookie.split("=");
  await call("Network.setCookie",{name:cn,value:cv,url:browserOrigin,httpOnly:true,sameSite:"Lax"});
+ // AI-first sidebar regression: five daily actions and two collapsed groups
+ // are accessible without removing or altering staff role permissions.
+ await call("Page.navigate",{url:browserOrigin+"/admin"});
+ await until('location.pathname==="/admin"&&document.querySelectorAll(".admin-nav-primary>a").length===5',
+  "five primary admin sidebar destinations");
+ const sidebar=await run('(()=>{const nav=document.querySelector(".admin-sidebar-navigation");return {primary:[...nav.querySelectorAll(".admin-nav-primary>a")].map(x=>new URL(x.href).pathname),groupCount:nav.querySelectorAll("details.admin-nav-group").length,closed:[...nav.querySelectorAll("details.admin-nav-group")].every(x=>!x.open),active:[...nav.querySelectorAll("a[aria-current=page]")].map(x=>new URL(x.href).pathname)}})()');
+ assert(JSON.stringify(sidebar.primary)===JSON.stringify(["/admin","/admin/orders","/admin/products","/admin/inventory","/admin/warehouse/insights"]),
+  "Primary sidebar navigation is not AI-first: "+JSON.stringify(sidebar));
+ assert(sidebar.groupCount===2&&sidebar.closed&&JSON.stringify(sidebar.active)==='["/admin"]',
+  "Sidebar collapsed groups or dashboard active route failed: "+JSON.stringify(sidebar));
+ const expand=await run(`(()=>{const group=[...document.querySelectorAll("details.admin-nav-group")].find(x=>x.textContent.includes("Quản lý khác"));if(!group)return false;group.querySelector("summary").click();return group.open&&group.querySelector('a[href="/admin/reports"]')!==null})()`);
+ assert(expand,"Management menu disclosure does not open and expose reports");
+ await run(`document.querySelector('details.admin-nav-group[open] a[href="/admin/reports"]').click()`);
+ await until(`location.pathname==="/admin/reports"&&!!document.querySelector('a[href="/admin/reports"][aria-current=page]')`,
+  "Reports nested navigation and active highlighting");
+ console.log("ADMIN SIDEBAR E2E PASSED: five primary links, two disclosure groups, active dashboard and nested reports.");
  await call("Page.navigate",{url:browserOrigin+"/admin/products?edit="+product.data.id});
  try{
   await until('document.querySelector(".admin-variants .admin-table tbody button")!==null',"variants loaded");
