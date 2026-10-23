@@ -328,7 +328,7 @@ func(a *App) warehouseWaitlistUpdate(c *gin.Context){
  if c.ShouldBindJSON(&in)!=nil||(in.Status!="CONTACTED"&&in.Status!="CLOSED"){c.JSON(400,gin.H{"error":"Trạng thái không hợp lệ."});return}
  ctx,cancel:=context.WithTimeout(c.Request.Context(),5*time.Second);defer cancel()
  tx,err:=a.DB.Begin(ctx);if err!=nil{serverError(c,err);return};defer tx.Rollback(ctx)
- tag,err:=tx.Exec(ctx,`UPDATE stock_waitlist SET status=$1 WHERE id::text=$2 AND status='WAITING'`,in.Status,c.Param("id"))
+ tag,err:=tx.Exec(ctx,`UPDATE stock_waitlist SET status=$1 WHERE id::text=$2 AND (status='WAITING' OR (status='CONTACTED' AND $1='CLOSED'))`,in.Status,c.Param("id"))
  if err!=nil{serverError(c,err);return}
  if tag.RowsAffected()!=1{c.JSON(409,gin.H{"error":"Yêu cầu không còn đang chờ."});return}
  if _,err=tx.Exec(ctx,`INSERT INTO admin_audit_logs(actor_id,action,target_id,details) VALUES($1,'STOCK_WAITLIST_UPDATE',$2,$3)`,actor.ID,c.Param("id"),in.Status);err!=nil{serverError(c,err);return}
