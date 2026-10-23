@@ -21,18 +21,21 @@ export function ProductExperience({product}:{product:Product}){
  const meta=product.colors?.find(x=>x.name===color);
  const shade=visualColor(color,meta?.hex)||"#d4d0c8";
  const modelUrl=meta?.model_url??"";
+ const supportBust=["ao","outerwear","vay-dam","quan"].includes(product.category_slug);
+ const canShow3D=supportBust||Boolean(modelUrl);
  return <div className="detail-layout">
   <div className="virtual-experience">
    <div className="virtual-experience-tabs" role="tablist" aria-label="Chế độ xem sản phẩm">
     <button type="button" role="tab" aria-selected={mode==="photos"} className={mode==="photos"?"active":""}
      onClick={()=>setMode("photos")}><ImageIcon size={16}/> Ảnh 2D</button>
     <button type="button" role="tab" aria-selected={mode==="3d"} className={mode==="3d"?"active":""}
+     title={canShow3D?"Xem trên ma-nơ-canh 3D":"Sản phẩm chưa có mô hình 3D"} disabled={!canShow3D}
      onClick={()=>setMode("3d")}><Box size={17}/> Xem 3D</button>
    </div>
    <div role="tabpanel" aria-label={mode==="photos"?"Ảnh sản phẩm":"Không gian 3D"}>
     {mode==="photos"?<ProductImageGallery key={color} product={product} color={color}/>:
      <Virtual3DStudio key={color+modelUrl} color={shade} colorName={color}
-      category={product.category_slug} modelUrl={modelUrl} onBack={()=>setMode("photos")}/>}
+      category={product.category_slug} productName={product.name} modelUrl={modelUrl} onBack={()=>setMode("photos")}/>}
    </div>
   </div>
   <ProductPicker product={product} color={color} size={size}

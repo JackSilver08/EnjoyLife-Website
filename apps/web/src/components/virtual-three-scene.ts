@@ -5,6 +5,7 @@ import {GLTFLoader} from "three/addons/loaders/GLTFLoader.js";
 type StudioOptions={
  color:string;
  category:string;
+ productName?:string;
  modelUrl?:string;
  onModelFallback?:(message:string)=>void;
 };
@@ -133,7 +134,7 @@ function buildDressForm(group:THREE.Group,bump:THREE.Texture,slim=false){
  woodenStand(group,-.51,-1.34,true);
 }
 function makeUpperGarment(group:THREE.Group,garment:number,bump:THREE.Texture,
- kind:"tee"|"jacket"|"dress"){
+ kind:"tee"|"jacket"|"dress"|"knit"){
  const cloth=fabric(garment,bump);
  const bigger=kind==="jacket"?1.06:1;
  const hem=kind==="dress"?-1.05:-.35;
@@ -151,15 +152,18 @@ function makeUpperGarment(group:THREE.Group,garment:number,bump:THREE.Texture,
  // Short, sculpted sleeves hug the shoulder of the torso — no floating hands/arms.
  for(const sign of [-1,1]){
   const shoulder=new THREE.Vector3(sign*.452,1.115,0);
-  const outer=new THREE.Vector3(sign*(kind==="jacket"?.725:.67),
-   kind==="jacket"?.73:.79,-.012);
-  tube(group,shoulder,outer,kind==="jacket"?.19:.171,kind==="jacket"?.145:.131,
+  const long=kind==="knit"||kind==="jacket";
+  const outer=new THREE.Vector3(sign*(long?.69:.67),
+   long?.68:.79,-.012);
+  tube(group,shoulder,outer,long?.185:.171,long?.151:.131,
    cloth,"Garment shoulder sleeve");
-  const cuff=new THREE.Mesh(new THREE.TorusGeometry(kind==="jacket"?.145:.132,.009,8,36),
+  const sleeveEnd=long?new THREE.Vector3(sign*.73,-.10,0):outer;
+  if(long)tube(group,outer,sleeveEnd,.151,.115,cloth,"Garment lower sleeve");
+  const cuff=new THREE.Mesh(new THREE.TorusGeometry(long?.116:.132,.009,8,36),
    new THREE.MeshStandardMaterial({color:new THREE.Color(garment).multiplyScalar(.81),roughness:.94}));
-  cuff.name="Sleeve hem";cuff.position.copy(outer);
+  cuff.name="Sleeve hem";cuff.position.copy(sleeveEnd);
   cuff.quaternion.setFromUnitVectors(new THREE.Vector3(0,0,1),
-   new THREE.Vector3().subVectors(outer,shoulder).normalize());
+   new THREE.Vector3().subVectors(sleeveEnd,long?outer:shoulder).normalize());
   group.add(cuff);
  }
  seamRing(group,.167,.162,1.295,new THREE.Color(garment).multiplyScalar(.76).getHex(),.014,
@@ -189,14 +193,15 @@ function makeTrouserDisplay(group:THREE.Group,garment:number,bump:THREE.Texture)
   "Trouser waist seam");
  woodenStand(group,.28,-1.40,false);
 }
-function buildDisplay(category:string,colorHex:string,bump:THREE.Texture):THREE.Group{
+function buildDisplay(category:string,colorHex:string,bump:THREE.Texture,name=""):THREE.Group{
  const root=new THREE.Group();
  const color=new THREE.Color(colorHex).getHex();
  if(category==="quan")makeTrouserDisplay(root,color,bump);
  else{
   buildDressForm(root,bump,category==="vay-dam");
+  const winter=/len|sweater|hoodie|knit|dài tay|so mi|sơ mi/i.test(name);
   makeUpperGarment(root,color,bump,
-   category==="outerwear"?"jacket":category==="vay-dam"?"dress":"tee");
+   category==="outerwear"?"jacket":category==="vay-dam"?"dress":winter?"knit":"tee");
  }
  // No human head, hair, hands, legs or feet. This is a boutique display form.
  return root;
@@ -229,7 +234,7 @@ export async function mountStudio(host:HTMLElement,options:StudioOptions):Promis
  host.appendChild(renderer.domElement);
  const scene=new THREE.Scene();
  const camera=new THREE.PerspectiveCamera(33,1,.1,80);
- const home=new THREE.Vector3(0,.45,4.8),focus=new THREE.Vector3(0,.20,0);
+ const home=new THREE.Vector3(.42,.27,5.70),focus=new THREE.Vector3(0,.14,0);
  camera.position.copy(home);
  const controls=new OrbitControls(camera,renderer.domElement);
  controls.enablePan=false;
@@ -252,7 +257,7 @@ export async function mountStudio(host:HTMLElement,options:StudioOptions):Promis
  scene.add(floor);
  const root=new THREE.Group();scene.add(root);
  const bump=makeClothBump();
- const defaultModel=buildDisplay(options.category,options.color,bump);
+ const defaultModel=buildDisplay(options.category,options.color,bump,options.productName);
  root.add(defaultModel);
  let disposed=false,paused=false,raf=0;
  const observer=new ResizeObserver(()=>{

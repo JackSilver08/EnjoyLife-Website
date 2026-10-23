@@ -3,8 +3,8 @@ import {useEffect,useRef,useState} from "react";
 import {RotateCcw,RotateCw,ZoomIn,ZoomOut,Play,Pause,RefreshCw,Expand,Box,AlertCircle} from "lucide-react";
 import type {StudioHandle} from "@/components/virtual-three-scene";
 
-export function Virtual3DStudio({color,category,modelUrl="",colorName,onBack}:{
- color:string;category:string;modelUrl?:string;colorName:string;onBack:()=>void;
+export function Virtual3DStudio({color,category,productName="",modelUrl="",colorName,onBack}:{
+ color:string;category:string;productName?:string;modelUrl?:string;colorName:string;onBack:()=>void;
 }){
  const host=useRef<HTMLDivElement>(null),studio=useRef<StudioHandle|null>(null);
  const [state,setState]=useState<"loading"|"ready"|"error">("loading");
@@ -20,7 +20,7 @@ export function Virtual3DStudio({color,category,modelUrl="",colorName,onBack}:{
    import("@/components/virtual-three-scene").then(async({mountStudio})=>{
     if(abandoned)return;
     try{
-     const handle=await mountStudio(target,{color,category,modelUrl,onModelFallback:message=>{
+     const handle=await mountStudio(target,{color,category,productName,modelUrl,onModelFallback:message=>{
       if(!abandoned)setWarning(message);
      }});
      if(abandoned){handle.dispose();return}
@@ -36,7 +36,7 @@ export function Virtual3DStudio({color,category,modelUrl="",colorName,onBack}:{
    window.clearTimeout(start);
    studio.current?.dispose();studio.current=null;
   };
- },[color,category,modelUrl]);
+ },[color,category,modelUrl,productName]);
  useEffect(()=>{
   const listener=()=>setFull(document.fullscreenElement===stage.current);
   document.addEventListener("fullscreenchange",listener);
