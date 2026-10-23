@@ -19,7 +19,7 @@ import (
 )
 
 const maxModelBytes=15<<20
-var safeModelName=regexp.MustCompile(`^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}\\.glb$`)
+var safeModelName=regexp.MustCompile(`^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}\.glb$`)
 
 // GLB v2 only, with self-contained resources. Reject remote URIs, including
 // URLs placed in glTF buffers/images: a model must never request third-party data.
@@ -34,13 +34,13 @@ func validGLB(b []byte)bool{
   Buffers []struct{URI string `json:"uri"`} `json:"buffers"`
   Images []struct{URI string `json:"uri"`} `json:"images"`
  }
- if json.Unmarshal(bytes.TrimRight(b[20:20+jsonLength]," \\x00"),&root)!=nil||root.Asset.Version!="2.0"{return false}
+ if json.Unmarshal(bytes.TrimRight(b[20:20+jsonLength]," \x00"),&root)!=nil||root.Asset.Version!="2.0"{return false}
  for _,buffer:=range root.Buffers{if buffer.URI!=""{return false}}
  for _,img:=range root.Images{if img.URI!=""{return false}}
  // Do not allow stray or oversized trailing chunks; only one embedded BIN chunk.
  pos:=20+jsonLength
  if pos==len(b){return true}
- if pos+8>len(b)||!bytes.Equal(b[pos+4:pos+8],[]byte("BIN\\x00")){return false}
+ if pos+8>len(b)||!bytes.Equal(b[pos+4:pos+8],[]byte("BIN\x00")){return false}
  chunkLength:=int(binary.LittleEndian.Uint32(b[pos:pos+4]))
  return chunkLength>=0&&chunkLength%4==0&&pos+8+chunkLength==len(b)
 }
