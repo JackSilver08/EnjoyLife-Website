@@ -127,7 +127,7 @@ export default function WarehouseOperations(){
  </div>
  <section className="admin-surface"><h2>Danh sách phiếu nhập</h2>
  {purchases.loading?<p>Đang tải phiếu...</p>:!purchases.data?.items.length?<p>Chưa có phiếu nhập.</p>:
- <div className="admin-table-wrap"><table className="admin-table"><thead><tr><th>Mã phiếu</th><th>Nhà cung cấp</th><th>Tiến độ</th><th>Nhận hàng</th></tr></thead><tbody>{purchases.data.items.map(p=><tr key={p.id}><td><strong>{p.po_no}</strong><small>{p.expected_date&&"Dự kiến: "+p.expected_date}</small></td><td>{p.supplier}</td><td>{p.received}/{p.quantity} · {labels[p.status]||p.status}</td><td><button type="button" onClick={()=>{setChosen(p.id);setDetail(null);key.current=null}}>{chosen===p.id?"Đang chọn":"Xem / nhận"}</button></td></tr>)}</tbody></table></div>}
+ <div className="admin-table-wrap"><table className="admin-table"><thead><tr><th>Mã phiếu</th><th>Nhà cung cấp</th><th>Tiến độ</th><th>Nhận hàng</th></tr></thead><tbody>{purchases.data.items.map(p=><tr key={p.id}><td><strong>{p.po_no}</strong><small>{p.expected_date&&"Dự kiến: "+p.expected_date}</small></td><td>{p.supplier}</td><td>{p.received}/{p.quantity} · {labels[p.status]||p.status}</td><td><button type="button" onClick={()=>{if(chosen===p.id){void purchases.reload()}else{setChosen(p.id);setDetail(null);key.current=null}}}>{chosen===p.id?"Đang chọn":"Xem / nhận"}</button></td></tr>)}</tbody></table></div>}
  </section>
  {chosen&&<section className="admin-surface">
   {!detail?<p>Đang tải chi tiết phiếu...</p>:<>
