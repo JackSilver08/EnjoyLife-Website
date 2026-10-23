@@ -3,7 +3,7 @@ import {Check,ArrowUpRight} from "lucide-react";
 import {money} from "@/lib/format";
 import {PayOSPaymentPanel} from "@/components/payos-payment-panel";
 export const metadata={title:"Tra cứu đơn hàng",robots:{index:false,follow:false}};
-const orderStatus:Record<string,string>={PENDING_CONFIRMATION:"Chờ xác nhận",CONFIRMED:"Đã xác nhận",PREPARING:"Đang chuẩn bị",SHIPPING:"Đang giao",DELIVERED:"Đã giao",COMPLETED:"Hoàn tất",CANCELLED:"Đã hủy"};
+const orderStatus:Record<string,string>={PENDING_CONFIRMATION:"Chờ xác nhận",CONFIRMED:"Đã xác nhận",PREPARING:"Đang chuẩn bị",SHIPPING:"Đang giao",DELIVERED:"Đã giao",COMPLETED:"Hoàn tất",CANCELLED:"Đã hủy",RETURNED:"Hàng đã hoàn về"};
 const paymentMethod:Record<string,string>={COD:"Thanh toán khi nhận hàng",PAYOS:"Mã QR payOS"};
 const paymentStatus:Record<string,string>={UNPAID:"Chưa thanh toán",PAID:"Đã thanh toán",REVIEW_REQUIRED:"Cần đối soát giao dịch"};
 type Order={order_no:string;status:string;payment_status:string;payment_method:string;total_vnd:number;checkout_url?:string;qr_code?:string;gateway_status?:string};
@@ -21,7 +21,7 @@ export default async function OrderPage({params}:{params:Promise<{token:string}>
   <div className="status-check"><Check size={30}/></div>
   <span className="eyebrow">ĐƠN HÀNG / ENJOY LIFE</span>
   <h1>Đã nhận<br/><em>đơn hàng.</em></h1>
-  <p>{order.status==="CANCELLED"?"Đơn hàng đã được hủy.":isPayOS&&!paid?"Đơn hàng đã được tạo, nhưng giao dịch QR chưa được xác nhận.":"Cửa hàng đã nhận đơn và sẽ liên hệ khi cần."}</p>
+  <p>{order.status==="CANCELLED"?"Đơn hàng đã được hủy.":order.status==="RETURNED"?"Đơn giao không thành công. Hàng đã được cửa hàng nhận về và đang được kiểm tra.":isPayOS&&!paid?"Đơn hàng đã được tạo, nhưng giao dịch QR chưa được xác nhận.":"Cửa hàng đã nhận đơn và sẽ liên hệ khi cần."}</p>
   <div className="status-table">
    <div><span>Mã đơn</span><strong>{order.order_no}</strong></div>
    <div><span>Trạng thái</span><strong>{orderStatus[order.status]??order.status}</strong></div>
