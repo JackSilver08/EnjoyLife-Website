@@ -466,7 +466,14 @@ func (a *App) orderStatus(c *gin.Context) {
 			return
 		}
 	}
-	c.JSON(http.StatusOK, gin.H{"order_no": orderNo, "status": status, "payment_status": paymentStatus, "payment_method": method, "total_vnd": total, "created_at": created, "checkout_url": payURL, "qr_code": qr, "gateway_status": attemptState})
+	var rmaStatus,rmaKind,rmaRefund string
+ returnErr:=a.DB.QueryRow(c.Request.Context(),`SELECT r.kind,r.status,r.refund_status
+ FROM return_cases r JOIN orders o ON o.id=r.order_id
+ WHERE o.public_token=$1 AND r.status<>'REJECTED'
+ ORDER BY r.created_at DESC,r.id DESC LIMIT 1`,tok).Scan(&rmaKind,&rmaStatus,&rmaRefund)
+ if returnErr!=nil&&!errors.Is(returnErr,pgx.ErrNoRows){serverError(c,returnErr);return}
+ c.JSON(http.StatusOK, gin.H{"order_no": orderNo, "status": status, "payment_status": paymentStatus, "payment_method": method, "total_vnd": total, "created_at": created, "checkout_url": payURL, "qr_code": qr, "gateway_status": attemptState,
+  "return_kind":rmaKind,"return_status":rmaStatus,"return_refund_status":rmaRefund})
 }
 func (a *App) adminAuth(c *gin.Context) {
 	if a.Config.AdminKey == "" {
