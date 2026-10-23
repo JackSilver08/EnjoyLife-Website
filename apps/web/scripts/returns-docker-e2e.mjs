@@ -26,6 +26,8 @@ const order=await request("orders",{method:"POST",body:{
 }});
 assert(order.code===201&&order.data?.order_no,"Cannot create COD order: "+order.text);
 const no=order.data.order_no;
+const token=order.data.order_token;
+assert(typeof token==="string"&&token.length===48,"Cannot track customer order");
 for(const state of ["CONFIRMED","PREPARING","SHIPPING","DELIVERED"]){
  const response=await request("admin/orders/"+no+"/status",{method:"PATCH",cookie,body:{status:state}});
  assert(response.code===200,"Cannot advance "+state+": "+response.text);
@@ -58,6 +60,9 @@ const refund=await request("admin/returns/"+rid+"/refund",{method:"POST",cookie,
 assert(refund.code===200&&refund.data.status==="CLOSED","Manual refund confirmation failed: "+refund.text);
 const refundedAgain=await request("admin/returns/"+rid+"/refund",{method:"POST",cookie,body:{reference:"ci-refund-"+seed,amount_vnd:190000}});
 assert(refundedAgain.code===409,"Double refund confirmation must be blocked");
+const customerTracking=await request("orders/"+token);
+assert(customerTracking.code===200&&customerTracking.data?.return_status==="CLOSED"&&
+ customerTracking.data?.return_refund_status==="CONFIRMED","Customer cannot track finalized RMA: "+customerTracking.text);
 const inv=await request("admin/inventory",{cookie});
 const stock=inv.data?.items?.find(x=>x.variant_id===sku);
 assert(stock?.on_hand===7&&stock?.unavailable===0,"Return stock should be shipped 2 then returned 1 exactly once: "+JSON.stringify(stock));
