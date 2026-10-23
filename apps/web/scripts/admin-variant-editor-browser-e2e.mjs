@@ -226,7 +226,7 @@ try{
  glb.writeUInt32LE(pad,12);glb.write("JSON",16);jsonBuf.copy(glb,20);
  glb.fill(0x20,20+jsonBuf.length,20+pad);
  glb.writeUInt32LE(bin.length,20+pad);
- glb.write("BIN\\u0000",24+pad,"binary");
+ glb.writeUInt32LE(0x004e4942,24+pad);
  bin.copy(glb,28+pad);
  const form=new FormData();form.set("color","Be");
  form.set("file",new Blob([glb],{type:"model/gltf-binary"}),"product-ci.glb");
