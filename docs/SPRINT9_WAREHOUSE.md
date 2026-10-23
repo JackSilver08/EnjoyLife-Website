@@ -24,6 +24,8 @@ Sprint 9 triển khai ba phần liên kết với dữ liệu PostgreSQL hiện 
 - Điểm đặt lại = `ceil(average * lead_days)` + ngưỡng an toàn mỗi SKU. Nếu chưa từng bán trong kỳ thì KHÔNG đề xuất nhập tự động.
 - Ước tính thời gian giao của **nhà cung cấp trên PO gần nhất**; nếu chưa có PO thì dùng giả định **7 ngày**, luôn được gắn nhãn ước tính.
 - Đề xuất chỉ để nhân viên tham khảo, không tạo phiếu nhập tự động.
+- **AI Admin:** Nút “Phân tích bằng AI” chỉ dành cho ADMIN, truy vấn tối đa 25 SKU, gửi tên/SKU/màu/size, tồn khả dụng, ngưỡng và số lượng thực xuất 30 ngày (không gửi email khách chờ, địa chỉ giao hoặc khóa API). `OpenAI Responses API` giải thích dữ liệu mà không được gọi bất kỳ hàm thay đổi kho nào; ghi chú đây là phân tích tham khảo. Giới hạn 3 lần/10 phút/Admin. Yêu cầu sử dụng ngân sách OpenAI API riêng.
+
 
 ## Màn hình
 - `/admin/warehouse`: nhà cung cấp, PO, nhận hàng, cách ly.
