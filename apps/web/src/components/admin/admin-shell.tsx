@@ -3,7 +3,7 @@ import Link from "next/link";
 import {AdminToastProvider} from "@/components/admin/admin-toast";
 import {usePathname,useRouter} from "next/navigation";
 import {createContext,useContext,useEffect} from "react";
-import {LayoutDashboard,ClipboardList,Package,Boxes,Users,BarChart3,Newspaper,Images,Palette,LogOut,ArrowUpRight,ShieldCheck,LockKeyhole,Truck,ChartNoAxesCombined,Sparkles,ChevronDown,RotateCcw} from "lucide-react";
+import {LayoutDashboard,ClipboardList,Package,Boxes,Users,BarChart3,Newspaper,Images,Palette,LogOut,ArrowUpRight,ShieldCheck,LockKeyhole,Truck,Sparkles,ChevronDown,RotateCcw} from "lucide-react";
 
 type Role="ADMIN"|"STAFF";
 type NavItem={href:string;label:string;icon:typeof LayoutDashboard};
