@@ -140,6 +140,33 @@ try{
  await until('!!document.querySelector("dialog.admin-modal[open] form.warehouse-form")',"supplier form modal");
  await run('document.querySelector("dialog.admin-modal[open] .admin-modal-close").click()');
  await until('document.querySelectorAll("dialog.admin-modal[open]").length===0',"supplier modal dismisses");
+ // A customer's /account route renders the shared password form OUTSIDE the
+ // protected Admin shell. This used to crash with "useAdminToast must be used
+ // inside AdminToastProvider" when redirected from an unauthorized /admin.
+ const customer=await api("auth/register","POST","",{
+  name:"CI Account Toast Regression",
+  email:"ci-account-toast-"+Date.now()+"@example.test",
+  password:"CiAccountPassword123!"
+ });
+ assert(customer.status===200&&customer.cookie.startsWith("enjoy_life_session="),
+  "Could not create isolated customer account: "+customer.text);
+ const [customerCookieName,customerCookieValue]=customer.cookie.split("=");
+ await call("Network.setCookie",{
+  name:customerCookieName,value:customerCookieValue,url:browserOrigin,
+  httpOnly:true,sameSite:"Lax"
+ });
+ await call("Page.navigate",{url:browserOrigin+"/account"});
+ await until('location.pathname==="/account"&&!!document.querySelector(".sprint7-password-form")',
+  "customer account password form renders without AdminToastProvider",20);
+ const publicForm=await run('({notice:!!document.querySelector(".sprint7-password-form"),account:document.body?.innerText?.includes("Bảo mật tài khoản"),overlay:!!document.querySelector("nextjs-portal")?.shadowRoot?.textContent?.includes("useAdminToast must be used inside")})');
+ assert(publicForm.notice&&publicForm.account&&!publicForm.overlay,
+  "Account page crashed while rendering password form outside provider: "+JSON.stringify(publicForm));
+ await call("Page.navigate",{url:browserOrigin+"/admin"});
+ await until('location.pathname==="/account"&&!!document.querySelector(".sprint7-password-form")',
+  "customer redirected from admin can still view Account page",20);
+ const redirectError=await run('!!document.querySelector("nextjs-portal")?.shadowRoot?.textContent?.includes("useAdminToast must be used inside")');
+ assert(!redirectError,"Unauthenticated Admin redirect reproduced the toast context crash");
+ console.log("ACCOUNT TOAST REGRESSION PASSED: customer account and unauthorized admin redirect render without AdminToastProvider.");
  console.log("ADMIN MODAL/TOAST CHROME E2E PASSED: nested edit, success toast, product add, Escape, inventory modal and staff modal.");
  console.log("Admin variant browser E2E PASSED: edit stays open, no autosave, deliberate Save updates PostgreSQL.");
 }finally{cleanup()}
