@@ -71,6 +71,7 @@ try{
  const editClicked=await run('(()=>{const b=[...document.querySelectorAll(".admin-variants button")].find(x=>x.textContent.trim()==="Chỉnh sửa");if(!b)return false;b.click();return true})()');
  assert(editClicked,"Cannot find edit button");
  await until('document.querySelector(".admin-variant-editor")!==null',"edit area opened");
+ assert(await run('document.querySelectorAll("dialog.admin-modal[open]").length===2'),"Variant edit should use a nested native modal over product editor");
  await delay(1100);
  assert(await run('!!document.querySelector(".admin-variant-editor")'),"Edit panel vanished after initial render");
  assert(patchCount===0,"Clicking Edit automatically PATCHed the price!");
@@ -87,5 +88,37 @@ try{
  const after=await api("admin/products/"+product.data.id+"/variants","GET",cookie);
  assert(after.data?.items?.find(x=>x.id===variantId)?.price_vnd===412000,"Save did not persist price; "+after.text);
  assert(patchCount===1,"Expected one explicit PATCH, observed "+patchCount);
+
+ // Ensure the nested size/price modal disappeared, leaving its product editor.
+ await until('document.querySelectorAll("dialog.admin-modal[open]").length===1',"variant modal closes, parent remains",12);
+ await until('!!document.querySelector(".admin-toast")',"global toast appears after saving",10);
+ assert(await run('document.querySelector(".admin-toast")?.textContent?.includes("Đã cập nhật")'),"Success notification is not visible as a popup");
+ // Close product modal without persisting another edit.
+ await run('document.querySelector("dialog.admin-modal[open] .admin-modal-close").click()');
+ await until('document.querySelectorAll("dialog.admin-modal[open]").length===0',"product modal close");
+ // A new product form must open as a large modal, not expand into the table.
+ await run('(()=>{const b=[...document.querySelectorAll(".admin-toolbar button")].find(x=>x.textContent.includes("Thêm sản phẩm"));if(b)b.click()})()');
+ await until('!!document.querySelector("dialog.admin-modal[open] .admin-product-create")',"new product creation modal");
+ assert(await run('document.querySelector(".admin-modal-sheet")?.getBoundingClientRect().width>650'),"Large desktop modal is too narrow");
+ await call("Input.dispatchKeyEvent",{type:"keyDown",key:"Escape",code:"Escape",windowsVirtualKeyCode:27});
+ await call("Input.dispatchKeyEvent",{type:"keyUp",key:"Escape",code:"Escape",windowsVirtualKeyCode:27});
+ await until('document.querySelectorAll("dialog.admin-modal[open]").length===0',"Escape closes unsaved new product");
+ // Inventory adjustments also open modal, and cancelling must not create a transaction.
+ await call("Page.navigate",{url:browserOrigin+"/admin/inventory"});
+ await until('document.querySelector(".inventory-actions button")!==null',"stock table loaded");
+ const invClicked=await run('(()=>{const b=document.querySelector(".inventory-actions button");if(!b)return false;b.click();return true})()');
+ assert(invClicked,"Cannot open stock operation");
+ await until('!!document.querySelector("dialog.admin-modal[open] .inventory-operation-form")',"inventory form modal");
+ assert(await run('!!document.querySelector("dialog.admin-modal[open] .admin-modal-close")'),"Inventory modal has accessible close button");
+ await run('document.querySelector("dialog.admin-modal[open] .admin-modal-close").click()');
+ await until('document.querySelectorAll("dialog.admin-modal[open]").length===0',"stock form dismissal");
+ // Create and password-reset staff forms are no longer permanent inline forms.
+ await call("Page.navigate",{url:browserOrigin+"/admin/staff"});
+ await until('document.querySelector(".admin-toolbar button")!==null',"staff management loaded");
+ await run('(()=>{const b=[...document.querySelectorAll(".admin-toolbar button")].find(x=>x.textContent.includes("Thêm nhân viên"));if(b)b.click()})()');
+ await until('!!document.querySelector("dialog.admin-modal[open] .sprint7-form")',"staff creation modal");
+ await run('document.querySelector("dialog.admin-modal[open] .admin-modal-close").click()');
+ await until('document.querySelectorAll("dialog.admin-modal[open]").length===0',"staff form dismissal");
+ console.log("ADMIN MODAL/TOAST CHROME E2E PASSED: nested edit, success toast, product add, Escape, inventory modal and staff modal.");
  console.log("Admin variant browser E2E PASSED: edit stays open, no autosave, deliberate Save updates PostgreSQL.");
 }finally{cleanup()}
