@@ -56,7 +56,7 @@ ws.addEventListener("message",ev=>{
 });
 function call(method,params={}){return new Promise((ok,bad)=>{const seq=++id;pending.set(seq,{ok,bad});ws.send(JSON.stringify({id:seq,method,params}))})}
 async function run(js){const r=await call("Runtime.evaluate",{expression:js,returnByValue:true,awaitPromise:true});if(r.exceptionDetails)throw Error("Browser JS exception: "+JSON.stringify(r.exceptionDetails));return r.result.value}
-async function until(js,label,seconds=30){const end=Date.now()+seconds*1000;while(Date.now()<end){if(await run(js))return;await delay(300)}const debug=await run('({path:location.pathname,heading:document.querySelector("h1")?.textContent,modalCount:document.querySelectorAll("dialog.admin-modal[open]").length,body:document.body?.innerText?.slice(0,450)})()');throw Error("Browser condition not met: "+label+" "+JSON.stringify(debug))}
+async function until(js,label,seconds=30){const end=Date.now()+seconds*1000;while(Date.now()<end){if(await run(js))return;await delay(300)}const debug=await run('({path:location.pathname,heading:document.querySelector("h1")?.textContent,modalCount:document.querySelectorAll("dialog.admin-modal[open]").length,flyoutCount:document.querySelectorAll(".admin-flyout-panel").length,buttons:[...document.querySelectorAll(".admin-flyout-trigger")].map(b=>({expanded:b.getAttribute("aria-expanded"),label:b.textContent})),active:document.activeElement?.outerHTML?.slice(0,250),scrollY:scrollY,body:document.body?.innerText?.slice(0,450)})');throw Error("Browser condition not met: "+label+" "+JSON.stringify(debug))}
 try{
  await call("Page.enable");await call("Runtime.enable");await call("Network.enable");
  const [cn,cv]=cookie.split("=");
@@ -96,7 +96,7 @@ try{
  await call("Emulation.setDeviceMetricsOverride",{width:375,height:810,deviceScaleFactor:1,mobile:true});
  await call("Page.navigate",{url:browserOrigin+"/admin"});
  await until('document.querySelectorAll(".admin-flyout-trigger").length===2',"mobile flyout buttons");
- await delay(600);
+ await delay(1400);
  const narrowRow=await run('(()=>{const nav=document.querySelector(".admin-nav-groups").getBoundingClientRect(),buttons=[...document.querySelectorAll(".admin-flyout-trigger")].map(x=>x.getBoundingClientRect());return {width:innerWidth,navWidth:nav.width,first:buttons[0].width,second:buttons[1].width,vertical:buttons[1].top>buttons[0].bottom-1}})()');
  assert(narrowRow.vertical&&narrowRow.first>narrowRow.navWidth*.88&&narrowRow.second>narrowRow.navWidth*.88,"Mobile menu triggers should be two stacked rows: "+JSON.stringify(narrowRow));
  await run('document.querySelector(".admin-flyout-trigger").click()');
