@@ -36,6 +36,14 @@ func(a *App) adminChangeOrderStatus(c *gin.Context){
   if paymentState!="PAID"{c.JSON(409,gin.H{"error":"Đơn payOS chưa xác nhận thanh toán; không được chuyển sang xử lý hoặc giao hàng."});return}
  }
  if !canTransition(current,req.Status){c.JSON(409,gin.H{"error":"Chuyển trạng thái không hợp lệ."});return}
+ // A shipment with an active failed-delivery RMA must not be marked delivered
+ // while the warehouse is expecting the entire shipment back.
+ if current=="SHIPPING"&&req.Status=="DELIVERED"{
+  var pending bool
+  if err=tx.QueryRow(ctx,`SELECT EXISTS(SELECT 1 FROM return_cases WHERE order_id=$1
+    AND kind='DELIVERY_FAILED' AND status IN ('REQUESTED','APPROVED'))`,id).Scan(&pending);err!=nil{serverError(c,err);return}
+  if pending{c.JSON(409,gin.H{"error":"Đơn đang có phiếu giao thất bại; xử lý nhận hàng hoàn trước."});return}
+ }
  // Keep the original reservations until packing/shipping or cancellation.
  if req.Status=="CANCELLED"||req.Status=="SHIPPING"{
   rows,queryErr:=tx.Query(ctx,`SELECT variant_id::text,quantity FROM order_items WHERE order_id=$1 ORDER BY variant_id FOR UPDATE`,id)
