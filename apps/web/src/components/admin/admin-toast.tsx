@@ -53,19 +53,23 @@ export function useAdminToast(){
 /** Existing async form state can transition to toast without breaking errors.
  * Avoid blank/unmounted notices; errors deliberately have longer lifetime. */
 export function AdminFeedback({message,error}:{message?:string|null;error?:string|null}){
- const notify=useAdminToast();
+ const hub=useContext(ToastContext);
+ const notify=hub?.notify;
  const prevMessage=useRef("");
  const prevError=useRef("");
  useEffect(()=>{
   if(message&&message!==prevMessage.current){
    const kind:Kind=/^Đã\b/i.test(message)?"success":/^(Đang|Tải lên|Đã tải)/i.test(message)?"info":"error";
-   notify(message,kind);
+   notify?.(message,kind);
   }
   prevMessage.current=message||"";
  },[message,notify]);
  useEffect(()=>{
-  if(error&&error!==prevError.current)notify(error,"error");
+  if(error&&error!==prevError.current)notify?.(error,"error");
   prevError.current=error||"";
  },[error,notify]);
- return null;
+ return hub?null:<>
+  {message&&<p role="status" className="admin-notice">{message}</p>}
+  {error&&<p role="alert" className="admin-error">{error}</p>}
+ </>;
 }
