@@ -76,8 +76,8 @@ func (p PayOS) call(ctx context.Context,method,path string,body any,dst any)erro
  resp,err:=client.Do(req);if err!=nil{return err};defer resp.Body.Close()
  if resp.StatusCode!=200{return fmt.Errorf("payOS HTTP %d",resp.StatusCode)}
  limited,err:=io.ReadAll(io.LimitReader(resp.Body,65537));if err!=nil||len(limited)>65536{return errors.New("invalid payOS response")}
- var result struct{Code string `json:"code"`;Data json.RawMessage `json:"data"`}
- if json.Unmarshal(limited,&result)!=nil||result.Code!="00"||len(result.Data)==0{return errors.New("payOS rejected payment request")}
+ var result struct{Code string `json:"code"`;Desc string `json:"desc"`;Data json.RawMessage `json:"data"`}
+ if json.Unmarshal(limited,&result)!=nil||result.Code!="00"||len(result.Data)==0{return fmt.Errorf("payOS rejected payment request: code=%s desc=%s",result.Code,result.Desc)}
  return json.Unmarshal(result.Data,dst)
 }
 func (p PayOS) Create(ctx context.Context,code,amount int64,returnURL,cancelURL string)(Link,error){
