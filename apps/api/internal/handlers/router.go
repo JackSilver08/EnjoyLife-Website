@@ -107,6 +107,13 @@ func Router(a *App) *gin.Engine {
 			{"title": "Đổi trả", "content": "Vui lòng liên hệ cửa hàng để xác minh điều kiện đổi trả. Chính sách chính thức sẽ được công bố trước khi mở bán."},
 		}})
 	})
+	api.GET("/ai/status",func(c *gin.Context){
+  // Only configuration presence is revealed; do not probe live credentials
+  // or expose key fragments, organization identifiers or billing data.
+  model:=strings.TrimSpace(a.Config.AIModel)
+  if model==""{model="gpt-4.1-mini"}
+  c.JSON(200,gin.H{"configured":strings.TrimSpace(a.Config.OpenAIAPIKey)!="","model":model})
+ })
 	api.POST("/ai/customer", a.customerAI)
 	api.GET("/admin/media", a.adminMediaList)
 	api.POST("/admin/media", a.adminMediaUpload)
