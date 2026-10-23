@@ -80,7 +80,7 @@ jobs:
           for file in db/init/001_schema.sql db/init/002_seed.sql db/init/003_vietnamese_catalog.sql db/init/004_accounts.sql db/init/005_admin_audit.sql; do
             docker exec -i enjoy-ci-postgres psql -v ON_ERROR_STOP=1 -U enjoylife -d enjoylife < "$file"
           done
-          INTEGRATION_DATABASE_URL="postgres://enjoylife:ci_password@localhost:55433/enjoylife?sslmode=disable" go test ./internal/handlers -run 'Test(AdminIntegration|BlogIntegration|PayOSIntegration)' -count=1 -v
+          INTEGRATION_DATABASE_URL="postgres://enjoylife:ci_password@localhost:55433/enjoylife?sslmode=disable" go test ./internal/handlers -run 'Test(AdminIntegration|BlogIntegration|PayOSIntegration|Sprint9WarehouseIntegration)' -count=1 -v
 
   docker_dev_dependencies:
     name: Docker dev dependency volume regression
