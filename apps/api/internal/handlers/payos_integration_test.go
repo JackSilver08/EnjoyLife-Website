@@ -31,6 +31,7 @@ func TestPayOSIntegration(t *testing.T){
  db,err:=pgxpool.New(ctx,dbURL);if err!=nil{t.Fatal(err)};defer db.Close()
  if err=EnsurePaymentSchema(ctx,db);err!=nil{t.Fatal(err)}
  if err=EnsureAccountSchema(ctx,db);err!=nil{t.Fatal(err)}
+ if err=EnsureReturnsSchema(ctx,db);err!=nil{t.Fatal(err)}
  var mu sync.Mutex
  amounts:=map[int64]int64{}
  statuses:=map[int64]string{}

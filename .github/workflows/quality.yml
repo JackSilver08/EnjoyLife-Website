@@ -80,7 +80,7 @@ jobs:
           for file in db/init/001_schema.sql db/init/002_seed.sql db/init/003_vietnamese_catalog.sql db/init/004_accounts.sql db/init/005_admin_audit.sql; do
             docker exec -i enjoy-ci-postgres psql -v ON_ERROR_STOP=1 -U enjoylife -d enjoylife < "$file"
           done
-          INTEGRATION_DATABASE_URL="postgres://enjoylife:ci_password@localhost:55433/enjoylife?sslmode=disable" go test ./internal/handlers -run 'Test(AdminIntegration|BlogIntegration|PayOSIntegration|Sprint9WarehouseIntegration)' -count=1 -v
+          INTEGRATION_DATABASE_URL="postgres://enjoylife:ci_password@localhost:55433/enjoylife?sslmode=disable" go test ./internal/handlers -run 'Test(AdminIntegration|BlogIntegration|PayOSIntegration|Sprint9WarehouseIntegration|Sprint11ReturnsIntegration)' -count=1 -v
 
   docker_dev_dependencies:
     name: Docker dev dependency volume regression
@@ -111,6 +111,7 @@ jobs:
           node --check apps/web/scripts/orders-payment-docker-e2e.mjs
           node --check apps/web/scripts/chatbot-docker-e2e.mjs
           node --check apps/web/scripts/warehouse-docker-e2e.mjs
+          node --check apps/web/scripts/returns-docker-e2e.mjs
           node --check apps/web/scripts/admin-variant-editor-browser-e2e.mjs
           node --check apps/web/scripts/editorial-docker-e2e.mjs
           node --check apps/web/scripts/test-payos-qr.mjs
@@ -166,6 +167,8 @@ jobs:
         run: node apps/web/scripts/orders-payment-docker-e2e.mjs
       - name: Sprint 9 warehouse and waitlist end-to-end via browser proxy
         run: node apps/web/scripts/warehouse-docker-e2e.mjs
+      - name: Sprint 11 returns and manual refund BFF E2E
+        run: node apps/web/scripts/returns-docker-e2e.mjs
       - name: Admin variant price editor actual Chrome click regression
         run: |
           command -v google-chrome || command -v google-chrome-stable || command -v chromium

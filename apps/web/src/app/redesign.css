@@ -882,3 +882,9 @@ html{scroll-padding-top:calc(82px + 18px)}
  .latest-editorial-item:hover .latest-editorial-image,
  .latest-editorial-item:hover .latest-editorial-arrow{transform:none!important}
 }
+
+/* Sprint 11: order return status is shown on the private order link. */
+.status-rma-progress{max-width:780px;margin:28px auto;background:#eef2e9;border:1px solid #cfddcc;padding:22px 25px;color:#314936}
+.status-rma-progress strong{font-size:14px;letter-spacing:.03em}
+.status-rma-progress p{font-size:13px;line-height:1.7;margin:8px 0 0}
+@media(max-width:600px){.status-rma-progress{padding:18px}}

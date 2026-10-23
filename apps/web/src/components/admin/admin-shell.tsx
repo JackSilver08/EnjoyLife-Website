@@ -10,6 +10,7 @@ export function useAdminRole(){return useContext(RoleContext)}
 const adminNav=[
  {href:"/admin",label:"Tổng quan",icon:LayoutDashboard},
  {href:"/admin/orders",label:"Đơn hàng",icon:ClipboardList},
+ {href:"/admin/returns",label:"Đổi trả & Hoàn tiền",icon:ClipboardList},
  {href:"/admin/products",label:"Sản phẩm",icon:Package},
  {href:"/admin/inventory",label:"Kho hàng",icon:Boxes},
  {href:"/admin/warehouse",label:"Phiếu nhập & NCC",icon:Truck},
