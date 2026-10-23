@@ -49,7 +49,7 @@ export function ProductModelManager({productId,colorVersion=0}:{productId:string
  return <section className="admin-product-3d" key={colorVersion}>
   <div className="admin-gallery-head">
    <div><h3><Box size={21} aria-hidden="true"/> Model 3D theo màu</h3>
-    <p className="admin-help">Tải mô hình GLB 2.0 do cửa hàng sở hữu hoặc được phép sử dụng. Ảnh 2D luôn là chế độ mặc định; mỗi màu có thể có một GLB riêng.</p>
+    <p className="admin-help">Phải tải GLB 2.0 dựng đúng sản phẩm và đúng màu. Ảnh 2D luôn khả dụng; nếu chưa có GLB, website không dựng ma-nơ-canh giả và không hiển thị tab 3D.</p>
    </div>
   </div>
   {error&&<p role="alert">{error}</p>}{message&&<p role="status">{message}</p>}
@@ -63,7 +63,7 @@ export function ProductModelManager({productId,colorVersion=0}:{productId:string
      </select>
     </label>
     <p className="admin-3d-status">{current?.model_url?<><CheckCircle2 size={16}/> Màu {color} đã có model GLB.</>:
-     "Màu "+color+" chưa có GLB. Shop sẽ hiển thị avatar 3D minh họa."}</p>
+     "Màu "+color+" chưa có mô hình GLB. Trang sản phẩm chỉ hiển thị ảnh 2D; tab 3D sẽ xuất hiện khi có GLB."}</p>
     <input ref={fileRef} type="file" accept=".glb,model/gltf-binary" hidden
      onChange={e=>void upload(e.target.files)} aria-label="Tải mô hình GLB"/>
     <div className="admin-row-actions">
@@ -73,7 +73,7 @@ export function ProductModelManager({productId,colorVersion=0}:{productId:string
      {current?.model_url&&<button type="button" disabled={busy}
       onClick={()=>void unlink()}><Trash2 size={16}/> Gỡ liên kết</button>}
     </div>
-    <small>Định dạng GLB self-contained, tối đa 15 MB. Mô hình phải đúng kiểu dáng và màu sản phẩm; không dùng avatar minh họa làm ảnh sản phẩm thật.</small>
+    <small>GLB self-contained, tối đa 15 MB. Upload không tự chuyển ảnh 2D thành 3D. Cần kiểm tra trước model có đủ mũ, tay, họa tiết và chất liệu của sản phẩm thực tế.</small>
    </div>}
  </section>;
 }

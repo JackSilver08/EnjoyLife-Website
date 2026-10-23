@@ -4,8 +4,10 @@ import type {Product} from "@/lib/types";
 import {ProductImageGallery} from "@/components/product-image-gallery";
 import {ProductPicker} from "@/components/product-picker";
 import {Virtual3DStudio} from "@/components/virtual-3d-studio";
-import {visualColor} from "@/lib/product-colors";
 import {Image as ImageIcon, Box} from "lucide-react";
+
+const validModel=(url:string|undefined):url is string=>
+ Boolean(url&&/^\/models\/[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}\.glb$/.test(url));
 
 export function ProductExperience({product}:{product:Product}){
  const colors=[...new Set(product.variants.map(v=>v.color))];
@@ -13,29 +15,29 @@ export function ProductExperience({product}:{product:Product}){
  const [mode,setMode]=useState<"photos"|"3d">("photos");
  const inColor=product.variants.filter(v=>v.color===color);
  const [size,setSize]=useState(inColor.find(v=>v.available>0)?.size??inColor[0]?.size??"");
+ const currentModel=product.colors?.find(x=>x.name===color)?.model_url;
+ const has3D=validModel(currentModel);
+ // Never show a made-up mannequin when the selected color has no GLB.
+ const activeMode=has3D?mode:"photos";
  function chooseColor(value:string){
   setColor(value);
   const items=product.variants.filter(v=>v.color===value);
   setSize(items.find(v=>v.available>0)?.size??items[0]?.size??"");
+  if(!validModel(product.colors?.find(x=>x.name===value)?.model_url))setMode("photos");
  }
- const meta=product.colors?.find(x=>x.name===color);
- const shade=visualColor(color,meta?.hex)||"#d4d0c8";
- const modelUrl=meta?.model_url??"";
- const supportBust=["ao","outerwear","vay-dam","quan"].includes(product.category_slug);
- const canShow3D=supportBust||Boolean(modelUrl);
  return <div className="detail-layout">
   <div className="virtual-experience">
-   <div className="virtual-experience-tabs" role="tablist" aria-label="Chế độ xem sản phẩm">
-    <button type="button" role="tab" aria-selected={mode==="photos"} className={mode==="photos"?"active":""}
+   {has3D&&<div className="virtual-experience-tabs" role="tablist" aria-label="Chế độ xem sản phẩm">
+    <button type="button" role="tab" aria-selected={activeMode==="photos"} className={activeMode==="photos"?"active":""}
      onClick={()=>setMode("photos")}><ImageIcon size={16}/> Ảnh 2D</button>
-    <button type="button" role="tab" aria-selected={mode==="3d"} className={mode==="3d"?"active":""}
-     title={canShow3D?"Xem trên ma-nơ-canh 3D":"Sản phẩm chưa có mô hình 3D"} disabled={!canShow3D}
+    <button type="button" role="tab" aria-selected={activeMode==="3d"} className={activeMode==="3d"?"active":""}
      onClick={()=>setMode("3d")}><Box size={17}/> Xem 3D</button>
-   </div>
-   <div role="tabpanel" aria-label={mode==="photos"?"Ảnh sản phẩm":"Không gian 3D"}>
-    {mode==="photos"?<ProductImageGallery key={color} product={product} color={color}/>:
-     <Virtual3DStudio key={color+modelUrl} color={shade} colorName={color}
-      category={product.category_slug} productName={product.name} modelUrl={modelUrl} onBack={()=>setMode("photos")}/>}
+   </div>}
+   <div role={has3D?"tabpanel":undefined} aria-label={activeMode==="photos"?"Ảnh sản phẩm":"Mô hình sản phẩm 3D"}>
+    {activeMode==="photos"?
+     <ProductImageGallery key={color} product={product} color={color}/>:
+     <Virtual3DStudio key={currentModel} modelUrl={currentModel!} colorName={color}
+      productName={product.name} onBack={()=>setMode("photos")}/>}
    </div>
   </div>
   <ProductPicker product={product} color={color} size={size}
