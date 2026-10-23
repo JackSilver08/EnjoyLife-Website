@@ -6,7 +6,6 @@ import (
  "fmt"
  "net/http"
  "regexp"
- "sort"
  "strings"
  "time"
 
@@ -41,8 +40,7 @@ func(a *App) adminOrderReturnItems(c *gin.Context){
  if err!=nil{serverError(c,err);return};defer rows.Close()
  items:=[]gin.H{}
  for rows.Next(){
-  var id int64;var sku,name,color,size string;var purchased,priceQty,claimed int;var price int64
-  _=priceQty
+  var id int64;var sku,name,color,size string;var purchased,claimed int;var price int64
   if err=rows.Scan(&id,&sku,&name,&color,&size,&purchased,&price,&claimed);err!=nil{serverError(c,err);return}
   available:=purchased-claimed
   items=append(items,gin.H{"order_item_id":id,"sku":sku,"name":name,"color":color,"size":size,
@@ -316,4 +314,3 @@ func(a *App) adminReturnRefund(c *gin.Context){
 
 // No Go provider refund call exists in Sprint 11. Never mark paid payOS funds
 // as refunded merely because a user opens, approves or receives an RMA.
-var _=sort.Strings
