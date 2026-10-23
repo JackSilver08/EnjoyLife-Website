@@ -2,7 +2,7 @@
 import Link from "next/link";
 import {usePathname,useRouter} from "next/navigation";
 import {createContext,useContext,useEffect} from "react";
-import {LayoutDashboard,ClipboardList,Package,Boxes,Users,BarChart3,Newspaper,Images,Palette,LogOut,ArrowUpRight,ShieldCheck,LockKeyhole} from "lucide-react";
+import {LayoutDashboard,ClipboardList,Package,Boxes,Users,BarChart3,Newspaper,Images,Palette,LogOut,ArrowUpRight,ShieldCheck,LockKeyhole,Truck,ChartNoAxesCombined} from "lucide-react";
 type Role="ADMIN"|"STAFF";
 const RoleContext=createContext<Role>("ADMIN");
 export function useAdminRole(){return useContext(RoleContext)}
@@ -11,6 +11,8 @@ const adminNav=[
  {href:"/admin/orders",label:"Đơn hàng",icon:ClipboardList},
  {href:"/admin/products",label:"Sản phẩm",icon:Package},
  {href:"/admin/inventory",label:"Kho hàng",icon:Boxes},
+ {href:"/admin/warehouse",label:"Phiếu nhập & NCC",icon:Truck},
+ {href:"/admin/warehouse/insights",label:"Phân tích tồn kho",icon:ChartNoAxesCombined},
  {href:"/admin/customers",label:"Khách hàng",icon:Users},
  {href:"/admin/staff",label:"Nhân viên & quyền",icon:ShieldCheck},
  {href:"/admin/reports",label:"Báo cáo",icon:BarChart3},

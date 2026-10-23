@@ -38,6 +38,7 @@ func main() {
 	if err = handlers.EnsureBlogSchema(ctx, db); err != nil { slog.Error("blog migration", "error", err); os.Exit(1) }
 	if err = handlers.EnsureMediaSchema(ctx, db); err != nil { slog.Error("media migration", "error", err); os.Exit(1) }
 	if err = handlers.EnsureProductCatalogSchema(ctx, db); err != nil { slog.Error("catalog migration", "error", err); os.Exit(1) }
+	if err = handlers.EnsureWarehouseSchema(ctx, db); err != nil { slog.Error("warehouse migration", "error", err); os.Exit(1) }
 	if err = handlers.EnsureAdmin(ctx, db, cfg.AdminEmail, cfg.AdminPassword); err != nil {
 		slog.Error("admin bootstrap", "error", err)
 		os.Exit(1)
@@ -46,7 +47,7 @@ func main() {
 	reconcileCtx,reconcileCancel:=context.WithCancel(context.Background())
 	defer reconcileCancel()
 	go app.StartPayOSReconciler(reconcileCtx)
-	srv := &http.Server{Addr: ":" + cfg.Port, Handler: handlers.Router(app), ReadHeaderTimeout: 5 * time.Second, ReadTimeout: 15 * time.Second, WriteTimeout: 20 * time.Second, IdleTimeout: 60 * time.Second}
+	srv := &http.Server{Addr: ":" + cfg.Port, Handler: handlers.Router(app), ReadHeaderTimeout: 5 * time.Second, ReadTimeout: 15 * time.Second, WriteTimeout: 35 * time.Second, IdleTimeout: 60 * time.Second}
 	go func() {
 		slog.Info("Enjoy Life API listening", "port", cfg.Port)
 		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {

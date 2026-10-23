@@ -38,3 +38,37 @@
 .chat-error button{margin-left:auto;background:none;border:none;color:inherit;padding:2px}
 .chat-privacy{display:block;font-size:10px;color:#8a8982;margin-top:9px;line-height:1.5}
 @media(max-width:480px){.chat-dock{bottom:12px;right:12px}.chat-window{width:calc(100vw - 24px)}.chat-live{padding:15px}.chat-messages{height:min(440px,57vh)}}
+
+/* Sprint 9: receiving, supplier and QA workflow */
+.warehouse-grid{display:grid;grid-template-columns:1fr 1.25fr;gap:20px;align-items:start;margin:22px 0}
+.warehouse-form{display:flex;flex-direction:column;gap:14px;margin-top:16px}
+.warehouse-form label{display:flex;flex-direction:column;gap:6px;font-size:12px;color:#4c584e}
+.warehouse-form input,.warehouse-form select{width:100%;min-height:42px;border:1px solid #c9d0c7;background:#fff;color:#293c2d;padding:9px;font-size:13px}
+.warehouse-form button{min-height:39px;cursor:pointer;border:1px solid #9eae9e;background:#eff2eb;color:#2d4836;padding:9px 14px}
+.warehouse-form .button-dark{background:#2e4839;color:#fff;border-color:#2e4839}
+.warehouse-form button:disabled{opacity:.5;cursor:not-allowed}
+.warehouse-fields{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.warehouse-supplier-list{display:flex;flex-direction:column;gap:12px;margin-top:23px}
+.warehouse-supplier-list>div{border-top:1px solid #dedfd9;padding:10px 0;display:flex;flex-direction:column;gap:5px;font-size:13px}
+.warehouse-supplier-list small{color:#697669}
+.warehouse-line{padding:12px 0;border-bottom:1px solid #dce2d9;display:flex;align-items:center;justify-content:space-between;gap:12px;font-size:12px}
+.warehouse-line button{min-height:33px}
+.warehouse-waiting-list{display:flex;flex-direction:column;gap:10px;margin-top:15px;max-height:440px;overflow:auto}
+.warehouse-waiting-list article{display:flex;flex-direction:column;gap:5px;border:1px solid #e0e4dd;padding:12px;overflow-wrap:anywhere}
+.warehouse-waiting-list small{font-size:11px;color:#68756c}
+.warehouse-waiting-actions{display:flex;gap:9px;margin-top:6px}
+.warehouse-waiting-actions button{border:1px solid #a8b5a9;background:#f3f5f1;padding:8px;font-size:12px;cursor:pointer}
+.stock-waitlist-card{background:#f1f3ec;border:1px solid #d0dacd;padding:20px;margin:18px 0}
+.stock-waitlist-card strong{font-size:16px}
+.stock-waitlist-card p{font-size:12px;line-height:1.7;color:#546553}
+.stock-waitlist-card form{display:flex;flex-direction:column;gap:12px}
+.stock-waitlist-card form>label:first-child{display:flex;flex-direction:column;gap:5px;font-size:12px}
+.stock-waitlist-card input[type=email]{min-height:42px;padding:10px;border:1px solid #b6c5b5;background:white;width:100%}
+.stock-waitlist-consent{display:flex;gap:9px;font-size:11px;line-height:1.6}
+.stock-waitlist-consent input{flex-shrink:0;align-self:start;margin-top:4px}
+.stock-waitlist-card button{background:#334c39;color:#fff;border:0;min-height:40px;padding:9px 15px;font-size:12px}
+.stock-waitlist-card button:disabled{opacity:.5}
+@media(max-width:900px){.warehouse-grid{grid-template-columns:1fr}}
+@media(max-width:500px){.warehouse-fields{grid-template-columns:1fr}}
+
+.warehouse-ai-answer{background:#f1f5ee;border:1px solid #c3d3c1;padding:20px;white-space:pre-wrap;color:#2e4c36;font-size:14px;line-height:1.8;overflow-wrap:anywhere}
