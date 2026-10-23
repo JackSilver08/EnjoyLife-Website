@@ -19,6 +19,7 @@ Xử lý chứng từ RMA thật cho shop thời trang nữ với các nghiệp 
 - `/admin/returns`: tạo, xem và xử lý RMA với modal; danh sách lọc trạng thái.
 - `/admin/orders`: thêm liên kết sang trang quản trị đổi trả.
 - Phiếu có số RMA, mã đơn, loại yêu cầu, lý do, danh sách SKU/màu/size, số lượng, giá snapshot và số tiền hàng cần hoàn.
+- Link tra cứu đơn hàng riêng tư `/orders/:token` thể hiện trạng thái RMA và khoản hoàn tiền, không hiển thị ghi chú nội bộ hoặc thông tin của khách khác. Không thay thế gửi email/SMS chủ động.
 
 ## Bảo toàn hệ thống
 - Migration additive dùng transaction và khóa advisory; KHÔNG sửa hay xóa đơn, sổ kho cũ, thanh toán payOS hoặc dữ liệu khách.
