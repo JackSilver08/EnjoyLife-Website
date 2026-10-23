@@ -2,6 +2,7 @@
 import {useState} from "react";
 import {adminAction,moneyVND,useAdminData} from "@/components/admin/admin-data";
 import {useAdminRole} from "@/components/admin/admin-shell";
+import {AdminFeedback,useAdminToast} from "@/components/admin/admin-toast";
 
 type Order={order_no:string;customer_name:string;phone?:string;shipping_address?:string;status:string;payment_status:string;payment_method?:string;total_vnd:number;created_at:string};
 type RowResult={ok:boolean;message:string};
@@ -28,6 +29,7 @@ function nextStates(order:Order):string[]{
 }
 export default function OrdersPage(){
  const role=useAdminRole();
+ const notify=useAdminToast();
  const {data,loading,error,reload}=useAdminData<{items:Order[]}>("admin/orders");
  const [filter,setFilter]=useState("ALL");
  const [working,setWorking]=useState("");
@@ -46,10 +48,10 @@ export default function OrdersPage(){
    await adminAction("admin/orders/"+order.order_no+"/status","PATCH",{status:next});
    await reload();
    setSelected(v=>({...v,[order.order_no]:""}));
-   setFeedback(f=>({...f,[order.order_no]:{ok:true,message:order.order_no+" đã chuyển sang: "+(status[next]??next)}}));
+   notify(order.order_no+" đã chuyển sang: "+(status[next]??next),"success");
   }catch(e){
    const message=e instanceof Error?e.message:"Không thể cập nhật đơn hàng.";
-   setFeedback(f=>({...f,[order.order_no]:{ok:false,message}}));
+   notify(message,"error");
   }finally{setWorking("")}
  }
  async function paid(order:Order){
@@ -58,8 +60,8 @@ export default function OrdersPage(){
   try{
    await adminAction("admin/orders/"+order.order_no+"/paid","POST");
    await reload();
-   setFeedback(f=>({...f,[order.order_no]:{ok:true,message:"Đã ghi nhận thu tiền COD cho "+order.order_no}}));
-  }catch(e){setFeedback(f=>({...f,[order.order_no]:{ok:false,message:e instanceof Error?e.message:"Lỗi máy chủ."}}))}
+   notify("Đã ghi nhận thu tiền COD cho "+order.order_no,"success");
+  }catch(e){notify(e instanceof Error?e.message:"Lỗi máy chủ.","error")}
   finally{setWorking("")}
  }
  return <><span className="eyebrow">VẬN HÀNH / ĐƠN HÀNG</span><h1>Quản lý đơn hàng</h1>
@@ -67,7 +69,7 @@ export default function OrdersPage(){
  <div className="admin-toolbar"><label>Trạng thái <select value={filter} onChange={e=>setFilter(e.target.value)}>
   <option value="ALL">Tất cả</option>{Object.entries(status).map(([k,v])=><option value={k} key={k}>{v}</option>)}
  </select></label><button type="button" onClick={()=>void reload()}>Làm mới</button></div>
- {error&&<p role="alert" className="admin-error">{error}</p>}
+ <AdminFeedback error={error}/>
  <section className="admin-surface">{loading?<p>Đang tải...</p>:!orders.length?<p className="admin-empty">Chưa có đơn trong nhóm này.</p>:
  <div className="admin-table-wrap"><table className="admin-table">
  <thead><tr><th>Đơn / Ngày</th><th>Khách</th><th>Giá trị</th><th>Thanh toán</th><th>Trạng thái / Thao tác</th></tr></thead>
