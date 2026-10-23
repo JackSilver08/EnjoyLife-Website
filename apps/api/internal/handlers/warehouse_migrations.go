@@ -2,11 +2,20 @@ package handlers
 
 import (
  "context"
+ "fmt"
  "github.com/jackc/pgx/v5/pgxpool"
 )
 
 // Additive warehouse v2 migration: never rebuild/drop the existing inventory or order ledger.
 func EnsureWarehouseSchema(ctx context.Context,db *pgxpool.Pool)error{
+ tx,err:=db.Begin(ctx)
+ if err!=nil{return fmt.Errorf("warehouse migration begin: %w",err)}
+ defer tx.Rollback(ctx)
+ // All additive DDL succeeds or rolls back together. Serialize on concurrent
+ // dev API startups so a partially initialized persistent DB is recoverable.
+ if _,err=tx.Exec(ctx,`SELECT pg_advisory_xact_lock(hashtext('enjoy_warehouse_schema_v1'))`);err!=nil{
+  return fmt.Errorf("warehouse migration lock: %w",err)
+ }
  statements:=[]string{
   `CREATE SEQUENCE IF NOT EXISTS warehouse_po_seq START WITH 1`,
   `CREATE TABLE IF NOT EXISTS warehouse_suppliers(
@@ -45,6 +54,6 @@ func EnsureWarehouseSchema(ctx context.Context,db *pgxpool.Pool)error{
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),UNIQUE(variant_id,email))`,
   `CREATE INDEX IF NOT EXISTS idx_stock_waitlist_active ON stock_waitlist(variant_id,created_at) WHERE status='WAITING'`,
  }
- for _,statement:=range statements{if _,err:=db.Exec(ctx,statement);err!=nil{return err}}
- return nil
+ for i,statement:=range statements{if _,err=tx.Exec(ctx,statement);err!=nil{return fmt.Errorf("warehouse migration step %d: %w",i+1,err)}}
+ return tx.Commit(ctx)
 }
