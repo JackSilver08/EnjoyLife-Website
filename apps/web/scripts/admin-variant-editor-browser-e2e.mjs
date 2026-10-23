@@ -203,6 +203,22 @@ try{
   category:"ao",color:"Be",size:"M",price_vnd:159000,opening_stock:5,published:true
  });
  assert(accountFixture.status===201&&accountFixture.data?.variant_id,"Account fixture product not created: "+accountFixture.text);
+ // 3D studio UX: 2D remains default; selecting 3D loads the lazy WebGL pane.
+ await call("Page.navigate",{url:browserOrigin+"/products/"+accountFixture.data.slug});
+ await until('document.querySelectorAll(".virtual-experience-tabs button").length===3',
+  "virtual studio tabs present on product detail",30);
+ assert(await run('document.querySelector(".virtual-experience-tabs button.active")?.textContent?.includes("Ảnh 2D")'),
+  "Photo gallery must stay the default, never block checkout with WebGL");
+ assert(await run('document.querySelector(".virtual-experience-tabs button:disabled")?.textContent?.includes("AI thử đồ")'),
+  "AI try-on should be honestly marked unavailable");
+ await run('document.querySelectorAll(".virtual-experience-tabs button")[1].click()');
+ await until('!!document.querySelector(".virtual-3d-host")&&!!document.querySelector(".virtual-studio")',
+  "3D scene panel mounted",30);
+ await until('!!document.querySelector(".virtual-3d-canvas")||!!document.querySelector(".virtual-3d-overlay[role=alert]")',
+  "WebGL scene or graceful unsupported-device fallback",45);
+ await run('document.querySelectorAll(".virtual-experience-tabs button")[0].click()');
+ await until('!!document.querySelector(".product-gallery")&&!!document.querySelector(".virtual-experience-tabs button.active")?.textContent?.includes("2D")',
+  "Returning from 3D must restore true product photo gallery",25);
  const customerOrder=await api("orders","POST",customer.cookie,{
   client_order_key:"account-ux-"+Date.now().toString(36),
   customer_name:"CI EnjoyLife Customer",customer_phone:"0901234567",
