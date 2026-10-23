@@ -125,6 +125,9 @@ func(a *App) adminReturnCreate(c *gin.Context){
   (in.Kind=="DELIVERY_FAILED"&&state!="SHIPPING"){
   c.JSON(409,gin.H{"error":"Đổi trả cần đơn đã giao; giao thất bại cần đơn đang giao."});return
  }
+ if in.Kind=="CUSTOMER_RETURN"&&payment!="PAID"{
+  c.JSON(409,gin.H{"error":"Cần xác nhận đã thu tiền COD hoặc payOS trước khi lập phiếu khách đổi/trả."});return
+ }
  if payment=="REVIEW_REQUIRED"{
   c.JSON(409,gin.H{"error":"Đơn đang đối soát thanh toán, chưa thể quyết định hoàn tiền."});return
  }
