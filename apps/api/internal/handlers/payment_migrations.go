@@ -12,6 +12,10 @@ func EnsurePaymentSchema(ctx context.Context,db *pgxpool.Pool)error{
   `ALTER TABLE payment_attempts ADD COLUMN IF NOT EXISTS provider_order_code BIGINT`,
   `ALTER TABLE payment_attempts ADD COLUMN IF NOT EXISTS qr_code TEXT`,
   `ALTER TABLE payment_attempts ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT now()`,
+  // Keep production order codes away from old/demo payOS codes. The sequence
+  // is persistent in PostgreSQL, so this is applied only when its current
+  // value is still below the production range.
+  `SELECT setval('payos_order_code_seq',GREATEST((SELECT COALESCE(MAX(provider_order_code),0) FROM payment_attempts),(SELECT last_value FROM payos_order_code_seq),700000000))`,
   `CREATE UNIQUE INDEX IF NOT EXISTS idx_payos_provider_code ON payment_attempts(provider,provider_order_code)`,
   `CREATE UNIQUE INDEX IF NOT EXISTS idx_payos_one_attempt_order ON payment_attempts(order_id) WHERE provider='PAYOS'`,
  }
