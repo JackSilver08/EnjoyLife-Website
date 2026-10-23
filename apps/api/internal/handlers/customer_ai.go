@@ -23,6 +23,7 @@ const (
 	maxCustomerAIHistory      = 6
 	maxCustomerAIToolRounds   = 3
 	maxCustomerAIRequests     = 12
+	defaultCustomerAIModel = "gpt-4.1-mini"
 )
 
 var shopperAIRateLimit = struct {
@@ -90,7 +91,7 @@ xem đơn hàng cá nhân, sửa dữ liệu, tạo đơn hay xử lý thanh to�
 func customerAITools() []gin.H {
 	return []gin.H{
 		{
-			"type": "function", "name": "search_catalog",
+			"type": "function", "name": "search_catalog", "strict": false,
 			"description": "Tìm các sản phẩm công khai đang còn ít nhất một biến thể để bán. Dùng trước mọi tư vấn về catalogue, giá, màu hoặc size.",
 			"parameters": gin.H{
 				"type": "object", "properties": gin.H{
@@ -103,7 +104,7 @@ func customerAITools() []gin.H {
 			},
 		},
 		{
-			"type": "function", "name": "get_product_details",
+			"type": "function", "name": "get_product_details", "strict": false,
 			"description": "Lấy giá và tồn kho chính xác theo từng màu/size của một sản phẩm đã có slug từ kết quả tìm kiếm.",
 			"parameters": gin.H{
 				"type": "object", "properties": gin.H{
@@ -112,7 +113,7 @@ func customerAITools() []gin.H {
 			},
 		},
 		{
-			"type": "function", "name": "get_store_policies",
+			"type": "function", "name": "get_store_policies", "strict": false,
 			"description": "Lấy nội dung chính sách hiện được công bố khi khách hỏi về thanh toán, giao hàng hoặc đổi trả.",
 			"parameters":  gin.H{"type": "object", "properties": gin.H{}, "additionalProperties": false},
 		},
@@ -167,12 +168,18 @@ func (a *App) customerAI(c *gin.Context) {
 	}
 	input = append(input, gin.H{"role": "user", "content": request.Message})
 
-	ctx, cancel := context.WithTimeout(c.Request.Context(), 25*time.Second)
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 35*time.Second)
 	defer cancel()
 	answer, err := a.runCustomerAI(ctx, input)
 	if err != nil {
-		slog.Error("customer AI request failed", "error", err)
-		c.JSON(http.StatusBadGateway, gin.H{"error": "Trợ lý đang bận. Vui lòng thử lại sau ít phút."})
+		var providerErr *customerAIProviderError
+		if errors.As(err, &providerErr) {
+			slog.Warn("OpenAI customer assistant unavailable", "status", providerErr.Status, "code", providerErr.Code)
+			c.JSON(providerErr.PublicStatus(), gin.H{"error": providerErr.PublicMessage(), "code": providerErr.PublicCode()})
+		} else {
+			slog.Warn("OpenAI customer assistant request failed", "kind", "network_or_empty_reply")
+			c.JSON(http.StatusBadGateway, gin.H{"error": "Chưa kết nối được trợ lý. Vui lòng thử lại sau.", "code": "upstream_unavailable"})
+		}
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"answer": answer})
@@ -234,7 +241,14 @@ func (a *App) runCustomerAI(ctx context.Context, input []any) (string, error) {
 			})
 		}
 	}
-	return "", errors.New("customer AI exceeded the tool-call limit")
+	// The final response cannot request more tools; synthesize an answer from
+	// authenticated tool data rather than failing on the final tool round.
+	final, err := a.openAIResponsesRequest(ctx, input, true)
+	if err != nil { return "", err }
+	answer := cleanAIText(final.OutputText, 1800)
+	if answer == "" { answer = cleanAIText(responseOutputText(final.Output), 1800) }
+	if answer == "" { return "", errors.New("OpenAI returned no final answer") }
+	return answer, nil
 }
 
 // The REST Responses payload places assistant text inside output message
@@ -284,41 +298,53 @@ func safeResponseDetail(detail json.RawMessage) string {
 	return cleanAIText(string(detail), 160)
 }
 
-func (a *App) openAIResponsesRequest(ctx context.Context, input []any) (openAIResponse, error) {
+func (a *App) openAIResponsesRequest(ctx context.Context, input []any, finalOnly ...bool) (openAIResponse, error) {
+	model := strings.TrimSpace(a.Config.AIModel)
+	if model == "" { model = defaultCustomerAIModel }
 	payload := gin.H{
-		"model":             a.Config.AIModel,
+		"model":             model,
 		"instructions":      shopperAssistantInstructions,
 		"input":             input,
 		"tools":             customerAITools(),
 		"store":             false,
-		"max_output_tokens": 450,
-		"reasoning":         gin.H{"effort": "none"},
+		"max_output_tokens": 700,
+	}
+	// gpt-4.1-mini is a non-reasoning model, so do not send an unsupported
+	// reasoning.effort parameter. If previous rounds used the tool budget,
+	// force a text-only answer without further function calls.
+	if len(finalOnly)>0 && finalOnly[0] {
+		payload["tool_choice"]="none"
 	}
 	body, err := json.Marshal(payload)
 	if err != nil {
 		return openAIResponse{}, err
 	}
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, "https://api.openai.com/v1/responses", bytes.NewReader(body))
+	endpoint := "https://api.openai.com/v1/responses"
+	if a.Config.OpenAIBaseURL != "" { endpoint = strings.TrimRight(a.Config.OpenAIBaseURL,"/") + "/v1/responses" }
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, endpoint, bytes.NewReader(body))
 	if err != nil {
 		return openAIResponse{}, err
 	}
 	req.Header.Set("Authorization", "Bearer "+a.Config.OpenAIAPIKey)
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("User-Agent", "enjoy-life-storefront/1.0")
-	client := &http.Client{Timeout: 24 * time.Second}
+	client := &http.Client{Timeout: 30 * time.Second}
 	response, err := client.Do(req)
 	if err != nil {
 		return openAIResponse{}, err
 	}
 	defer response.Body.Close()
-	var decoded openAIResponse
-	if err := json.NewDecoder(io.LimitReader(response.Body, 2_000_000)).Decode(&decoded); err != nil {
-		return openAIResponse{}, err
-	}
+	data, err := io.ReadAll(io.LimitReader(response.Body,2_000_000))
+	if err != nil { return openAIResponse{},err }
 	if response.StatusCode < 200 || response.StatusCode >= 300 {
-		return openAIResponse{}, fmt.Errorf("OpenAI responses status %d", response.StatusCode)
+		var problem struct {Error struct {Code string `json:"code"`; Type string `json:"type"`} `json:"error"`}
+		_ = json.Unmarshal(data,&problem)
+		return openAIResponse{}, &customerAIProviderError{Status:response.StatusCode, Code: safeAIErrorCode(problem.Error.Code)}
 	}
-	return decoded, nil
+	var decoded openAIResponse
+	if err := json.Unmarshal(data,&decoded); err != nil { return openAIResponse{},err }
+	if decoded.Status=="failed" || decoded.Status=="incomplete" { return openAIResponse{},errors.New("OpenAI response was not completed") }
+	return decoded,nil
 }
 
 func functionCalls(output []json.RawMessage) []openAIFunctionCall {
@@ -440,4 +466,39 @@ func cleanAIText(value string, maximumRunes int) string {
 		return value
 	}
 	return string([]rune(value)[:maximumRunes])
+}
+
+type customerAIProviderError struct {
+ Status int
+ Code string
+}
+func (e *customerAIProviderError) Error() string {return fmt.Sprintf("OpenAI status=%d code=%s",e.Status,e.Code)}
+func (e *customerAIProviderError) PublicCode()string{
+ switch {
+ case e.Status==401||e.Status==403: return "credentials"
+ case e.Status==404: return "model_not_available"
+ case e.Status==429&&e.Code=="insufficient_quota": return "quota_exceeded"
+ case e.Status==429: return "rate_limited"
+ case e.Status==400: return "invalid_configuration"
+ default: return "upstream_unavailable"
+ }
+}
+func (e *customerAIProviderError) PublicStatus()int{
+ if e.Status==429&&e.Code!="insufficient_quota" {return http.StatusTooManyRequests}
+ return http.StatusServiceUnavailable
+}
+func (e *customerAIProviderError) PublicMessage()string{
+ switch e.PublicCode(){
+ case "credentials":return "API key OpenAI chưa hợp lệ hoặc tài khoản không có quyền dùng model. Hãy kiểm tra cấu hình phía máy chủ."
+ case "model_not_available":return "Model AI đang cấu hình không tồn tại hoặc chưa được cấp quyền. Hãy đặt AI_MODEL=gpt-4.1-mini và khởi động lại API."
+ case "quota_exceeded":return "Tài khoản OpenAI API hết hạn mức hoặc chưa có ngân sách thanh toán. Hãy kiểm tra Billing trên OpenAI Platform."
+ case "rate_limited":return "OpenAI đang giới hạn số yêu cầu. Vui lòng thử lại sau."
+ case "invalid_configuration":return "Yêu cầu gửi tới OpenAI chưa tương thích với model được chọn. Hãy kiểm tra AI_MODEL."
+ default:return "OpenAI hiện không phản hồi. Vui lòng thử lại sau."
+ }
+}
+func safeAIErrorCode(code string)string {
+ if len(code)>64{return "unknown"}
+ for _,r:=range code{if !((r>='a'&&r<='z')||(r>='0'&&r<='9')||r=='_'||r=='-'){return "unknown"}}
+ if code==""{return "unknown"};return code
 }
