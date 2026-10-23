@@ -3,8 +3,8 @@ import {useEffect,useRef,useState} from "react";
 import {RotateCcw,RotateCw,ZoomIn,ZoomOut,Play,Pause,RefreshCw,Expand,Box,AlertCircle} from "lucide-react";
 import type {StudioHandle} from "@/components/virtual-three-scene";
 
-export function Virtual3DStudio({color,category,modelUrl="",colorName,onBack}:{
- color:string;category:string;modelUrl?:string;colorName:string;onBack:()=>void;
+export function Virtual3DStudio({color,category,productName="",modelUrl="",colorName,onBack}:{
+ color:string;category:string;productName?:string;modelUrl?:string;colorName:string;onBack:()=>void;
 }){
  const host=useRef<HTMLDivElement>(null),studio=useRef<StudioHandle|null>(null);
  const [state,setState]=useState<"loading"|"ready"|"error">("loading");
@@ -20,7 +20,7 @@ export function Virtual3DStudio({color,category,modelUrl="",colorName,onBack}:{
    import("@/components/virtual-three-scene").then(async({mountStudio})=>{
     if(abandoned)return;
     try{
-     const handle=await mountStudio(target,{color,category,modelUrl,onModelFallback:message=>{
+     const handle=await mountStudio(target,{color,category,productName,modelUrl,onModelFallback:message=>{
       if(!abandoned)setWarning(message);
      }});
      if(abandoned){handle.dispose();return}
@@ -36,7 +36,7 @@ export function Virtual3DStudio({color,category,modelUrl="",colorName,onBack}:{
    window.clearTimeout(start);
    studio.current?.dispose();studio.current=null;
   };
- },[color,category,modelUrl]);
+ },[color,category,modelUrl,productName]);
  useEffect(()=>{
   const listener=()=>setFull(document.fullscreenElement===stage.current);
   document.addEventListener("fullscreenchange",listener);
@@ -53,7 +53,7 @@ export function Virtual3DStudio({color,category,modelUrl="",colorName,onBack}:{
   <div className={"virtual-studio-stage"+(full?" is-full":"")} ref={stage}>
    <div ref={host} className="virtual-3d-host" aria-label="Khung 3D có thể xoay bằng chuột hoặc ngón tay"/>
    <div className="virtual-3d-stage-top">
-    <span className="virtual-3d-tag"><Box size={14}/> 3D VIEWER</span>
+    <span className="virtual-3d-tag"><Box size={14}/> ATELIER / 3D</span>
     <button type="button" onClick={fullscreen} aria-label="Xem 3D toàn màn hình"
      title="Toàn màn hình"><Expand size={16}/></button>
    </div>
@@ -81,11 +81,11 @@ export function Virtual3DStudio({color,category,modelUrl="",colorName,onBack}:{
   </div>
   <div className="virtual-studio-meta">
    <div><strong>{colorName}</strong>
-    <small>{modelUrl?"Mô hình GLB do cửa hàng cung cấp":"Người mẫu 3D minh họa — không phải sản phẩm thật"}</small>
+    <small>{modelUrl?"Mô hình GLB do cửa hàng cung cấp":"Ma-nơ-canh trưng bày bán thân · Màu minh họa"}</small>
    </div>
    <span className="virtual-studio-hint">Kéo để xoay · Cuộn để zoom</span>
   </div>
   {warning&&<p className="virtual-studio-warning" role="status">{warning}</p>}
-  <p className="virtual-studio-disclaimer">Ảnh 2D là ảnh sản phẩm tham chiếu. 3D chỉ hỗ trợ quan sát; không đảm bảo độ vừa vặn, chất liệu hoặc sắc độ thực tế.</p>
+  <p className="virtual-studio-disclaimer">Ma-nơ-canh 3D minh họa kiểu dáng trưng bày, không phải bản dựng chính xác từ ảnh sản phẩm. Hãy xem ảnh 2D để đối chiếu chất liệu, màu thực tế và chi tiết.</p>
  </section>;
 }

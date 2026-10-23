@@ -3,189 +3,285 @@ import {OrbitControls} from "three/addons/controls/OrbitControls.js";
 import {GLTFLoader} from "three/addons/loaders/GLTFLoader.js";
 
 type StudioOptions={
- color:string;category:string;modelUrl?:string;
+ color:string;
+ category:string;
+ productName?:string;
+ modelUrl?:string;
  onModelFallback?:(message:string)=>void;
 };
 export type StudioHandle={
- dispose:()=>void;reset:()=>void;zoom:(direction:1|-1)=>void;
- turn:(degrees:number)=>void;autoRotate:(enabled:boolean)=>void;
-};
-const palette={
- skin:0xb6a18a,skinDark:0xa88e75,neutral:0xe9e8e1,
- neutralPants:0x646a63,hair:0x38362e,shoes:0xe2dacf,
- metal:0x746f64
+ dispose:()=>void;
+ reset:()=>void;
+ zoom:(direction:1|-1)=>void;
+ turn:(degrees:number)=>void;
+ autoRotate:(enabled:boolean)=>void;
 };
 
-function capsule(radius:number,length:number,color:number,metalness=0){
- return new THREE.Mesh(new THREE.CapsuleGeometry(radius,length,8,16),
-  new THREE.MeshStandardMaterial({color,roughness:.87,metalness}));
-}
-function ellipsoid(rx:number,ry:number,rz:number,color:number){
- const mesh=new THREE.Mesh(new THREE.SphereGeometry(1,24,18),
-  new THREE.MeshStandardMaterial({color,roughness:.87}));
- mesh.scale.set(rx,ry,rz);return mesh;
-}
-function between(parent:THREE.Group,from:THREE.Vector3,to:THREE.Vector3,
- rTop:number,rBottom:number,color:number,radial=18){
- const direction=new THREE.Vector3().subVectors(to,from),length=direction.length();
- const m=new THREE.Mesh(new THREE.CylinderGeometry(rTop,rBottom,length,radial),
-  new THREE.MeshStandardMaterial({color,roughness:.89,side:THREE.DoubleSide}));
- m.position.copy(from).add(to).multiplyScalar(.5);
- m.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),direction.normalize());
- parent.add(m);return m;
-}
-function outfitBody(parent:THREE.Group,color:number,kind:"shirt"|"dress"|"jacket"){
- const material=new THREE.MeshStandardMaterial({color,roughness:.86,side:THREE.DoubleSide});
- const outer=kind==="jacket"?1.12:1;
- // ring-based torso mesh with a natural shoulder taper and a slightly flared hem.
- const rings=kind==="dress"?[
-  [1.01,.35,.19],[.87,.38,.215],[.47,.295,.18],[.1,.30,.205],[-.44,.48,.315],[-.81,.57,.33]
- ]:[[1.01,.34*outer,.19*outer],[.82,.365*outer,.218*outer],[.40,.31*outer,.185*outer],[.06,.33*outer,.218*outer]];
- const points:number[]=[];const indices:number[]=[];const n=32;
- for(const [y,rx,rz] of rings){
-  for(let j=0;j<n;j++){const a=2*Math.PI*j/n;points.push(Math.cos(a)*rx,y,Math.sin(a)*rz)}
+type ProfilePoint=[height:number,width:number,depth:number];
+const IVORY=0xece6d8;
+const OAK=0xa47549;
+const OAK_DARK=0x765033;
+
+// Deterministic fine-grain canvas-free texture: subtle woven fabric, no network requests.
+function makeClothBump():THREE.DataTexture{
+ const n=128,raw=new Uint8Array(n*n*4);
+ let seed=20261023;
+ for(let y=0;y<n;y++)for(let x=0;x<n;x++){
+  seed=(1664525*seed+1013904223)>>>0;
+  const grain=(seed>>>24)-128;
+  const weave=((x%3===0?6:-3)+(y%3===0?6:-3));
+  const light=Math.max(0,Math.min(255,128+Math.round(grain*.10)+weave));
+  const i=(y*n+x)*4;
+  raw[i]=raw[i+1]=raw[i+2]=light;raw[i+3]=255;
  }
- for(let i=0;i<rings.length-1;i++)for(let j=0;j<n;j++){
-  const a=i*n+j,b=i*n+(j+1)%n,c=(i+1)*n+j,d=(i+1)*n+(j+1)%n;
-  indices.push(a,c,b,b,c,d);
+ const texture=new THREE.DataTexture(raw,n,n,THREE.RGBAFormat);
+ texture.wrapS=texture.wrapT=THREE.RepeatWrapping;
+ texture.repeat.set(5,6);
+ texture.generateMipmaps=true;
+ texture.minFilter=THREE.LinearMipmapLinearFilter;
+ texture.magFilter=THREE.LinearFilter;
+ texture.needsUpdate=true;
+ return texture;
+}
+function fabric(color:THREE.ColorRepresentation,bump:THREE.Texture):THREE.MeshPhysicalMaterial{
+ return new THREE.MeshPhysicalMaterial({
+  color,roughness:.92,metalness:0,sheen:.28,sheenRoughness:.93,
+  side:THREE.DoubleSide,bumpMap:bump,bumpScale:.009
+ });
+}
+function addMesh(group:THREE.Group,geometry:THREE.BufferGeometry,material:THREE.Material,
+ name:string):THREE.Mesh{
+ const mesh=new THREE.Mesh(geometry,material);
+ mesh.name=name;mesh.castShadow=true;mesh.receiveShadow=true;group.add(mesh);
+ return mesh;
+}
+function profileMesh(group:THREE.Group,profile:ProfilePoint[],material:THREE.Material,
+ name:string,frontShape=false):THREE.Mesh{
+ const vertices:number[]=[],uvs:number[]=[],indices:number[]=[];
+ const curve=new THREE.CatmullRomCurve3(profile.map(([y,rx,rz])=>new THREE.Vector3(rx,y,rz)),false,"centripetal");
+ const levels=76,segments=64;
+ for(let i=0;i<=levels;i++){
+  const p=curve.getPoint(i/levels);
+  for(let j=0;j<=segments;j++){
+   const theta=j/segments*Math.PI*2;
+   const sin=Math.sin(theta),cos=Math.cos(theta);
+   // +Z is the front. Small paired bust volume creates a dress-form silhouette.
+   const chest=Math.exp(-Math.pow((p.y-.91)/.26,2));
+   const paired=frontShape&&sin>0?chest*.035*Math.pow(Math.sin(theta),2)*
+    (1+.28*Math.cos(theta*2)):0;
+   vertices.push(p.x*cos,p.y,p.z*sin+paired);
+   uvs.push(j/segments,i/levels);
+   if(i<levels&&j<segments){
+    const a=i*(segments+1)+j,b=a+segments+1;
+    indices.push(a,b,a+1,b,b+1,a+1);
+   }
+  }
  }
  const geo=new THREE.BufferGeometry();
- geo.setAttribute("position",new THREE.Float32BufferAttribute(points,3));
+ geo.setAttribute("position",new THREE.Float32BufferAttribute(vertices,3));
+ geo.setAttribute("uv",new THREE.Float32BufferAttribute(uvs,2));
  geo.setIndex(indices);geo.computeVertexNormals();
- const torso=new THREE.Mesh(geo,material);parent.add(torso);
- // Loose cylindrical sleeves, shoulder to elbow. Arms remain visible underneath.
- for(const sign of [-1,1]){
-  const a=new THREE.Vector3(sign*.34,.91,0);
-  const b=new THREE.Vector3(sign*(kind==="jacket"?.55:.50),kind==="jacket"?.36:.59,0);
-  between(parent,a,b,kind==="jacket"?.16:.145,kind==="jacket"?.13:.125,color);
+ return addMesh(group,geo,material,name);
+}
+function tube(group:THREE.Group,a:THREE.Vector3,b:THREE.Vector3,r1:number,r2:number,
+ material:THREE.Material,name:string):THREE.Mesh{
+ const v=new THREE.Vector3().subVectors(b,a);
+ const mesh=addMesh(group,new THREE.CylinderGeometry(r2,r1,v.length(),32,1,false),
+  material,name);
+ mesh.position.copy(a).add(b).multiplyScalar(.5);
+ mesh.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),v.normalize());
+ return mesh;
+}
+function seamRing(group:THREE.Group,rx:number,rz:number,y:number,color:number,
+ width=.012,name="Stitching"){
+ const mat=new THREE.MeshStandardMaterial({color,roughness:.95});
+ const mesh=addMesh(group,new THREE.TorusGeometry(1,width,8,64),mat,name);
+ mesh.rotation.x=Math.PI/2;mesh.scale.set(rx,rz,1);mesh.position.y=y;
+ return mesh;
+}
+function woodenStand(group:THREE.Group,from:number,to:number,withFinial=true){
+ const wood=new THREE.MeshStandardMaterial({color:OAK,roughness:.62});
+ const dark=new THREE.MeshStandardMaterial({color:OAK_DARK,roughness:.58});
+ const steel=new THREE.MeshStandardMaterial({color:0x938a7e,metalness:.52,roughness:.48});
+ const pole=addMesh(group,new THREE.CylinderGeometry(.032,.036,from-to,16),
+  wood,"Wooden mannequin post");pole.position.y=(from+to)/2;
+ const base=addMesh(group,new THREE.CylinderGeometry(.42,.44,.055,48),
+  dark,"Mannequin display base");base.position.y=to;
+ const foot=addMesh(group,new THREE.CylinderGeometry(.14,.16,.035,32),
+  steel,"Mannequin support collar");foot.position.y=to+.04;
+ if(withFinial){
+  const finial=addMesh(group,new THREE.LatheGeometry([
+   new THREE.Vector2(.066,0),new THREE.Vector2(.071,.08),
+   new THREE.Vector2(.079,.16),new THREE.Vector2(.045,.24),
+   new THREE.Vector2(.012,.31)
+  ],48),wood,"Wooden dress form finial");
+  finial.position.y=1.43;
+  const collar=addMesh(group,new THREE.CylinderGeometry(.092,.09,.038,32),
+   dark,"Wooden neck cap");collar.position.y=1.445;
  }
- // Neck opening, hem and restrained seam accents.
- const seam=new THREE.MeshStandardMaterial({color:0xf8f3e9,roughness:.95});
- const collar=new THREE.Mesh(new THREE.TorusGeometry(.14,.015,8,30),seam);
- collar.rotation.x=Math.PI/2;collar.position.set(0,1.015,.012);parent.add(collar);
+}
+function buildDressForm(group:THREE.Group,bump:THREE.Texture,slim=false){
+ const torso:ProfilePoint[]=[
+  [1.42,.105,.111],[1.34,.139,.143],[1.28,.23,.17],
+  [1.22,.39,.20],[1.15,.50,.236],[1.04,.52,.268],
+  [.88,.47,.295],[.71,.405,.272],[.50,.34,.235],
+  [.26,.335,.235],[.07,.388,.270],[-.16,.424,.303],
+  [-.37,.418,.300],[-.53,.369,.276]
+ ].map(([y,x,z])=>[y,slim?x*.95:x,z] as ProfilePoint);
+ profileMesh(group,torso,fabric(IVORY,bump),"Ivory linen dress form bust",true);
+ seamRing(group,.108,.113,1.42,0xd0c6b7,.012,"Neck piping");
+ seamRing(group,.367,.273,-.53,0xd1c4b0,.009,"Dress form lower seam");
+ woodenStand(group,-.51,-1.34,true);
+}
+function makeUpperGarment(group:THREE.Group,garment:number,bump:THREE.Texture,
+ kind:"tee"|"jacket"|"dress"|"knit"){
+ const cloth=fabric(garment,bump);
+ const bigger=kind==="jacket"?1.06:1;
+ const hem=kind==="dress"?-1.05:-.35;
+ const profile:ProfilePoint[]=[
+  [1.29,.166,.165],[1.25,.247,.177],
+  [1.18,.40*bigger,.213*bigger],[1.10,.515*bigger,.255*bigger],
+  [.97,.532*bigger,.29*bigger],[.80,.485*bigger,.306*bigger],
+  [.63,.421*bigger,.286*bigger],[.43,.373*bigger,.261*bigger],
+  [.23,.385*bigger,.259*bigger],[.03,.425*bigger,.287*bigger],
+  [-.26,.448*bigger,.316*bigger],
+  ...(kind==="dress"?[[-.64,.57,.36],[-1.05,.72,.41]] as ProfilePoint[]:
+   [[-.36,.438*bigger,.301*bigger]] as ProfilePoint[])
+ ];
+ profileMesh(group,profile,cloth,"Displayed garment: "+kind,true);
+ // Short, sculpted sleeves hug the shoulder of the torso — no floating hands/arms.
+ for(const sign of [-1,1]){
+  const shoulder=new THREE.Vector3(sign*.452,1.115,0);
+  const long=kind==="knit"||kind==="jacket";
+  const outer=new THREE.Vector3(sign*(long?.69:.67),
+   long?.68:.79,-.012);
+  tube(group,shoulder,outer,long?.185:.171,long?.151:.131,
+   cloth,"Garment shoulder sleeve");
+  const sleeveEnd=long?new THREE.Vector3(sign*.73,-.10,0):outer;
+  if(long)tube(group,outer,sleeveEnd,.151,.115,cloth,"Garment lower sleeve");
+  const cuff=new THREE.Mesh(new THREE.TorusGeometry(long?.116:.132,.009,8,36),
+   new THREE.MeshStandardMaterial({color:new THREE.Color(garment).multiplyScalar(.81),roughness:.94}));
+  cuff.name="Sleeve hem";cuff.position.copy(sleeveEnd);
+  cuff.quaternion.setFromUnitVectors(new THREE.Vector3(0,0,1),
+   new THREE.Vector3().subVectors(sleeveEnd,long?outer:shoulder).normalize());
+  group.add(cuff);
+ }
+ seamRing(group,.167,.162,1.295,new THREE.Color(garment).multiplyScalar(.76).getHex(),.014,
+  "Garment collar");
  if(kind==="jacket"){
-  const stripe=new THREE.Mesh(new THREE.BoxGeometry(.018,.85,.012),seam);
-  stripe.position.set(0,.53,.224);parent.add(stripe);
+  const zipper=addMesh(group,new THREE.CylinderGeometry(.008,.008,1.5,8),
+   new THREE.MeshStandardMaterial({color:0xb7aa94,roughness:.7}),
+   "Jacket opening");
+  zipper.position.set(0,.52,.324);
  }
- const hem=new THREE.Mesh(new THREE.TorusGeometry(
-  kind==="dress"?.55:.33,.008,6,40),new THREE.MeshStandardMaterial({color,roughness:.9}));
- hem.rotation.x=Math.PI/2;hem.scale.y=kind==="dress"?.60:.65;
- hem.position.y=kind==="dress"?-.81:.06;parent.add(hem);
+ seamRing(group,kind==="dress"?.70:.43,kind==="dress"?.4:.30,hem,
+  new THREE.Color(garment).multiplyScalar(.88).getHex(),.008,"Garment hem");
 }
-function pants(parent:THREE.Group,color:number){
- const fabric=new THREE.MeshStandardMaterial({color,roughness:.89,side:THREE.DoubleSide});
- const hips=new THREE.Mesh(new THREE.CylinderGeometry(.285,.34,.35,32),fabric);
- hips.position.y=-.10;parent.add(hips);
- for(const side of [-1,1]){
-  between(parent,new THREE.Vector3(side*.165,-.20,0),new THREE.Vector3(side*.185,-1.30,0),
-   .185,.126,color,24);
-  // visual leg crease
-  const line=new THREE.Mesh(new THREE.BoxGeometry(.009,.72,.009),
-   new THREE.MeshStandardMaterial({color:0x6e746a,roughness:1,transparent:true,opacity:.18}));
-  line.position.set(side*.185,-.8,.139);parent.add(line);
- }
-}
-function buildMannequin(category:string,garmentHex:string):THREE.Group{
- const root=new THREE.Group();
- const outfit=new THREE.Group();root.add(outfit);
- const garment=new THREE.Color(garmentHex).getHex();
- // Head, neck and subtle neutral arms create a readable human silhouette.
- const head=ellipsoid(.23,.30,.205,palette.skin);head.position.y=1.57;root.add(head);
- const hair=ellipsoid(.236,.125,.208,palette.hair);hair.position.set(0,1.81,-.018);root.add(hair);
- const neck=between(root,new THREE.Vector3(0,1.20,0),new THREE.Vector3(0,1.40,0),
-  .10,.105,palette.skin,20);neck.name="neck";
+function makeTrouserDisplay(group:THREE.Group,garment:number,bump:THREE.Texture){
+ const cream=fabric(IVORY,bump),cloth=fabric(garment,bump);
+ profileMesh(group,[[1.12,.20,.17],[1.03,.34,.22],[.82,.40,.25],
+  [.56,.41,.285],[.3,.36,.277]] as ProfilePoint[],cream,"Hip mannequin",false);
+ profileMesh(group,[[.95,.38,.235],[.88,.42,.255],[.55,.44,.305],[.36,.45,.327],
+  [.18,.405,.29]] as ProfilePoint[],cloth,"Trouser waistband and hips");
  for(const sign of [-1,1]){
-  between(root,new THREE.Vector3(sign*.39,.81,0),new THREE.Vector3(sign*.66,-.30,0),
-   .105,.085,palette.skin);
-  const hand=ellipsoid(.087,.13,.07,palette.skinDark);hand.position.set(sign*.66,-.39,0);root.add(hand);
-  between(root,new THREE.Vector3(sign*.18,-.13,0),new THREE.Vector3(sign*.18,-1.37,0),
-   .14,.103,palette.skinDark);
-  const shoe=ellipsoid(.17,.085,.30,palette.shoes);shoe.position.set(sign*.185,-1.40,.11);root.add(shoe);
+  tube(group,new THREE.Vector3(sign*.224,.3,0),
+   new THREE.Vector3(sign*.248,-1.12,0),.225,.145,cloth,
+   "Trouser leg");
+  // A lower cuff reinforces the tailoring rather than adding human legs.
  }
- if(category==="quan"){
-  outfitBody(outfit,palette.neutral,"shirt");
-  pants(outfit,garment);
- }else if(category==="vay-dam"){
-  pants(outfit,palette.neutralPants);
-  outfitBody(outfit,garment,"dress");
- }else{
-  pants(outfit,palette.neutralPants);
-  outfitBody(outfit,garment,category==="outerwear"?"jacket":"shirt");
+ seamRing(group,.39,.25,.94,new THREE.Color(garment).multiplyScalar(.81).getHex(),.012,
+  "Trouser waist seam");
+ woodenStand(group,.28,-1.40,false);
+}
+function buildDisplay(category:string,colorHex:string,bump:THREE.Texture,name=""):THREE.Group{
+ const root=new THREE.Group();
+ const color=new THREE.Color(colorHex).getHex();
+ if(category==="quan")makeTrouserDisplay(root,color,bump);
+ else{
+  buildDressForm(root,bump,category==="vay-dam");
+  const winter=/len|sweater|hoodie|knit|dài tay|so mi|sơ mi/i.test(name);
+  makeUpperGarment(root,color,bump,
+   category==="outerwear"?"jacket":category==="vay-dam"?"dress":winter?"knit":"tee");
  }
+ // No human head, hair, hands, legs or feet. This is a boutique display form.
  return root;
 }
-
 function disposeTree(node:THREE.Object3D){
- node.traverse(child=>{
-  if(!(child instanceof THREE.Mesh))return;
-  child.geometry?.dispose();
-  const mats=Array.isArray(child.material)?child.material:[child.material];
-  for(const material of mats){
-   if(material instanceof THREE.MeshStandardMaterial){
-    for(const texture of [material.map,material.normalMap,material.roughnessMap,material.metalnessMap,
-      material.aoMap,material.emissiveMap,material.alphaMap])texture?.dispose();
+ node.traverse(item=>{
+  if(!(item instanceof THREE.Mesh))return;
+  item.geometry?.dispose();
+  const materials=Array.isArray(item.material)?item.material:[item.material];
+  for(const mat of materials){
+   if(mat instanceof THREE.MeshStandardMaterial){
+    for(const texture of [mat.map,mat.bumpMap,mat.normalMap,mat.roughnessMap,
+     mat.metalnessMap,mat.aoMap,mat.emissiveMap,mat.alphaMap])texture?.dispose();
    }
-   material?.dispose();
+   mat?.dispose();
   }
  });
 }
 
-// Only invoked after the customer opens the 3D tab: no WebGL or GLB on page load.
 export async function mountStudio(host:HTMLElement,options:StudioOptions):Promise<StudioHandle>{
  const renderer=new THREE.WebGLRenderer({antialias:true,alpha:true,powerPreference:"low-power"});
- renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,1.6));
+ renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,1.7));
  renderer.outputColorSpace=THREE.SRGBColorSpace;
  renderer.toneMapping=THREE.ACESFilmicToneMapping;
- renderer.toneMappingExposure=1.45;
+ renderer.toneMappingExposure=1.12;
  renderer.shadowMap.enabled=true;
  renderer.shadowMap.type=THREE.PCFSoftShadowMap;
  renderer.domElement.className="virtual-3d-canvas";
  renderer.domElement.setAttribute("aria-hidden","true");
  host.appendChild(renderer.domElement);
  const scene=new THREE.Scene();
- const camera=new THREE.PerspectiveCamera(32,1,.1,100);
- camera.position.set(0,.4,5.8);
+ const camera=new THREE.PerspectiveCamera(33,1,.1,80);
+ const home=new THREE.Vector3(.42,.27,5.70),focus=new THREE.Vector3(0,.14,0);
+ camera.position.copy(home);
  const controls=new OrbitControls(camera,renderer.domElement);
- controls.enablePan=false;controls.enableDamping=true;controls.dampingFactor=.07;
- controls.minDistance=2.65;controls.maxDistance=8;
+ controls.enablePan=false;
+ controls.enableDamping=true;controls.dampingFactor=.085;
+ controls.minDistance=2.5;controls.maxDistance=7.5;
  controls.minPolarAngle=.35;controls.maxPolarAngle=Math.PI-.35;
- controls.target.set(0,0.12,0);
- controls.update();
- const ambient=new THREE.HemisphereLight(0xfffdf3,0xb9c2b7,2.25);
- scene.add(ambient);
- const key=new THREE.DirectionalLight(0xfff5e9,3.2);
- key.position.set(-3,7,5);key.castShadow=true;key.shadow.mapSize.set(1024,1024);
- key.shadow.camera.left=-3;key.shadow.camera.right=3;key.shadow.camera.top=4;key.shadow.camera.bottom=-4;
+ controls.target.copy(focus);controls.update();
+ scene.add(new THREE.HemisphereLight(0xffffff,0xb6b5ad,1.9));
+ const key=new THREE.DirectionalLight(0xfff4e7,2.65);
+ key.position.set(-3,5,5);key.castShadow=true;
+ key.shadow.mapSize.set(1024,1024);
+ key.shadow.camera.left=-3;key.shadow.camera.right=3;
+ key.shadow.camera.top=4;key.shadow.camera.bottom=-4;
  scene.add(key);
- const fill=new THREE.DirectionalLight(0xdce7e5,2);fill.position.set(4,3,-3);scene.add(fill);
- const floor=new THREE.Mesh(new THREE.CircleGeometry(1.33,64),
-  new THREE.MeshStandardMaterial({color:0xe2e1db,roughness:1}));
- floor.rotation.x=-Math.PI/2;floor.position.y=-1.5;floor.receiveShadow=true;scene.add(floor);
+ const fill=new THREE.DirectionalLight(0xe5ebed,1.35);
+ fill.position.set(4,2,-2);scene.add(fill);
+ const floor=new THREE.Mesh(new THREE.CircleGeometry(1.32,64),
+  new THREE.MeshStandardMaterial({color:0xe4e2db,roughness:1}));
+ floor.rotation.x=-Math.PI/2;floor.position.y=-1.42;floor.receiveShadow=true;
+ scene.add(floor);
  const root=new THREE.Group();scene.add(root);
- const base=buildMannequin(options.category,options.color);
- root.add(base);
- base.traverse(node=>{if(node instanceof THREE.Mesh)node.castShadow=true});
+ const bump=makeClothBump();
+ const defaultModel=buildDisplay(options.category,options.color,bump,options.productName);
+ root.add(defaultModel);
  let disposed=false,paused=false,raf=0;
  const observer=new ResizeObserver(()=>{
   if(disposed)return;
   const width=Math.max(1,host.clientWidth),height=Math.max(1,host.clientHeight);
-  renderer.setSize(width,height,false);camera.aspect=width/height;camera.updateProjectionMatrix();
+  renderer.setSize(width,height,false);
+  camera.aspect=width/height;camera.updateProjectionMatrix();
  });
  observer.observe(host);
- function tick(){
+ function draw(){
   if(disposed||paused)return;
-  controls.update();renderer.render(scene,camera);raf=window.requestAnimationFrame(tick);
+  controls.update();renderer.render(scene,camera);raf=window.requestAnimationFrame(draw);
  }
  const onVisibility=()=>{
-  paused=document.hidden;
-  if(paused){window.cancelAnimationFrame(raf)}
-  else tick();
+  const wasPaused=paused;paused=document.hidden;
+  if(paused)window.cancelAnimationFrame(raf);else if(wasPaused)draw();
  };
  document.addEventListener("visibilitychange",onVisibility);
- const onContextLost=(ev:Event)=>{ev.preventDefault();paused=true;window.cancelAnimationFrame(raf);
-  options.onModelFallback?.("WebGL bị gián đoạn. Hãy quay về ảnh 2D hoặc thử tải lại.")};
+ const onContextLost=(event:Event)=>{
+  event.preventDefault();paused=true;window.cancelAnimationFrame(raf);
+  options.onModelFallback?.("WebGL bị gián đoạn. Hãy quay về ảnh 2D hoặc thử tải lại.");
+ };
  renderer.domElement.addEventListener("webglcontextlost",onContextLost);
- tick();
+ draw();
  if(options.modelUrl&&/^\/models\/[a-f0-9-]{36}\.glb$/.test(options.modelUrl)){
   try{
    const gltf=await new GLTFLoader().loadAsync(options.modelUrl);
@@ -193,33 +289,53 @@ export async function mountStudio(host:HTMLElement,options:StudioOptions):Promis
    else{
     const imported=gltf.scene;
     imported.updateMatrixWorld(true);
-    const bounds=new THREE.Box3().setFromObject(imported),s=bounds.getSize(new THREE.Vector3());
-    if(!isFinite(s.y)||s.y<.0001||s.length()>10000)throw Error("Empty model");
-    const scale=Math.min(3.0/Math.max(s.x,s.y,s.z),100);
-    imported.scale.setScalar(scale);
+    const size=new THREE.Box3().setFromObject(imported).getSize(new THREE.Vector3());
+    if(!isFinite(size.y)||size.y<.0001||size.length()>10000)throw Error("Invalid model bounds");
+    imported.scale.setScalar(Math.min(2.65/Math.max(size.x,size.y,size.z),100));
     imported.updateMatrixWorld(true);
     const center=new THREE.Box3().setFromObject(imported).getCenter(new THREE.Vector3());
     imported.position.sub(center);
     imported.traverse(node=>{if(node instanceof THREE.Mesh)node.castShadow=true});
-    root.remove(base);disposeTree(base);
+    root.remove(defaultModel);disposeTree(defaultModel);
     root.add(imported);
-   }
+    floor.visible=false;
+    controls.target.copy(new THREE.Vector3(0,0,0));
+    camera.position.set(0,.12,4.65);controls.update();
+  }
   }catch{
-   if(!disposed)options.onModelFallback?.("Không tải được GLB. Đang hiển thị avatar 3D minh họa.");
+   if(!disposed)options.onModelFallback?.("Không tải được GLB. Đang hiển thị ma-nơ-canh 3D minh họa.");
   }
  }
+ function reset(){
+  controls.autoRotate=false;
+  const target=root.children.includes(defaultModel)?focus:new THREE.Vector3(0,0,0);
+  controls.target.copy(target);
+  camera.position.copy(target===focus?home:new THREE.Vector3(0,.12,4.65));
+  controls.update();
+ }
  return {
-  reset(){controls.reset();camera.position.set(0,.4,5.8);controls.target.set(0,.12,0);controls.update()},
-  zoom(direction){camera.position.multiplyScalar(direction===1?.86:1.16);controls.update()},
-  turn(degrees){const shift=degrees*Math.PI/180;const v=camera.position.clone().sub(controls.target);v.applyAxisAngle(new THREE.Vector3(0,1,0),shift);camera.position.copy(controls.target).add(v);controls.update()},
-  autoRotate(enabled){controls.autoRotate=enabled;controls.autoRotateSpeed=1.1},
+  reset,
+  zoom(direction){
+   const offset=camera.position.clone().sub(controls.target);
+   offset.multiplyScalar(direction===1?.85:1.18);
+   offset.clampLength(controls.minDistance,controls.maxDistance);
+   camera.position.copy(controls.target).add(offset);controls.update();
+  },
+  turn(degrees){
+   const offset=camera.position.clone().sub(controls.target);
+   offset.applyAxisAngle(new THREE.Vector3(0,1,0),degrees*Math.PI/180);
+   camera.position.copy(controls.target).add(offset);controls.update();
+  },
+  autoRotate(enabled){controls.autoRotate=enabled;controls.autoRotateSpeed=1.15},
   dispose(){
    if(disposed)return;
-   disposed=true;window.cancelAnimationFrame(raf);observer.disconnect();
+   disposed=true;
+   window.cancelAnimationFrame(raf);observer.disconnect();
    document.removeEventListener("visibilitychange",onVisibility);
    renderer.domElement.removeEventListener("webglcontextlost",onContextLost);
-   controls.dispose();disposeTree(root);floor.geometry.dispose();
-   (floor.material as THREE.Material).dispose();renderer.dispose();
+   controls.dispose();disposeTree(root);
+   floor.geometry.dispose();(floor.material as THREE.Material).dispose();
+   bump.dispose();renderer.dispose();
    if(renderer.domElement.parentElement===host)host.removeChild(renderer.domElement);
   }
  };
