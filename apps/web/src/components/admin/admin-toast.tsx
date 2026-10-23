@@ -4,7 +4,8 @@ import {CheckCircle2,AlertCircle,Info,X} from "lucide-react";
 type Kind="success"|"error"|"info";
 type Toast={id:number;message:string;kind:Kind};
 type Notify=(message:string,kind?:Kind)=>void;
-const ToastContext=createContext<Notify|null>(null);
+type ToastHub={items:Toast[];notify:Notify;close:(id:number)=>void};
+const ToastContext=createContext<ToastHub|null>(null);
 let nextToast=0;
 
 export function AdminToastProvider({children}:{children:ReactNode}){
@@ -26,21 +27,28 @@ export function AdminToastProvider({children}:{children:ReactNode}){
   const active=timers.current;
   return()=>{for(const timer of active.values())clearTimeout(timer);active.clear()};
  },[]);
- return <ToastContext.Provider value={notify}>
+ return <ToastContext.Provider value={{items,notify,close}}>
   {children}
-  <div className="admin-toast-stack" aria-label="Thông báo quản trị" aria-live="polite" aria-atomic="false">
-   {items.map(item=><div key={item.id} className={`admin-toast admin-toast-${item.kind}`} role={item.kind==="error"?"alert":"status"}>
-    {item.kind==="success"?<CheckCircle2 size={21}/>:item.kind==="error"?<AlertCircle size={21}/>:<Info size={21}/>}
-    <span>{item.message}</span>
-    <button type="button" aria-label="Đóng thông báo" onClick={()=>close(item.id)}><X size={17}/></button>
-   </div>)}
-  </div>
+  <AdminToastViewport/>
  </ToastContext.Provider>;
 }
+/** Render within the top-layer modal as well as the page. Otherwise a native
+ * dialog backdrop will visually hide notifications while an editor is open. */
+export function AdminToastViewport(){
+ const hub=useContext(ToastContext);
+ if(!hub)throw Error("AdminToastViewport requires AdminToastProvider");
+ return <div className="admin-toast-stack" aria-label="Thông báo quản trị" aria-live="polite" aria-atomic="false">
+  {hub.items.map(item=><div key={item.id} className={`admin-toast admin-toast-${item.kind}`} role={item.kind==="error"?"alert":"status"}>
+   {item.kind==="success"?<CheckCircle2 size={21}/>:item.kind==="error"?<AlertCircle size={21}/>:<Info size={21}/>}
+   <span>{item.message}</span>
+   <button type="button" aria-label="Đóng thông báo" onClick={()=>hub.close(item.id)}><X size={17}/></button>
+  </div>)}
+ </div>;
+}
 export function useAdminToast(){
- const notify=useContext(ToastContext);
- if(!notify)throw Error("useAdminToast must be used inside AdminToastProvider");
- return notify;
+ const hub=useContext(ToastContext);
+ if(!hub)throw Error("useAdminToast must be used inside AdminToastProvider");
+ return hub.notify;
 }
 /** Existing async form state can transition to toast without breaking errors.
  * Avoid blank/unmounted notices; errors deliberately have longer lifetime. */
