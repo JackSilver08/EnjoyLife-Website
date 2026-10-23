@@ -44,9 +44,10 @@ type customerAIRequest struct {
 }
 
 type openAIResponse struct {
-	OutputText string            `json:"output_text"`
-	Output     []json.RawMessage `json:"output"`
-	Status     string            `json:"status"`
+	OutputText        string            `json:"output_text"`
+	Output            []json.RawMessage `json:"output"`
+	Status            string            `json:"status"`
+	IncompleteDetails json.RawMessage   `json:"incomplete_details"`
 }
 
 type openAIFunctionCall struct {
@@ -209,7 +210,10 @@ func (a *App) runCustomerAI(ctx context.Context, input []any) (string, error) {
 		if len(calls) == 0 {
 			answer := cleanAIText(response.OutputText, 1800)
 			if answer == "" {
-				return "", errors.New("OpenAI returned no answer")
+				answer = cleanAIText(responseOutputText(response.Output), 1800)
+			}
+			if answer == "" {
+				return "", fmt.Errorf("OpenAI returned no answer (status=%s, output_types=%s, incomplete=%s)", response.Status, responseOutputTypes(response.Output), safeResponseDetail(response.IncompleteDetails))
 			}
 			return answer, nil
 		}
@@ -231,6 +235,53 @@ func (a *App) runCustomerAI(ctx context.Context, input []any) (string, error) {
 		}
 	}
 	return "", errors.New("customer AI exceeded the tool-call limit")
+}
+
+// The REST Responses payload places assistant text inside output message
+// content. Some SDKs also expose it as the convenience field output_text, so
+// support both representations rather than depending on one SDK behavior.
+func responseOutputText(output []json.RawMessage) string {
+	parts := make([]string, 0)
+	for _, raw := range output {
+		var item struct {
+			Type    string `json:"type"`
+			Content []struct {
+				Type string `json:"type"`
+				Text string `json:"text"`
+			} `json:"content"`
+		}
+		if json.Unmarshal(raw, &item) != nil || item.Type != "message" {
+			continue
+		}
+		for _, content := range item.Content {
+			if content.Type == "output_text" && content.Text != "" {
+				parts = append(parts, content.Text)
+			}
+		}
+	}
+	return strings.Join(parts, "\n")
+}
+
+func responseOutputTypes(output []json.RawMessage) string {
+	types := make([]string, 0, len(output))
+	for _, raw := range output {
+		var item struct {
+			Type string `json:"type"`
+		}
+		if json.Unmarshal(raw, &item) == nil && item.Type != "" {
+			types = append(types, item.Type)
+		}
+	}
+	return strings.Join(types, ",")
+}
+
+func safeResponseDetail(detail json.RawMessage) string {
+	if len(detail) == 0 || string(detail) == "null" {
+		return "none"
+	}
+	// Incomplete details are expected to be a short machine status; cap the log
+	// defensively so response data is never logged in bulk.
+	return cleanAIText(string(detail), 160)
 }
 
 func (a *App) openAIResponsesRequest(ctx context.Context, input []any) (openAIResponse, error) {
