@@ -39,6 +39,7 @@ func main() {
 	if err = handlers.EnsureMediaSchema(ctx, db); err != nil { slog.Error("media migration", "error", err); os.Exit(1) }
 	if err = handlers.EnsureProductCatalogSchema(ctx, db); err != nil { slog.Error("catalog migration", "error", err); os.Exit(1) }
 	if err = handlers.EnsureWarehouseSchema(ctx, db); err != nil { slog.Error("warehouse migration", "error", err); os.Exit(1) }
+	if err = handlers.EnsureReturnsSchema(ctx, db); err != nil { slog.Error("return migration", "error", err); os.Exit(1) }
 	if err = handlers.EnsureAdmin(ctx, db, cfg.AdminEmail, cfg.AdminPassword); err != nil {
 		slog.Error("admin bootstrap", "error", err)
 		os.Exit(1)
