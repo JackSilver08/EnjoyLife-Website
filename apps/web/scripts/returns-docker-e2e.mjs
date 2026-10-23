@@ -30,6 +30,8 @@ for(const state of ["CONFIRMED","PREPARING","SHIPPING","DELIVERED"]){
  const response=await request("admin/orders/"+no+"/status",{method:"PATCH",cookie,body:{status:state}});
  assert(response.code===200,"Cannot advance "+state+": "+response.text);
 }
+const paid=await request("admin/orders/"+no+"/paid",{method:"POST",cookie});
+assert(paid.code===200,"COD collection needed before customer return: "+paid.text);
 const available=await request("admin/orders/"+no+"/returnable",{cookie});
 assert(available.code===200&&available.data?.items?.length===1,"Returnable details unavailable: "+available.text);
 const item=available.data.items[0];
@@ -49,7 +51,7 @@ assert(detail.code===200&&detail.data?.items?.length===1,"RMA lines unavailable"
 const line=detail.data.items[0];
 const receipt={request_key:"bff-return-"+seed,note:"Passed warehouse QC",lines:[{item_id:line.id,good:1,quarantined:0}]};
 const received=await request("admin/returns/"+rid+"/receive",{method:"POST",cookie,body:receipt});
-assert(received.code===201&&received.data.status==="CLOSED","Unpaid COD return should close without refund: "+received.text);
+assert(received.code===201&&received.data.status==="RECEIVED","Paid COD return must await refund: "+received.text);
 const retry=await request("admin/returns/"+rid+"/receive",{method:"POST",cookie,body:receipt});
 assert(retry.code===200&&retry.data.idempotent===true,"Duplicate RMA receipt must be safe: "+retry.text);
 const inv=await request("admin/inventory",{cookie});
