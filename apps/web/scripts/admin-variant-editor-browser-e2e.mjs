@@ -61,22 +61,51 @@ try{
  await call("Page.enable");await call("Runtime.enable");await call("Network.enable");
  const [cn,cv]=cookie.split("=");
  await call("Network.setCookie",{name:cn,value:cv,url:browserOrigin,httpOnly:true,sameSite:"Lax"});
- // AI-first sidebar regression: five daily actions and two collapsed groups
- // are accessible without removing or altering staff role permissions.
+
+ // Admin right-flyout regression: five primary links; two full-width sidebar
+ // rows that open a separate popup to the RIGHT, never clipped by nav scrolling.
  await call("Page.navigate",{url:browserOrigin+"/admin"});
- await until('location.pathname==="/admin"&&document.querySelectorAll(".admin-nav-primary>a").length===5',
-  "five primary admin sidebar destinations");
- const sidebar=await run('(()=>{const nav=document.querySelector(".admin-sidebar-navigation");return {primary:[...nav.querySelectorAll(".admin-nav-primary>a")].map(x=>new URL(x.href).pathname),groupCount:nav.querySelectorAll("details.admin-nav-group").length,closed:[...nav.querySelectorAll("details.admin-nav-group")].every(x=>!x.open),active:[...nav.querySelectorAll("a[aria-current=page]")].map(x=>new URL(x.href).pathname)}})()');
- assert(JSON.stringify(sidebar.primary)===JSON.stringify(["/admin","/admin/orders","/admin/products","/admin/inventory","/admin/warehouse/insights"]),
-  "Primary sidebar navigation is not AI-first: "+JSON.stringify(sidebar));
- assert(sidebar.groupCount===2&&sidebar.closed&&JSON.stringify(sidebar.active)==='["/admin"]',
-  "Sidebar collapsed groups or dashboard active route failed: "+JSON.stringify(sidebar));
- const expand=await run(`(()=>{const group=[...document.querySelectorAll("details.admin-nav-group")].find(x=>x.textContent.includes("Quản lý khác"));if(!group)return false;group.querySelector("summary").click();return group.open&&group.querySelector('a[href="/admin/reports"]')!==null})()`);
- assert(expand,"Management menu disclosure does not open and expose reports");
- await run(`document.querySelector('details.admin-nav-group[open] a[href="/admin/reports"]').click()`);
- await until(`location.pathname==="/admin/reports"&&!!document.querySelector('a[href="/admin/reports"][aria-current=page]')`,
-  "Reports nested navigation and active highlighting");
- console.log("ADMIN SIDEBAR E2E PASSED: five primary links, two disclosure groups, active dashboard and nested reports.");
+ await until('location.pathname==="/admin"&&document.querySelectorAll(".admin-nav-primary>a").length===5&&document.querySelectorAll(".admin-flyout-trigger").length===2',
+  "AI-first sidebar and two flyout triggers");
+ await delay(750);
+ const sidebar=await run('(()=>{const nav=document.querySelector(".admin-sidebar-navigation");return {primary:[...nav.querySelectorAll(".admin-nav-primary>a")].map(x=>new URL(x.href).pathname),groups:[...nav.querySelectorAll(".admin-flyout-trigger")].map(x=>x.textContent.trim()),collapsed:[...nav.querySelectorAll(".admin-flyout-trigger")].every(x=>x.getAttribute("aria-expanded")==="false"),active:[...nav.querySelectorAll("a[aria-current=page]")].map(x=>new URL(x.href).pathname)}})()');
+ assert(JSON.stringify(sidebar.primary)===JSON.stringify(["/admin","/admin/orders","/admin/products","/admin/inventory","/admin/warehouse/insights"]),"Primary navigation changed: "+JSON.stringify(sidebar));
+ assert(sidebar.groups.length===2&&sidebar.groups.some(x=>x.includes("Vận hành"))&&sidebar.groups.some(x=>x.includes("Quản lý khác"))&&sidebar.collapsed&&JSON.stringify(sidebar.active)==='["/admin"]',"Unexpected sidebar groups: "+JSON.stringify(sidebar));
+ const openManagement=await run('(()=>{const b=[...document.querySelectorAll("button.admin-flyout-trigger")].find(x=>x.textContent.includes("Quản lý khác"));if(!b)return false;b.click();return true})()');
+ assert(openManagement,"Cannot activate Quản lý khác");
+ await until('!!document.querySelector(".admin-flyout-panel a[href=\"/admin/reports\"]")&&[...document.querySelectorAll(".admin-flyout-trigger")].some(x=>x.getAttribute("aria-expanded")==="true")',
+  "flyout popup opened");
+ const flyoutGeometry=await run('(()=>{const sidebar=document.querySelector(".admin-sidebar").getBoundingClientRect(),pop=document.querySelector(".admin-flyout-panel").getBoundingClientRect();return {sidebarRight:sidebar.right,left:pop.left,right:pop.right,top:pop.top,bottom:pop.bottom,viewport:innerWidth,height:innerHeight,links:document.querySelectorAll(".admin-flyout-panel a").length,portal:!document.querySelector(".admin-sidebar .admin-flyout-panel")}})()');
+ assert(flyoutGeometry.portal&&flyoutGeometry.left>=flyoutGeometry.sidebarRight&&flyoutGeometry.right<=flyoutGeometry.viewport&&flyoutGeometry.top>=0&&flyoutGeometry.bottom<=flyoutGeometry.height+2&&flyoutGeometry.links===6,
+  "Desktop flyout is clipped or not to sidebar right: "+JSON.stringify(flyoutGeometry));
+ // Escape closes the menu, then focus goes back to the trigger.
+ await call("Input.dispatchKeyEvent",{type:"keyDown",key:"Escape",code:"Escape",windowsVirtualKeyCode:27});
+ await call("Input.dispatchKeyEvent",{type:"keyUp",key:"Escape",code:"Escape",windowsVirtualKeyCode:27});
+ await until('!document.querySelector(".admin-flyout-panel")',"Escape dismisses flyout");
+ assert(await run('document.activeElement?.classList.contains("admin-flyout-trigger")'),"Escape must restore sidebar trigger focus");
+ await run('(()=>{const b=[...document.querySelectorAll("button.admin-flyout-trigger")].find(x=>x.textContent.includes("Quản lý khác"));b.click()})()');
+ await until('!!document.querySelector(".admin-flyout-panel a[href=\"/admin/reports\"]")',"management popup reopened");
+ await run('document.querySelector(\'.admin-flyout-panel a[href="/admin/reports"]\').click()');
+ await until('location.pathname==="/admin/reports"&&!!document.querySelector(\'.admin-sidebar .admin-flyout-trigger-active\')',
+  "Report navigation keeps group highlighted");
+ await until('!document.querySelector(".admin-flyout-panel")',"Group flyout closes after navigation");
+
+ // Narrow viewport fallback: menu must remain inside viewport while both
+ // trigger rows stay full-width, not two cramped tiny columns.
+ await call("Emulation.setDeviceMetricsOverride",{width:375,height:810,deviceScaleFactor:1,mobile:true});
+ await call("Page.navigate",{url:browserOrigin+"/admin"});
+ await until('document.querySelectorAll(".admin-flyout-trigger").length===2',"mobile flyout buttons");
+ await delay(600);
+ const narrowRow=await run('(()=>{const nav=document.querySelector(".admin-nav-groups").getBoundingClientRect(),buttons=[...document.querySelectorAll(".admin-flyout-trigger")].map(x=>x.getBoundingClientRect());return {width:innerWidth,navWidth:nav.width,first:buttons[0].width,second:buttons[1].width,vertical:buttons[1].top>buttons[0].bottom-1}})()');
+ assert(narrowRow.vertical&&narrowRow.first>narrowRow.navWidth*.88&&narrowRow.second>narrowRow.navWidth*.88,"Mobile menu triggers should be two stacked rows: "+JSON.stringify(narrowRow));
+ await run('document.querySelector(".admin-flyout-trigger").click()');
+ await until('!!document.querySelector(".admin-flyout-panel")',"mobile flyout open");
+ const mobileGeometry=await run('(()=>{const r=document.querySelector(".admin-flyout-panel").getBoundingClientRect();return {left:r.left,right:r.right,top:r.top,bottom:r.bottom,width:innerWidth,height:innerHeight,links:document.querySelectorAll(".admin-flyout-link").length}})()');
+ assert(mobileGeometry.left>=0&&mobileGeometry.right<=mobileGeometry.width+1&&mobileGeometry.top>=0&&mobileGeometry.bottom<=mobileGeometry.height+1&&mobileGeometry.links===3,"Mobile flyout escapes viewport: "+JSON.stringify(mobileGeometry));
+ await run('document.querySelector(".admin-flyout-header button").click()');
+ await until('!document.querySelector(".admin-flyout-panel")',"mobile close button works");
+ await call("Emulation.clearDeviceMetricsOverride");
+ console.log("ADMIN RIGHT FLYOUT E2E PASSED: two full-width rows, right-side popup, clipped-safe portal, ESC, nested navigation, 375px mobile.");
  await call("Page.navigate",{url:browserOrigin+"/admin/products?edit="+product.data.id});
  try{
   await until('document.querySelector(".admin-variants .admin-table tbody button")!==null',"variants loaded");
