@@ -43,3 +43,29 @@ Sprint 9 triển khai ba phần liên kết với dữ liệu PostgreSQL hiện 
 `go test ./internal/handlers -run TestSprint9WarehouseIntegration -v` với `INTEGRATION_DATABASE_URL` trỏ vào **PostgreSQL test**, không chạy bộ test trực tiếp trên DB thật. CI tự dựng PostgreSQL disposable và chạy test cùng các bài Sprint 6–8.
 
 Các tình huống kiểm tra: chưa đăng ký consent, đăng ký trùng, bắt buộc Admin, tạo PO, nhận một phần, retry trùng khóa, nhận vượt bị chặn, nhận đủ, không hủy PO đã nhận, kiểm tra chất lượng và sổ kho.
+
+## Windows Docker — API unhealthy after `--force-recreate`
+
+After a clean API container recreate, `go run ./cmd/server` compiles Go source **inside the container at startup**. The original Compose healthcheck allowed only 20 seconds startup grace and 12 failed checks. Windows bind mounts and a cold Go build can exceed that interval, making Compose print `dependency api failed to start` even if PostgreSQL is healthy.
+
+The API Compose service now mounts a **named build-cache volume**, `go_build_cache`, at `GOCACHE=/go/build-cache`, and allows a larger initial health grace. It does **not** modify the PostgreSQL `postgres_data` volume or payment credentials. The warehouse migration is now atomic and reports the failing migration step, if any.
+
+Update your local repository, then run:
+
+```powershell
+git switch main
+git pull origin main
+docker compose up -d --build --wait --wait-timeout 300 api web
+```
+
+If it still fails, obtain **redacted** diagnostics:
+
+```powershell
+docker compose ps
+docker compose logs --tail=100 api
+docker inspect enjoy-life-api-1 --format '{{json .State.Health}}'
+```
+
+Do **not** send `.env`, run `docker compose config` into chat, or invoke `docker compose down -v`. Logs may contain personally identifiable data or order tokens, so review them before sharing.
+
+If startup says `warehouse migration step N`, inspect the database error before trying to change the schema. Never drop existing tables to make a migration pass. GitHub CI against a fresh test database cannot alone rule out schema drift in a persistent local database.
