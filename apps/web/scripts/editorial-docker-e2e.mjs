@@ -114,7 +114,7 @@ try{
   const r=await evaluate(measure);
   check(r.names===5&&r.prices===5,"Missing titles/prices at "+width);
   check(r.hrefs.every((href,i)=>href==="/products/"+topFive[i].slug),"Product order/link incorrect at "+width+": "+r.hrefs.join(","));
-  check(r.rects.every(x=>x.width>95&&x.height>130),"Too small card at "+width);
+  check(r.rects.every(x=>x.width>95&&x.height>130),"Too small card at "+width+": "+JSON.stringify(r.rects));
   check(r.rects.every(x=>x.x>=-1&&x.x+x.width<=width+1),"Card horizontal overflow at "+width);
   check(r.hostRight<=width+1,"Editorial section overflow at "+width);
   check(r.images>=1&&r.placeholders>=1&&r.soldOut>=1,"Missing actual image, fallback or stock label at "+width);
