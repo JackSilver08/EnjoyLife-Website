@@ -22,3 +22,19 @@
 @keyframes hero-photo-drift{from{transform:scale(1.06)}to{transform:scale(1.015)}}@keyframes hero-enter{from{opacity:0;transform:translateY(calc(-40% + 28px))}to{opacity:1;transform:translateY(-40%)}}@keyframes hero-fade{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}@keyframes section-enter{from{opacity:0;transform:translateY(34px)}to{opacity:1;transform:translateY(0)}}.hero-photo{animation:hero-photo-drift 9s ease-out both}.hero-content{animation:hero-enter .9s .15s cubic-bezier(.2,.75,.25,1) both}.hero-topline{animation:hero-fade .7s .25s ease-out both}.hero-bottom{animation:hero-fade .7s .65s ease-out both}.home-reveal{animation:section-enter .75s cubic-bezier(.2,.75,.25,1) both}.home-reveal .product-card{animation:section-enter .6s ease-out both}.home-reveal .product-card:nth-child(2){animation-delay:.08s}.home-reveal .product-card:nth-child(3){animation-delay:.16s}.home-reveal .product-card:nth-child(4){animation-delay:.24s}@supports (animation-timeline:view()){.home-reveal{animation-timeline:view();animation-range:entry 8% cover 32%}.home-reveal .product-card{animation-timeline:view();animation-range:entry 5% cover 25%}}
 :root{--serif:"Times New Roman",Times,serif;--sans:"Segoe UI",Arial,sans-serif}html{font-synthesis:none;text-rendering:optimizeLegibility}body{font-kerning:normal}.brand{letter-spacing:-.04em}.hero-content h1{letter-spacing:-.035em;line-height:1.04}.manifesto h2,.section-heading h2,.ai-feature h2,.about-copy h2{letter-spacing:-.025em;line-height:1.16}.tile-caption h3{letter-spacing:-.02em;line-height:1.08}.product-caption h3,.bag-summary h2,.chat-content h3{letter-spacing:-.015em}.statement h2{letter-spacing:-.03em;line-height:1.04}.last-banner h2{letter-spacing:-.04em}.footer-top a,.footer-logo{letter-spacing:-.02em}.shop-head h1,.bag-page h1,.checkout-page h1,.status-page h1,.admin-title h1{letter-spacing:-.035em;line-height:1.1}.detail-title{letter-spacing:-.025em;line-height:1.08}.about-hero h1{letter-spacing:-.035em;line-height:1.1}.admin-panels h2{letter-spacing:-.025em}.eyebrow,.announcement,.hero-topline,.hero-bottom{font-family:var(--sans)}
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important;scroll-behavior:auto!important}}
+
+/* Enjoy Life AI assistant: readable, accessible and responsive. */
+.chat-window{width:420px;max-width:calc(100vw - 30px);border-radius:5px;overflow:hidden}
+.chat-head-actions{display:flex;gap:12px;align-items:center}
+.chat-head-actions button{display:grid;place-items:center;min-width:28px;min-height:28px}
+.chat-messages{height:min(400px,50vh);min-height:240px;scrollbar-gutter:stable}
+.chat-message{overflow-wrap:anywhere}
+.chat-message.assistant .chat-product-link{color:#256444;font-weight:600;margin:2px 0;font-size:inherit;border-bottom:1px solid #8aaf96;padding:0}
+.chat-suggestions{display:flex;flex-direction:column;align-items:flex-start;gap:8px;margin-top:16px}
+.chat-suggestions button{border:1px solid #d9d4c9;background:#faf8f3;padding:9px 11px;font-size:12px;color:#344739;text-align:left;line-height:1.4;max-width:100%}
+.chat-suggestions button:hover{border-color:#61816a;background:#edf3eb}
+.chat-suggestions button:disabled{opacity:.5;cursor:not-allowed}
+.chat-error{background:#fff3ed;border:1px solid #e8c4b9;padding:11px;font-size:12px;line-height:1.6;color:#873d30;display:flex;align-items:flex-start;gap:8px}
+.chat-error button{margin-left:auto;background:none;border:none;color:inherit;padding:2px}
+.chat-privacy{display:block;font-size:10px;color:#8a8982;margin-top:9px;line-height:1.5}
+@media(max-width:480px){.chat-dock{bottom:12px;right:12px}.chat-window{width:calc(100vw - 24px)}.chat-live{padding:15px}.chat-messages{height:min(440px,57vh)}}
