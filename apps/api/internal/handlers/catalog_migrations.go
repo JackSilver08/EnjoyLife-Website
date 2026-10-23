@@ -48,26 +48,12 @@ func EnsureProductCatalogSchema(ctx context.Context, db *pgxpool.Pool) error {
  if _,err=tx.Exec(ctx,`CREATE TABLE IF NOT EXISTS product_colorways (
   product_id UUID NOT NULL REFERENCES products(id) ON DELETE CASCADE,
   name TEXT NOT NULL CHECK (char_length(name) BETWEEN 1 AND 40),
-  hex TEXT NOT NULL DEFAULT '' CHECK(hex='' OR hex ~ '^#[0-9a-fA-F]{6}
- if _,err=tx.Exec(ctx,`ALTER TABLE product_variants ADD COLUMN IF NOT EXISTS low_stock_threshold INTEGER NOT NULL DEFAULT 3 CHECK (low_stock_threshold BETWEEN 0 AND 100000)`);err!=nil{return err}
- if _,err=tx.Exec(ctx,`ALTER TABLE stock_movements ADD COLUMN IF NOT EXISTS reason TEXT NOT NULL DEFAULT ''`);err!=nil{return err}
- if _,err=tx.Exec(ctx,`ALTER TABLE stock_movements ADD COLUMN IF NOT EXISTS actor_id UUID`);err!=nil{return err}
- return tx.Commit(ctx)
-}
-
-// The sequence runs in PostgreSQL, not in the browser; concurrent requests
-// cannot reserve the same SKU. Gaps are normal after failed transactions.
-func nextProductSKU(ctx context.Context,tx pgx.Tx)(string,error){
- var n int64
- if err:=tx.QueryRow(ctx,`SELECT nextval('enjoy_product_sku_seq')`).Scan(&n);err!=nil{return "",err}
- return fmt.Sprintf("SP-%03d",n),nil
-}
-),
+  hex TEXT NOT NULL DEFAULT '' CHECK(hex='' OR hex ~ '^#[0-9a-fA-F]{6}$'),
   color_group TEXT NOT NULL DEFAULT 'Khác' CHECK(char_length(color_group) BETWEEN 1 AND 40),
   swatch_url TEXT NOT NULL DEFAULT '',
   PRIMARY KEY(product_id,name)
  )`);err!=nil{return err}
- // Backfill only: preserve existing color names, SKU identities, and order history.
+ // Keep existing SKU, stock and historical order snapshots exactly as they were.
  if _,err=tx.Exec(ctx,`INSERT INTO product_colorways(product_id,name)
    SELECT DISTINCT product_id,color FROM product_variants
    ON CONFLICT(product_id,name) DO NOTHING`);err!=nil{return err}
