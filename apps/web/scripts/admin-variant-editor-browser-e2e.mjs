@@ -68,7 +68,9 @@ try{
  await call("Page.navigate",{url:browserOrigin+"/admin"});
  await until('location.pathname==="/admin"&&document.querySelectorAll(".admin-nav-primary>a").length===6&&document.querySelectorAll(".admin-flyout-trigger").length===1',
   "six primary links and a management flyout");
- await delay(750);
+ await until('Object.keys(document.querySelector(".admin-flyout-trigger")||{}).some(k=>k.startsWith("__reactProps$"))',
+  "Admin sidebar client-side hydration completed",40);
+ await delay(350);
  const sidebar=await run('(()=>{const nav=document.querySelector(".admin-sidebar-navigation");return {primary:[...nav.querySelectorAll(".admin-nav-primary>a")].map(x=>new URL(x.href).pathname),groups:[...nav.querySelectorAll(".admin-flyout-trigger")].map(x=>x.textContent.trim()),collapsed:[...nav.querySelectorAll(".admin-flyout-trigger")].every(x=>x.getAttribute("aria-expanded")==="false"),active:[...nav.querySelectorAll("a[aria-current=page]")].map(x=>new URL(x.href).pathname)}})()');
  assert(JSON.stringify(sidebar.primary)===JSON.stringify(["/admin","/admin/orders","/admin/products","/admin/inventory","/admin/customers","/admin/warehouse/insights"]),"Primary navigation changed: "+JSON.stringify(sidebar));
  assert(sidebar.groups.length===1&&sidebar.groups[0].includes("Quản lý khác")&&sidebar.collapsed&&JSON.stringify(sidebar.active)==='["/admin"]',"Unexpected sidebar groups: "+JSON.stringify(sidebar));
@@ -211,6 +213,9 @@ try{
   "Photo gallery must stay the default, never block checkout with WebGL");
  assert(await run('document.querySelector(".virtual-experience-tabs button:disabled")?.textContent?.includes("AI thử đồ")'),
   "AI try-on should be honestly marked unavailable");
+ await until('Object.keys(document.querySelector(".virtual-experience-tabs button")||{}).some(k=>k.startsWith("__reactProps$"))',
+  "3D client-side hydration completed",50);
+ await delay(650);
  await run('document.querySelectorAll(".virtual-experience-tabs button")[1].click()');
  await until('!!document.querySelector(".virtual-3d-host")&&!!document.querySelector(".virtual-studio")',
   "3D scene panel mounted",30);
