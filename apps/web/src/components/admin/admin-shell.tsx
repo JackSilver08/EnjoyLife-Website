@@ -72,7 +72,7 @@ export function AdminShell({children,name,role}:{children:React.ReactNode;name:s
       </div>
       <div className="admin-nav-groups">
        {secondaryNav.map(group=><details className="admin-nav-group" key={group.id}
-        defaultOpen={group.items.some(item=>isCurrent(pathname,item.href))}>
+        open={group.items.some(item=>isCurrent(pathname,item.href))}>
         <summary className="admin-nav-group-trigger">
          <span>{group.label}</span><ChevronDown size={16} aria-hidden="true"/>
         </summary>
