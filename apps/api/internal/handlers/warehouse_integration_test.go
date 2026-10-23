@@ -96,6 +96,15 @@ func TestSprint9WarehouseIntegration(t *testing.T){
  if rec:=send("POST","/api/v1/stock-alerts",join,nil);rec.Code!=409{t.Fatalf("joined waitlist while in stock: %d",rec.Code)}
  waitlist:=send("GET","/api/v1/admin/warehouse/waitlist",nil,cookie)
  if waitlist.Code!=200||!bytes.Contains(waitlist.Body.Bytes(),[]byte("shopper@example.com")){t.Fatalf("waitlist admin %d %s",waitlist.Code,waitlist.Body)}
+ var waitID string
+ if err=db.QueryRow(ctx,"SELECT id::text FROM stock_waitlist WHERE variant_id=$1",p.VariantID).Scan(&waitID);err!=nil{t.Fatal(err)}
+ for _,state:=range []string{"CONTACTED","CLOSED"}{
+  changed:=send("PATCH","/api/v1/admin/warehouse/waitlist/"+waitID,map[string]any{"status":state},cookie)
+  if changed.Code!=200{t.Fatalf("waitlist %s transition %d %s",state,changed.Code,changed.Body)}
+ }
+ if rec:=send("PATCH","/api/v1/admin/warehouse/waitlist/"+waitID,map[string]any{"status":"CONTACTED"},cookie);rec.Code!=409{
+  t.Fatalf("closed waitlist reopened: %d",rec.Code)
+ }
  insights:=send("GET","/api/v1/admin/warehouse/insights",nil,cookie)
  if insights.Code!=200||!bytes.Contains(insights.Body.Bytes(),[]byte("sold_30d")){t.Fatalf("warehouse insights %d %s",insights.Code,insights.Body)}
  var movementCount int
