@@ -49,7 +49,10 @@ export function AdminFeedback({message,error}:{message?:string|null;error?:strin
  const prevMessage=useRef("");
  const prevError=useRef("");
  useEffect(()=>{
-  if(message&&message!==prevMessage.current)notify(message,"success");
+  if(message&&message!==prevMessage.current){
+   const kind:Kind=/^Đã\b/i.test(message)?"success":/^(Đang|Tải lên|Đã tải)/i.test(message)?"info":"error";
+   notify(message,kind);
+  }
   prevMessage.current=message||"";
  },[message,notify]);
  useEffect(()=>{
