@@ -88,3 +88,44 @@
 .admin-variant-editing-label{font-size:12px;color:#2f6341;font-weight:600}
 @media(max-width:1100px){.admin-variant-editor-fields{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:680px){.admin-variant-editor{padding:15px}.admin-variant-editor-fields{grid-template-columns:1fr}.admin-variant-editor-actions button{flex:1}}
+
+
+/* Shared Admin interaction layer — native modal and toast. */
+.admin-modal{border:0;padding:0;margin:auto;max-width:none;max-height:none;width:100vw;height:100dvh;background:transparent;color:inherit;overflow:hidden}
+.admin-modal::backdrop{background:rgba(15,24,20,.58);backdrop-filter:blur(5px)}
+.admin-modal-sheet{position:absolute;inset:clamp(12px,3vw,38px);margin:auto;max-width:850px;height:min(850px,calc(100dvh - 24px));display:flex;flex-direction:column;background:#faf9f5;color:#263429;box-shadow:0 30px 95px rgba(0,0,0,.26);border:1px solid #dedfd7;overflow:hidden;border-radius:10px}
+.admin-modal-wide .admin-modal-sheet{max-width:1110px;height:min(940px,calc(100dvh - 24px))}
+.admin-modal-head{display:flex;justify-content:space-between;gap:24px;padding:26px clamp(18px,3vw,34px) 20px;border-bottom:1px solid #e1e1d9;flex:0 0 auto;background:#faf9f5}
+.admin-modal-head h2{font:normal clamp(27px,3.3vw,40px)/1.1 var(--serif);margin:9px 0 0;letter-spacing:-.03em}
+.admin-modal-head p{color:#647165;font-size:13px;line-height:1.7;margin:10px 0 0;max-width:690px}
+.admin-modal-close{align-self:flex-start;display:grid;place-items:center;flex:0 0 auto;width:39px;height:39px;border:1px solid #cdd4cc;border-radius:50%;background:#fff;cursor:pointer;color:#37463b}
+.admin-modal-close:hover{background:#e8eee6}
+.admin-modal-close:focus-visible,.admin-toast button:focus-visible{outline:3px solid #7e9d7b;outline-offset:3px}
+.admin-modal-close:disabled{opacity:.45;cursor:not-allowed}
+.admin-modal-body{flex:1;min-height:0;overflow:auto;padding:26px clamp(18px,3vw,34px) 34px;overscroll-behavior:contain}
+.admin-modal-body .admin-surface,.admin-modal-body .cms-panel{background:transparent;box-shadow:none;border:0;padding:0;margin:0}
+.admin-modal-body .admin-create-form,.admin-modal-body .admin-product-create{padding:0;margin:0}
+.admin-modal-body .admin-edit-panel{padding:0}
+.admin-modal-body .admin-create-form>h2,.admin-modal-body .admin-edit-panel>h2{display:none}
+.admin-modal-body .admin-create-form label,.admin-modal-body .warehouse-form label{min-width:0}
+.admin-modal-body .admin-form-grid{align-items:start}
+.admin-modal-body .admin-variants{margin-top:28px;border-top:1px solid #e0e5db;padding-top:25px}
+.admin-modal-body .admin-row-actions{margin-top:15px}
+.admin-modal-body input,.admin-modal-body textarea,.admin-modal-body select{max-width:100%}
+.admin-toast-stack{position:fixed;top:24px;right:22px;z-index:2147483600;display:flex;flex-direction:column;align-items:flex-end;gap:12px;pointer-events:none;width:min(420px,calc(100vw - 24px))}
+.admin-toast{pointer-events:auto;display:flex;align-items:flex-start;gap:12px;width:100%;background:#fffefb;border:1px solid #dbe0d8;border-left:4px solid #5d8262;border-radius:10px;box-shadow:0 10px 40px rgba(27,40,31,.15);padding:16px 13px 16px 16px;animation:admin-toast-enter .22s ease;color:#354638}
+.admin-toast>svg{flex-shrink:0;color:#4a8660}
+.admin-toast span{font-size:13px;line-height:1.55;overflow-wrap:anywhere;flex:1}
+.admin-toast-error{border-left-color:#ba5d55}.admin-toast-error>svg{color:#ba5d55}
+.admin-toast-info{border-left-color:#69879b}.admin-toast-info>svg{color:#69879b}
+.admin-toast button{background:none;border:0;padding:1px;cursor:pointer;color:#738176;flex-shrink:0}
+@keyframes admin-toast-enter{from{opacity:0;transform:translateY(-10px)}to{opacity:1;transform:translateY(0)}}
+@media(max-width:720px){
+ .admin-modal-sheet,.admin-modal-wide .admin-modal-sheet{inset:0;width:100vw;height:100dvh;max-width:none;border-radius:0;border:0}
+ .admin-modal-head{padding:19px 18px 15px}
+ .admin-modal-body{padding:19px 18px 90px}
+ .admin-modal-head h2{font-size:28px}
+ .admin-modal-body .admin-form-grid,.admin-modal-body .warehouse-grid{grid-template-columns:1fr}
+ .admin-toast-stack{top:12px;right:12px;width:calc(100vw - 24px)}
+}
+@media(prefers-reduced-motion:reduce){.admin-toast{animation:none}}
