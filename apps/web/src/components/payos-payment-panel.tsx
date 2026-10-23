@@ -33,9 +33,10 @@ export function PayOSPaymentPanel({token,initialPaymentStatus,initialCheckoutURL
  const [notice,setNotice]=useState("");
  const [cancelled,setCancelled]=useState(false);
  const [review,setReview]=useState(initialPaymentStatus==="REVIEW_REQUIRED"||initialGatewayStatus==="REVIEW_REQUIRED");
+ const [failed,setFailed]=useState(initialGatewayStatus==="ERROR");
 
  async function check(){
-  if(status==="PAID"||review||cancelled)return;
+  if(status==="PAID"||review||failed||cancelled)return;
   setChecking(true);
   try{
    const res=await fetch("/api/store/orders/"+token+"/payment-status",{cache:"no-store"});
@@ -50,16 +51,19 @@ export function PayOSPaymentPanel({token,initialPaymentStatus,initialCheckoutURL
    if(data.payment_status==="REVIEW_REQUIRED"){
     setReview(true);setError("");router.refresh();return;
    }
+   if(data.gateway_status==="ERROR"){
+    setFailed(true);setError("");return;
+   }
    if(!res.ok&&res.status!==503)setError(data.error||"Chưa kiểm tra được giao dịch.");
   }catch{/* Browser network failure cannot mark a transfer as paid. */}
   finally{setChecking(false)}
  }
  useEffect(()=>{
-  if(status==="PAID"||review||cancelled)return;
+  if(status==="PAID"||review||failed||cancelled)return;
   const timer=window.setInterval(()=>{void check()},20000);
   return()=>window.clearInterval(timer);
   // eslint-disable-next-line react-hooks/exhaustive-deps
- },[status,review,cancelled,token]);
+ },[status,review,failed,cancelled,token]);
 
  async function cancelOrder(){
   if(!window.confirm("Hủy đơn thanh toán QR? Nếu payOS đã nhận tiền, đơn sẽ không thể hủy."))return;
@@ -79,6 +83,7 @@ export function PayOSPaymentPanel({token,initialPaymentStatus,initialCheckoutURL
   try{
    const res=await fetch("/api/store/orders/"+token+"/payment-link",{method:"POST"});
    const data=await res.json();
+   if(!res.ok&&data.gateway_status==="ERROR")setFailed(true);
    if(!res.ok)throw Error(data.error||"Chưa tạo được mã QR thanh toán.");
    if(typeof data.checkout_url!=="string"||!officialURL(data.checkout_url)){
     throw Error("payOS trả về liên kết thanh toán không hợp lệ.");
@@ -95,7 +100,13 @@ export function PayOSPaymentPanel({token,initialPaymentStatus,initialCheckoutURL
   }finally{setBusy(false)}
  }
  return <section className="payos-payment-panel" aria-label="Thanh toán payOS">
-  {review?<div role="alert" className="payos-payment-review">
+  {failed?<div role="alert" className="payos-payment-review">
+    <strong>Chưa tạo được mã thanh toán</strong>
+    <p>payOS đã từ chối mã giao dịch này. Bạn có thể hủy đơn để trả hàng về kho, sau đó đặt lại nếu cần.</p>
+    <button className="payos-cancel" type="button" onClick={()=>void cancelOrder()} disabled={busy}>Hủy giao dịch và đơn hàng</button>
+    {error&&<p role="alert" className="form-error">{error}</p>}
+   </div>
+  :review?<div role="alert" className="payos-payment-review">
     <strong>Giao dịch cần đối soát</strong>
     <p>payOS ghi nhận tình huống thanh toán bất thường hoặc tiền đến sau khi hủy đơn. Vui lòng liên hệ cửa hàng kèm mã đơn; không chuyển khoản thêm và không đặt lại đơn cho tới khi được xác nhận.</p>
    </div>

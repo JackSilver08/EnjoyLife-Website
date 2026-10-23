@@ -124,7 +124,15 @@ func (a *App) createPayOSLink(c *gin.Context) {
 	if err != nil {
 		slog.Error("payOS create payment link failed", "error", err, "order_code", code, "amount_vnd", amount)
 		// Do not create a different payOS order code: request may have succeeded upstream.
-		_, _ = a.DB.Exec(ctx, `UPDATE payment_attempts SET status='REVIEW_REQUIRED',updated_at=now() WHERE order_id=$1 AND provider='PAYOS' AND checkout_url IS NULL`, id)
+		if strings.Contains(err.Error(), "code=231") {
+			_, _ = a.DB.Exec(ctx, `UPDATE payment_attempts SET status='ERROR',provider_reference='CREATE_REJECTED_231',updated_at=now() WHERE order_id=$1 AND provider='PAYOS' AND checkout_url IS NULL`, id)
+		} else {
+			_, _ = a.DB.Exec(ctx, `UPDATE payment_attempts SET status='REVIEW_REQUIRED',updated_at=now() WHERE order_id=$1 AND provider='PAYOS' AND checkout_url IS NULL`, id)
+		}
+		if strings.Contains(err.Error(), "code=231") {
+			c.JSON(502, gin.H{"error": "payOS từ chối mã giao dịch trùng. Bạn có thể hủy đơn an toàn.", "gateway_status": "ERROR"})
+			return
+		}
 		c.JSON(502, gin.H{"error": "Không tạo được link payOS. Đơn được giữ nguyên để kiểm tra, không tạo thanh toán thứ hai."})
 		return
 	}
