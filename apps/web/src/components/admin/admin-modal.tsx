@@ -2,6 +2,7 @@
 import {useEffect,useRef,type ReactNode,type MouseEvent} from "react";
 import {createPortal} from "react-dom";
 import {X} from "lucide-react";
+import {AdminToastViewport} from "@/components/admin/admin-toast";
 
 /** Native <dialog> supplies focus containment, nested top layer, Escape and
  * inert background. The portal keeps dialog outside overflowing admin tables. */
@@ -35,6 +36,7 @@ export function AdminModal({title,subtitle,children,onClose,busy=false,wide=fals
        className="admin-modal-close" onClick={onClose}><X size={21}/></button>
     </header>
     <div className="admin-modal-body">{children}</div>
+    <AdminToastViewport/>
    </div>
   </dialog>,document.body);
 }
