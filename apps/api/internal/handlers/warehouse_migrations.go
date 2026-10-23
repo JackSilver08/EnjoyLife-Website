@@ -8,6 +8,7 @@ import (
 // Additive warehouse v2 migration: never rebuild/drop the existing inventory or order ledger.
 func EnsureWarehouseSchema(ctx context.Context,db *pgxpool.Pool)error{
  statements:=[]string{
+  `CREATE SEQUENCE IF NOT EXISTS warehouse_po_seq START WITH 1`,
   `CREATE TABLE IF NOT EXISTS warehouse_suppliers(
     id UUID PRIMARY KEY,name TEXT NOT NULL,contact TEXT NOT NULL DEFAULT '',
     lead_days INTEGER NOT NULL DEFAULT 7 CHECK(lead_days BETWEEN 1 AND 365),
