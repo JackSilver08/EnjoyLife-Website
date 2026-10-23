@@ -2,6 +2,7 @@
 import {useEffect,useRef,useState} from "react";
 import {ImagePlus,FolderOpen,UploadCloud,X} from "lucide-react";
 import {fetchMediaAssets,uploadMedia,type MediaAsset} from "@/lib/media-api";
+import {AdminFeedback} from "@/components/admin/admin-toast";
 
 type Props={
  label?:string;value:string;onSelect:(url:string)=>void;
@@ -61,7 +62,7 @@ export function MediaPicker({label="Ảnh",value,onSelect,onUpload,compact=false
     <button type="button" aria-label="Bỏ chọn ảnh" onClick={()=>onSelect("")}><X size={17}/></button>
   </div>}
   {progress&&<p role="status" className="media-picker-progress">{progress}</p>}
-  {error&&<p role="alert" className="admin-error">{error}</p>}
+  <AdminFeedback error={error}/>
   {open&&<div className="media-gallery-panel">
    {items.length===0?<p>Thư viện còn trống. Hãy chọn ảnh từ máy để tải lên.</p>
    :<div className="media-gallery-grid">{items.map(item=><button key={item.id} type="button"
