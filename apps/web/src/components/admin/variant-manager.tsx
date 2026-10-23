@@ -2,11 +2,14 @@
 import {Fragment,useState,type FormEvent} from "react";
 import Link from "next/link";
 import {adminAction,moneyVND,useAdminData} from "@/components/admin/admin-data";
+import {AdminModal} from "@/components/admin/admin-modal";
+import {AdminFeedback} from "@/components/admin/admin-toast";
 type Variant={id:string;sku:string;color:string;size:string;price_vnd:number;active:boolean;on_hand:number;reserved:number;available:number;low_stock_threshold:number};
 const blank={sku:"",color:"",size:"M",price_vnd:0,opening_stock:0};
 export function VariantManager({productId}:{productId:string}){
  const {data,error,loading,reload}=useAdminData<{items:Variant[]}>("admin/products/"+productId+"/variants");
  const [form,setForm]=useState(blank);
+ const [adding,setAdding]=useState(false);
  const [message,setMessage]=useState("");
  const [busy,setBusy]=useState(false);
  const [editing,setEditing]=useState<string|null>(null);
@@ -15,7 +18,7 @@ export function VariantManager({productId}:{productId:string}){
   e.preventDefault();if(busy)return;setBusy(true);setMessage("");
   try{const created=await adminAction("admin/products/"+productId+"/variants","POST",{...form,sku:""});
    setMessage("Đã thêm biến thể "+form.color+"/"+form.size+" với mã hàng "+created.sku+".");
-   setForm(blank);await reload();
+   setForm(blank);setAdding(false);await reload();
   }catch(err){setMessage(err instanceof Error?err.message:"Không thêm được size/màu mới.")}
   finally{setBusy(false)}
  }
@@ -54,10 +57,10 @@ export function VariantManager({productId}:{productId:string}){
  }
  return <section className="admin-variants"><div className="admin-variant-title">
   <h3>Biến thể theo màu và kích thước</h3>
-  <Link href={"/admin/inventory?product="+productId}>Xem kho sản phẩm ↗</Link>
+  <div className="admin-row-actions"><button type="button" onClick={()=>setAdding(true)}>+ Thêm size / màu</button><Link href={"/admin/inventory?product="+productId}>Xem kho sản phẩm ↗</Link></div>
  </div>
  <p className="admin-help">Mỗi tổ hợp màu và size chỉ xuất hiện một lần; hệ thống tự cấp mã hàng. Giá và tồn kho được quản lý riêng. Thay đổi số lượng tại Kho hàng.</p>
- {message&&<p role="status" className="admin-notice">{message}</p>}{error&&<p role="alert" className="admin-error">{error}</p>}
+ <AdminFeedback message={message} error={error}/>
  {loading?<p>Đang tải biến thể...</p>:<div className="admin-table-wrap"><table className="admin-table">
   <thead><tr><th>Mã hàng</th><th>Màu / Size</th><th>Giá bán</th><th>Kho</th><th>Trạng thái / Thao tác</th></tr></thead>
   <tbody>{(data?.items??[]).map(v=><Fragment key={v.id}>
@@ -68,15 +71,13 @@ export function VariantManager({productId}:{productId:string}){
     <td>{v.on_hand} thực tế <small>{v.available} có thể bán · {v.reserved} đã giữ · Cảnh báo ≤ {v.low_stock_threshold}</small></td>
     <td><span className="admin-pill">{v.active?"Đang bán":"Ngừng bán"}</span>
      <div className="admin-row-actions">
-      {editing===v.id?<span className="admin-variant-editing-label">Đang chỉnh sửa bên dưới ↓</span>
+      {editing===v.id?<span className="admin-variant-editing-label">Đang chỉnh sửa...</span>
        :<button type="button" disabled={busy} onClick={()=>startEdit(v)}>Chỉnh sửa</button>}
       <button type="button" disabled={busy||editing===v.id} onClick={()=>void toggle(v)}>{v.active?"Ngừng bán":"Mở bán"}</button>
      </div>
     </td>
    </tr>
-   {editing===v.id&&<tr className="admin-variant-editor-row">
-    <td colSpan={5}>
-     <section className="admin-variant-editor" role="region" aria-label={"Chỉnh sửa biến thể "+v.sku}>
+   {editing===v.id&&<AdminModal title={"Chỉnh sửa biến thể "+v.sku} subtitle="Giá bán, màu, kích thước và mức cảnh báo tồn kho." onClose={()=>!busy&&setEditing(null)} busy={busy}><section className="admin-variant-editor" role="region" aria-label={"Chỉnh sửa biến thể "+v.sku}>
       <div className="admin-variant-editor-head">
        <strong>Chỉnh sửa giá bán & biến thể {v.sku}</strong>
        <small>Chỉnh số lượng kho tại Kho hàng. Các thay đổi bên dưới chưa được lưu.</small>
@@ -97,11 +98,9 @@ export function VariantManager({productId}:{productId:string}){
        </button>
        <button type="button" disabled={busy} onClick={()=>setEditing(null)}>Hủy chỉnh sửa</button>
       </div>
-     </section>
-    </td>
-   </tr>}
+     </section></AdminModal>}
   </Fragment>)}</tbody></table></div>}
- <form onSubmit={create} className="admin-variant-add">
+ {adding&&<AdminModal title="Thêm màu / size mới" subtitle="Tạo biến thể và mã hàng tự động cho sản phẩm." onClose={()=>!busy&&setAdding(false)} busy={busy}><form onSubmit={create} className="admin-variant-add">
   <h3>Thêm size / màu mới</h3>
   <div className="admin-form-grid">
    <label>Màu<input required maxLength={40} value={form.color} onChange={e=>setForm({...form,color:e.target.value})} placeholder="Trắng, Đen, Be..."/></label>
@@ -110,6 +109,6 @@ export function VariantManager({productId}:{productId:string}){
    <label>Tồn kho khởi tạo<input type="number" min={0} max={100000} step={1} required value={form.opening_stock} onChange={e=>setForm({...form,opening_stock:Number(e.target.value)})}/></label>
   </div>
   <button className="button-dark" disabled={busy} type="submit">{busy?"ĐANG LƯU...":"+ THÊM SIZE / MÀU"}</button>
- </form>
+ </form></AdminModal>}
  </section>;
 }
