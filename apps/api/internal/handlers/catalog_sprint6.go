@@ -15,6 +15,7 @@ import (
 type GalleryImage struct {
  URL string `json:"url"`
  Alt string `json:"alt"`
+ Color string `json:"color"`
 }
 func (a *App) adminGetGallery(c *gin.Context) {
  if a.requireAdmin(c)==nil{return}
@@ -24,10 +25,10 @@ func (a *App) adminGetGallery(c *gin.Context) {
   if errors.Is(err,pgx.ErrNoRows){c.JSON(404,gin.H{"error":"Không tìm thấy sản phẩm."})}else{serverError(c,err)}
   return
  }
- rows,err:=a.DB.Query(ctx,`SELECT url,alt FROM product_images WHERE product_id::text=$1 ORDER BY position`,c.Param("id"))
+ rows,err:=a.DB.Query(ctx,`SELECT url,alt,color FROM product_images WHERE product_id::text=$1 ORDER BY position`,c.Param("id"))
  if err!=nil{serverError(c,err);return};defer rows.Close()
  images:=[]GalleryImage{}
- for rows.Next(){var img GalleryImage;if err=rows.Scan(&img.URL,&img.Alt);err!=nil{serverError(c,err);return};images=append(images,img)}
+ for rows.Next(){var img GalleryImage;if err=rows.Scan(&img.URL,&img.Alt,&img.Color);err!=nil{serverError(c,err);return};images=append(images,img)}
  if err=rows.Err();err!=nil{serverError(c,err);return}
  if len(images)==0&&primary!=""{images=append(images,GalleryImage{URL:primary})}
  c.JSON(200,gin.H{"images":images})
@@ -41,8 +42,8 @@ func (a *App) adminSaveGallery(c *gin.Context) {
  seen:=map[string]bool{}
  for i:=range in.Images{
   item:= &in.Images[i]
-  item.URL=strings.TrimSpace(item.URL);item.Alt=strings.TrimSpace(item.Alt)
-  if item.URL==""||len(item.URL)>500||!validManagedImageURL(item.URL)||seen[item.URL]||len(item.Alt)>160 {
+  item.URL=strings.TrimSpace(item.URL);item.Alt=strings.TrimSpace(item.Alt);item.Color=strings.TrimSpace(item.Color)
+  if item.URL==""||len(item.URL)>500||!validManagedImageURL(item.URL)||seen[item.URL]||len(item.Alt)>160||len(item.Color)>40 {
    c.JSON(400,gin.H{"error":"URL ảnh không hợp lệ, ảnh trùng hoặc alt quá dài."});return
   }
   seen[item.URL]=true
@@ -52,11 +53,17 @@ func (a *App) adminSaveGallery(c *gin.Context) {
  var id string
  err=tx.QueryRow(ctx,`SELECT id::text FROM products WHERE id::text=$1 AND archived_at IS NULL FOR UPDATE`,c.Param("id")).Scan(&id)
  if err!=nil{if errors.Is(err,pgx.ErrNoRows){c.JSON(404,gin.H{"error":"Không tìm thấy sản phẩm."})}else{serverError(c,err)};return}
+ for _,img:=range in.Images{
+  if img.Color==""{continue}
+  var valid bool
+  if err=tx.QueryRow(ctx,`SELECT EXISTS(SELECT 1 FROM product_variants WHERE product_id=$1 AND color=$2)`,id,img.Color).Scan(&valid);err!=nil{serverError(c,err);return}
+  if !valid{c.JSON(400,gin.H{"error":"Màu ảnh không tồn tại trong sản phẩm."});return}
+ }
  if _,err=tx.Exec(ctx,`DELETE FROM product_images WHERE product_id=$1`,id);err!=nil{serverError(c,err);return}
  for position,img:=range in.Images{
   newID,e:=uuid();if e!=nil{serverError(c,e);return}
-  if _,err=tx.Exec(ctx,`INSERT INTO product_images(id,product_id,url,alt,position) VALUES($1,$2,$3,$4,$5)`,
-    newID,id,img.URL,img.Alt,position);err!=nil{serverError(c,err);return}
+  if _,err=tx.Exec(ctx,`INSERT INTO product_images(id,product_id,url,alt,position,color) VALUES($1,$2,$3,$4,$5,$6)`,
+    newID,id,img.URL,img.Alt,position,img.Color);err!=nil{serverError(c,err);return}
  }
  cover:=""
  if len(in.Images)>0{cover=in.Images[0].URL}
