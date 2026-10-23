@@ -57,6 +57,14 @@ func EnsureProductCatalogSchema(ctx context.Context, db *pgxpool.Pool) error {
  if _,err=tx.Exec(ctx,`INSERT INTO product_colorways(product_id,name)
    SELECT DISTINCT product_id,color FROM product_variants
    ON CONFLICT(product_id,name) DO NOTHING`);err!=nil{return err}
+ if _,err=tx.Exec(ctx,`ALTER TABLE product_colorways ADD COLUMN IF NOT EXISTS model_url TEXT NOT NULL DEFAULT ''`);err!=nil{return err}
+ if _,err=tx.Exec(ctx,`CREATE TABLE IF NOT EXISTS product_model_assets (
+  id UUID PRIMARY KEY, product_id UUID NOT NULL REFERENCES products(id),
+  color TEXT NOT NULL, filename TEXT NOT NULL UNIQUE, size_bytes INTEGER NOT NULL
+  CHECK (size_bytes BETWEEN 20 AND 15728640),
+  created_by UUID NOT NULL REFERENCES users(id), created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+ )`);err!=nil{return err}
+ if _,err=tx.Exec(ctx,`CREATE INDEX IF NOT EXISTS idx_product_model_assets_product ON product_model_assets(product_id,created_at DESC)`);err!=nil{return err}
  if _,err=tx.Exec(ctx,`CREATE INDEX IF NOT EXISTS idx_product_images_product ON product_images(product_id,position)`);err!=nil{return err}
  if _,err=tx.Exec(ctx,`ALTER TABLE product_variants ADD COLUMN IF NOT EXISTS low_stock_threshold INTEGER NOT NULL DEFAULT 3 CHECK (low_stock_threshold BETWEEN 0 AND 100000)`);err!=nil{return err}
  if _,err=tx.Exec(ctx,`ALTER TABLE stock_movements ADD COLUMN IF NOT EXISTS reason TEXT NOT NULL DEFAULT ''`);err!=nil{return err}

@@ -18,7 +18,8 @@
     "@tiptap/react": "^3.32.0",
     "@tiptap/pm": "^3.32.0",
     "@tiptap/starter-kit": "^3.32.0",
-    "@tiptap/extension-image": "^3.32.0"
+    "@tiptap/extension-image": "^3.32.0",
+    "three": "^0.186.1"
   },
   "devDependencies": {
     "@types/node": "^22.0.0",
@@ -28,6 +29,7 @@
     "tailwindcss": "^4.0.0",
     "typescript": "^5.7.0",
     "eslint": "^9.0.0",
-    "eslint-config-next": "^16.0.0"
+    "eslint-config-next": "^16.0.0",
+    "@types/three": "^0.186.0"
   }
 }
