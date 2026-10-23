@@ -5,7 +5,6 @@ import (
  "errors"
  "fmt"
  "math"
- "net/http"
  "net/mail"
  "regexp"
  "strings"
