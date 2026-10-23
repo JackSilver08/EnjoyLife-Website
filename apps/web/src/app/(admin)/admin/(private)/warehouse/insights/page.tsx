@@ -85,7 +85,7 @@ export default function WarehouseInsights(){
   <section className="admin-surface"><h2>Khách chờ hàng</h2>
    <p className="admin-subtitle">Yêu cầu có đồng ý nhận liên hệ cho đúng màu/size. Hiện cửa hàng liên hệ thủ công; chưa có email tự động.</p>
    {waiting.loading?<p>Đang tải...</p>:!waiting.data?.items.length?<p>Chưa có yêu cầu chờ hàng.</p>:<div className="warehouse-waiting-list">{waiting.data.items.map(w=><article key={w.id}><strong>{w.name} · {w.color}/{w.size}</strong><small>{w.email}</small><small>{w.status} · {new Date(w.created_at).toLocaleDateString("vi-VN")}</small>
-    {w.status==="WAITING"&&<div className="warehouse-waiting-actions"><button disabled={busy} onClick={()=>void updateWaiting(w,"CONTACTED")}>Đã liên hệ</button><button disabled={busy} onClick={()=>void updateWaiting(w,"CLOSED")}>Đóng yêu cầu</button></div>}
+    {(w.status==="WAITING"||w.status==="CONTACTED")&&<div className="warehouse-waiting-actions">{w.status==="WAITING"&&<button disabled={busy} onClick={()=>void updateWaiting(w,"CONTACTED")}>Đã liên hệ</button>}<button disabled={busy} onClick={()=>void updateWaiting(w,"CLOSED")}>Đóng yêu cầu</button></div>}
    </article>)}</div>}
   </section>
  </div>
