@@ -4,9 +4,12 @@ import Image from "next/image";
 import {ChevronLeft,ChevronRight,Expand, X} from "lucide-react";
 import type {Product} from "@/lib/types";
 
-export function ProductImageGallery({product}:{product:Product}){
+export function ProductImageGallery({product,color}:{product:Product;color:string}){
  const all=product.images?.filter(x=>!!x.url)??[];
- const images=all.length?all:product.image_url?[{url:product.image_url,alt:product.name}]:[];
+ const specific=all.filter(image=>image.color===color);
+ const shared=all.filter(image=>!image.color);
+ // Never display another color's photograph as if it matched the selection.
+ const images=all.length?[...specific,...shared]:product.image_url?[{url:product.image_url,alt:product.name,color:""}]:[];
  const [index,setIndex]=useState(0);
  const [open,setOpen]=useState(false);
  const selected=images[index]??images[0];
@@ -20,7 +23,9 @@ export function ProductImageGallery({product}:{product:Product}){
   window.addEventListener("keydown",key);
   return()=>window.removeEventListener("keydown",key);
  },[open,images.length]);
- if(!images.length)return <div className="detail-visual"><div className="empty-photo"/></div>;
+ if(!images.length)return <div className="product-gallery"><div className="detail-visual color-gallery-empty">
+  <div className="empty-photo"/><p>Chưa có ảnh thực tế cho màu {color}. Bạn vẫn có thể chọn size và đặt hàng.</p>
+ </div></div>;
  const move=(delta:number)=>setIndex(v=>(v+images.length+delta)%images.length);
  return <div className="product-gallery">
   <div className="detail-visual product-gallery-primary">
