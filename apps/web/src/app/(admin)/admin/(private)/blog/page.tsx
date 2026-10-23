@@ -3,6 +3,8 @@ import Link from "next/link";
 import {useCallback,useEffect,useState,type FormEvent} from "react";
 import {ArrowUpRight,Plus,RefreshCcw,Trash2,Edit3,Send,FilePenLine} from "lucide-react";
 import {journalApi} from "@/lib/blog-api";
+import {AdminModal} from "@/components/admin/admin-modal";
+import {AdminFeedback} from "@/components/admin/admin-toast";
 import {asSlug,type BlogArticle,type BlogCategory,type BlogTag,type BlogStatus} from "@/lib/blog-types";
 
 const statusLabel:{[key in BlogStatus]:string}={DRAFT:"Bản nháp",PUBLISHED:"Đã xuất bản"};
@@ -20,6 +22,7 @@ export default function AdminBlog(){
  const [message,setMessage]=useState("");
  const [categories,setCategories]=useState<BlogCategory[]>([]);
  const [tags,setTags]=useState<BlogTag[]>([]);
+ const [taxonomyModal,setTaxonomyModal]=useState<"category"|"tag"|null>(null);
  const [categoryName,setCategoryName]=useState("");
  const [categoryDescription,setCategoryDescription]=useState("");
  const [tagName,setTagName]=useState("");
@@ -73,7 +76,7 @@ export default function AdminBlog(){
     await journalApi.addTag({name,slug:asSlug(name).slice(0,80)});
     setTagName("");setMessage("Đã tạo thẻ.");
    }
-   await reloadTaxonomies();
+   await reloadTaxonomies();setTaxonomyModal(null);
   }catch(e){setError(e instanceof Error?e.message:"Không tạo được danh mục hoặc thẻ.")}
   finally{setWorking("")}
  }
@@ -102,8 +105,7 @@ export default function AdminBlog(){
     </label>
     <button type="button" className="cms-secondary-action" onClick={()=>void reload()}><RefreshCcw size={15}/> Làm mới</button>
    </div>
-   {error&&<p className="admin-error" role="alert">{error}</p>}
-   {message&&<p className="admin-notice" role="status">{message}</p>}
+   <AdminFeedback message={message} error={error}/>
    {loading?<div className="cms-loading">Đang tải bài viết...</div>:matches.length===0?
     <div className="cms-empty"><FilePenLine size={38}/><h2>Chưa có bài viết phù hợp</h2>
      <p>Bắt đầu bằng một bài nháp mới hoặc thay đổi bộ lọc.</p>
@@ -138,18 +140,20 @@ export default function AdminBlog(){
    <div className="cms-taxonomy-grid">
     <div className="cms-panel"><h3>Danh mục bài viết</h3>
      <div className="cms-term-list">{categories.length?categories.map(c=><span key={c.slug}>{c.name} <small>/{c.slug}</small></span>):<p>Chưa có danh mục.</p>}</div>
-     <form onSubmit={e=>{void createTaxonomy(e,"category")}}>
+     <button className="cms-secondary-action" type="button" onClick={()=>setTaxonomyModal("category")}><Plus size={15}/> + Danh mục</button>
+     {taxonomyModal==="category"&&<AdminModal title="Thêm danh mục Journal" onClose={()=>!working&&setTaxonomyModal(null)} busy={!!working}><form onSubmit={e=>{void createTaxonomy(e,"category")}}>
       <label>Tên danh mục<input required minLength={2} maxLength={120} placeholder="Ví dụ: Phong cách" value={categoryName} onChange={e=>setCategoryName(e.target.value)}/></label>
       <label>Mô tả ngắn<input maxLength={500} value={categoryDescription} onChange={e=>setCategoryDescription(e.target.value)}/></label>
       <button type="submit" disabled={!!working} className="cms-secondary-action"><Plus size={15}/> Thêm danh mục</button>
-     </form>
+     </form></AdminModal>}
     </div>
     <div className="cms-panel"><h3>Tags</h3>
      <div className="cms-term-list">{tags.length?tags.map(t=><span key={t.slug}>{t.name}</span>):<p>Chưa có thẻ nào.</p>}</div>
-     <form onSubmit={e=>{void createTaxonomy(e,"tag")}}>
+     <button className="cms-secondary-action" type="button" onClick={()=>setTaxonomyModal("tag")}><Plus size={15}/> + Tag</button>
+     {taxonomyModal==="tag"&&<AdminModal title="Thêm tag Journal" onClose={()=>!working&&setTaxonomyModal(null)} busy={!!working}><form onSubmit={e=>{void createTaxonomy(e,"tag")}}>
       <label>Tên tag<input required minLength={2} maxLength={120} placeholder="Ví dụ: Streetwear" value={tagName} onChange={e=>setTagName(e.target.value)}/></label>
       <button type="submit" disabled={!!working} className="cms-secondary-action"><Plus size={15}/> Thêm tag</button>
-     </form>
+     </form></AdminModal>}
     </div>
    </div>
   </section>
