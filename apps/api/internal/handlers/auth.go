@@ -181,7 +181,7 @@ func (a *App) myOrders(c *gin.Context) {
 	if u == nil {
 		return
 	}
-	rows, err := a.DB.Query(c.Request.Context(), "SELECT order_no,status,payment_status,payment_method,total_vnd,created_at FROM orders WHERE user_id=$1 ORDER BY created_at DESC LIMIT 50", u.ID)
+	rows, err := a.DB.Query(c.Request.Context(), "SELECT order_no,status,payment_status,payment_method,total_vnd,created_at,public_token FROM orders WHERE user_id=$1 ORDER BY created_at DESC LIMIT 50", u.ID)
 	if err != nil {
 		serverError(c, err)
 		return
@@ -189,12 +189,20 @@ func (a *App) myOrders(c *gin.Context) {
 	defer rows.Close()
 	items := []gin.H{}
 	for rows.Next() {
-		var no, status, pay, method string
+		var no, status, pay, method, trackingToken string
 		var total int64
 		var created time.Time
-		if rows.Scan(&no, &status, &pay, &method, &total, &created) == nil {
-			items = append(items, gin.H{"order_no": no, "status": status, "payment_status": pay, "payment_method": method, "total_vnd": total, "created_at": created})
+		if err := rows.Scan(&no, &status, &pay, &method, &total, &created, &trackingToken); err != nil {
+			serverError(c, err)
+			return
 		}
+		// Only an authenticated owner may receive their private tracking token.
+		// Never expose these tokens in public catalog or Admin lists.
+		items = append(items, gin.H{"order_no": no, "status": status, "payment_status": pay, "payment_method": method, "total_vnd": total, "created_at": created, "tracking_token": trackingToken})
+	}
+	if err := rows.Err(); err != nil {
+		serverError(c, err)
+		return
 	}
 	c.JSON(200, gin.H{"items": items})
 }
