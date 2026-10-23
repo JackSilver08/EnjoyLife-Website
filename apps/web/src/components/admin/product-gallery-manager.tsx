@@ -7,20 +7,23 @@ import {AdminFeedback} from "@/components/admin/admin-toast";
 import {uploadMedia} from "@/lib/media-api";
 import {optimizeProductImage} from "@/lib/image-optimizer";
 
-type ImageItem={url:string;alt:string};
+type ImageItem={url:string;alt:string;color:string};
+type StockColor={color:string};
 export function ProductGalleryManager({productId,onSaved}:{productId:string;onSaved?:(url:string)=>void}){
  const {data,loading,error,reload}=useAdminData<{images:ImageItem[]}>("admin/products/"+productId+"/images");
+ const {data:variantData}=useAdminData<{items:StockColor[]}>("admin/products/"+productId+"/variants");
+ const colorNames=[...new Set((variantData?.items??[]).map(v=>v.color))];
  const [images,setImages]=useState<ImageItem[]>([]);
  const [busy,setBusy]=useState(false);
  const [message,setMessage]=useState("");
  const filesRef=useRef<HTMLInputElement>(null);
  useEffect(()=>{
   if(!data)return;
-  const timeout=window.setTimeout(()=>setImages(data.images||[]),0);
+  const timeout=window.setTimeout(()=>setImages((data.images||[]).map(img=>({...img,color:img.color||""}))),0);
   return()=>window.clearTimeout(timeout);
  },[data]);
  function add(url:string){
-  setImages(prev=>prev.some(item=>item.url===url)?prev:prev.length<12?[...prev,{url,alt:""}]:prev);
+  setImages(prev=>prev.some(item=>item.url===url)?prev:prev.length<12?[...prev,{url,alt:"",color:""}]:prev);
  }
  function move(index:number,direction:number){
   setImages(prev=>{const next=[...prev],target=index+direction;
@@ -54,7 +57,7 @@ export function ProductGalleryManager({productId,onSaved}:{productId:string;onSa
   finally{setBusy(false)}
  }
  return <section className="admin-product-gallery">
-  <div className="admin-gallery-head"><div><h3>Album ảnh sản phẩm</h3><p className="admin-help">Tối đa 12 ảnh. Ảnh đầu tiên là ảnh đại diện; sử dụng mũi tên để thay đổi thứ tự.</p></div>
+  <div className="admin-gallery-head"><div><h3>Album ảnh sản phẩm</h3><p className="admin-help">Tối đa 12 ảnh. Mỗi ảnh có thể gắn một màu cụ thể; ảnh chung sẽ hiển thị cho mọi màu. Ảnh đầu tiên là ảnh đại diện.</p></div>
    <span>{images.length}/12 ảnh</span></div>
   <AdminFeedback error={error} message={message}/>
   {loading?<p>Đang tải ảnh...</p>:<>
@@ -65,6 +68,12 @@ export function ProductGalleryManager({productId,onSaved}:{productId:string;onSa
      {index===0&&<span className="admin-gallery-cover">Ảnh đại diện</span>}
      <label>Alt text
       <input maxLength={160} value={img.alt} onChange={e=>setImages(prev=>prev.map((x,i)=>i===index?{...x,alt:e.target.value}:x))} placeholder="Mô tả nội dung ảnh"/>
+     </label>
+     <label>Màu ảnh
+      <select value={img.color||""} onChange={e=>setImages(prev=>prev.map((x,i)=>i===index?{...x,color:e.target.value}:x))}>
+       <option value="">Ảnh chung (mọi màu)</option>
+       {colorNames.map(color=><option value={color} key={color}>{color}</option>)}
+      </select>
      </label>
      <div className="admin-gallery-item-actions">
       <button type="button" aria-label="Đưa ảnh lên trước" disabled={busy||index===0} onClick={()=>move(index,-1)}><ArrowUp size={16}/></button>
