@@ -66,6 +66,7 @@ func TestAdminIntegrationStaff(t *testing.T) {
 
  // Staff operations must be enforced by the API and write an audit trail.
  if err=EnsureProductCatalogSchema(ctx,db);err!=nil{t.Fatal(err)}
+ if err=EnsureReturnsSchema(ctx,db);err!=nil{t.Fatal(err)}
  product:=send("POST","/api/v1/admin/products",map[string]any{
   "name":"Sprint 7 staff item","slug":"sprint7-"+time.Now().Format("150405000000000"),
   "description":"Integration","category":"ao","collection":"Test",
