@@ -24,6 +24,7 @@ func TestAdminIntegration(t *testing.T){
  if err=EnsureAccountSchema(ctx,db);err!=nil{t.Fatal(err)}
  if err=EnsureAdminAudit(ctx,db);err!=nil{t.Fatal(err)}
  if err=EnsureProductCatalogSchema(ctx,db);err!=nil{t.Fatal(err)}
+ if err=EnsureReturnsSchema(ctx,db);err!=nil{t.Fatal(err)}
  r:=Router(&App{DB:db,Config:config.Config{}})
  send:=func(method,path string,body any,cookie *http.Cookie)*httptest.ResponseRecorder{
   t.Helper()
