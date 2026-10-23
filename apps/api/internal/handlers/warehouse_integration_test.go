@@ -21,7 +21,7 @@ func TestSprint9WarehouseIntegration(t *testing.T){
  t.Setenv("APP_ENV","development");t.Setenv("GIN_MODE","debug");t.Setenv("ENABLE_DEV_ADMIN","true")
  ctx,cancel:=context.WithTimeout(context.Background(),50*time.Second);defer cancel()
  db,err:=pgxpool.New(ctx,url);if err!=nil{t.Fatal(err)};defer db.Close()
- for _,migration:=range []func(context.Context,*pgxpool.Pool)error{EnsureAccountSchema,EnsureAdminAudit,EnsureProductCatalogSchema,EnsureWarehouseSchema}{
+ for _,migration:=range []func(context.Context,*pgxpool.Pool)error{EnsureAccountSchema,EnsureAdminAudit,EnsureProductCatalogSchema,EnsureWarehouseSchema,EnsureReturnsSchema}{
   if err=migration(ctx,db);err!=nil{t.Fatal(err)}
  }
  r:=Router(&App{DB:db,Config:config.Config{}})
