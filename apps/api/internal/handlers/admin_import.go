@@ -67,6 +67,7 @@ func(a *App) adminImportProducts(c *gin.Context){
    VALUES($1,$2,$3,$4,$5,$6)`,variant,id,row.SKU,row.Color,row.Size,row.Price);err!=nil{
    c.JSON(409,gin.H{"error":"SKU đã tồn tại.","row":index+1});return
   }
+  if err=upsertProductColorway(ctx,tx,id,row.Color,row.ColorHex,row.ColorGroup);err!=nil{serverError(c,err);return}
   if _,err=tx.Exec(ctx,`INSERT INTO inventory(variant_id,on_hand) VALUES($1,$2)`,variant,row.Stock);err!=nil{serverError(c,err);return}
   if row.Stock>0{
    if _,err=tx.Exec(ctx,`INSERT INTO stock_movements(variant_id,movement_type,on_hand_delta)

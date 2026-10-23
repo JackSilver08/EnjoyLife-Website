@@ -30,16 +30,16 @@ const name=["google-chrome","google-chrome-stable","chromium","chromium-browser"
 assert(name,"Chrome/Chromium not installed in CI runner");
 const dir=mkdtempSync(join(tmpdir(),"enjoy-chrome-"));
 const chrome=spawn(name,["--headless=new","--no-sandbox","--disable-gpu","--disable-dev-shm-usage",
- "--no-first-run","--remote-allow-origins=*","--remote-debugging-port=0","--user-data-dir="+dir,"about:blank"],{stdio:["ignore","ignore","pipe"]});
+ "--no-first-run","--disable-background-networking","--disable-extensions","--remote-allow-origins=*","--remote-debugging-port=0","--user-data-dir="+dir,"about:blank"],{stdio:["ignore","ignore","pipe"],env:{...process.env,DBUS_SESSION_BUS_ADDRESS:""}});
 let chromeErrors="";chrome.stderr.on("data",chunk=>{chromeErrors+=String(chunk).slice(0,2000)});
 let ws;
 function cleanup(){try{ws?.close()}catch{}try{chrome.kill("SIGKILL")}catch{}try{rmSync(dir,{recursive:true,force:true})}catch{}}
 process.on("exit",cleanup);
 let port=0;
-for(let i=0;i<120;i++){
+for(let i=0;i<300;i++){
  if(chrome.exitCode!==null||chrome.signalCode!==null)throw Error("Chrome failed to start: "+chromeErrors.slice(-1300));
  if(existsSync(join(dir,"DevToolsActivePort"))){port=Number(readFileSync(join(dir,"DevToolsActivePort"),"utf8").split("\n")[0]);break}
- await delay(150);
+ await delay(200);
 }
 assert(port>0,"Chrome debug port missing; browser="+name+"; "+chromeErrors.slice(-1600));
 const targets=await(await fetch("http://127.0.0.1:"+port+"/json/list")).json();
@@ -145,6 +145,12 @@ try{
  // A new product form must open as a large modal, not expand into the table.
  await run('(()=>{const b=[...document.querySelectorAll(".admin-toolbar button")].find(x=>x.textContent.includes("Thêm sản phẩm"));if(b)b.click()})()');
  await until('!!document.querySelector("dialog.admin-modal[open] .admin-product-create")',"new product creation modal");
+ // The visual color picker must be interactive, not a renamed text input.
+ assert(await run('document.querySelectorAll("dialog.admin-modal[open] .enjoy-color-preset").length===12'),
+   "New product must expose the full 12-color palette");
+ await run('(()=>{document.querySelector(\'dialog.admin-modal[open] button[aria-label="Chọn màu Đen"]\').click()})()');
+ assert(await run('document.querySelector("dialog.admin-modal[open] .enjoy-color-current strong")?.textContent==="Đen"'),
+   "Palette color selection did not update product state");
  assert(await run('document.querySelector(".admin-modal-sheet")?.getBoundingClientRect().width>650'),"Large desktop modal is too narrow");
  await call("Input.dispatchKeyEvent",{type:"keyDown",key:"Escape",code:"Escape",windowsVirtualKeyCode:27});
  await call("Input.dispatchKeyEvent",{type:"keyUp",key:"Escape",code:"Escape",windowsVirtualKeyCode:27});

@@ -114,6 +114,7 @@ jobs:
           node --check apps/web/scripts/chatbot-docker-e2e.mjs
           node --check apps/web/scripts/warehouse-docker-e2e.mjs
           node --check apps/web/scripts/returns-docker-e2e.mjs
+          node --check apps/web/scripts/colors-docker-e2e.mjs
           node --check apps/web/scripts/admin-variant-editor-browser-e2e.mjs
           node --check apps/web/scripts/editorial-docker-e2e.mjs
           node --check apps/web/scripts/test-payos-qr.mjs
@@ -188,6 +189,8 @@ jobs:
         run: node apps/web/scripts/warehouse-docker-e2e.mjs
       - name: Sprint 11 returns and manual refund BFF E2E
         run: node apps/web/scripts/returns-docker-e2e.mjs
+      - name: Product colorways and selected-color photo BFF E2E
+        run: node apps/web/scripts/colors-docker-e2e.mjs
       - name: Admin variant price editor actual Chrome click regression
         run: |
           command -v google-chrome || command -v google-chrome-stable || command -v chromium

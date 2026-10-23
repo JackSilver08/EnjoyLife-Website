@@ -44,6 +44,19 @@ func EnsureProductCatalogSchema(ctx context.Context, db *pgxpool.Pool) error {
   position INTEGER NOT NULL CHECK (position >= 0),
   UNIQUE(product_id,position)
  )`);err!=nil{return err}
+ if _,err=tx.Exec(ctx,`ALTER TABLE product_images ADD COLUMN IF NOT EXISTS color TEXT NOT NULL DEFAULT ''`);err!=nil{return err}
+ if _,err=tx.Exec(ctx,`CREATE TABLE IF NOT EXISTS product_colorways (
+  product_id UUID NOT NULL REFERENCES products(id) ON DELETE CASCADE,
+  name TEXT NOT NULL CHECK (char_length(name) BETWEEN 1 AND 40),
+  hex TEXT NOT NULL DEFAULT '' CHECK(hex='' OR hex ~ '^#[0-9a-fA-F]{6}$'),
+  color_group TEXT NOT NULL DEFAULT 'Khác' CHECK(char_length(color_group) BETWEEN 1 AND 40),
+  swatch_url TEXT NOT NULL DEFAULT '',
+  PRIMARY KEY(product_id,name)
+ )`);err!=nil{return err}
+ // Keep existing SKU, stock and historical order snapshots exactly as they were.
+ if _,err=tx.Exec(ctx,`INSERT INTO product_colorways(product_id,name)
+   SELECT DISTINCT product_id,color FROM product_variants
+   ON CONFLICT(product_id,name) DO NOTHING`);err!=nil{return err}
  if _,err=tx.Exec(ctx,`CREATE INDEX IF NOT EXISTS idx_product_images_product ON product_images(product_id,position)`);err!=nil{return err}
  if _,err=tx.Exec(ctx,`ALTER TABLE product_variants ADD COLUMN IF NOT EXISTS low_stock_threshold INTEGER NOT NULL DEFAULT 3 CHECK (low_stock_threshold BETWEEN 0 AND 100000)`);err!=nil{return err}
  if _,err=tx.Exec(ctx,`ALTER TABLE stock_movements ADD COLUMN IF NOT EXISTS reason TEXT NOT NULL DEFAULT ''`);err!=nil{return err}
