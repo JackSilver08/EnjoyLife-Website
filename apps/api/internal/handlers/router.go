@@ -125,6 +125,7 @@ func Router(a *App) *gin.Engine {
 	api.POST("/admin/warehouse/purchases/:id/cancel",a.warehousePurchaseCancel)
 	api.POST("/admin/warehouse/qc/:id",a.warehouseQC)
 	api.GET("/admin/warehouse/insights",a.warehouseInsights)
+	api.POST("/admin/warehouse/ai-review",a.warehouseAIReview)
 	api.GET("/admin/warehouse/waitlist",a.warehouseWaitlist)
 	api.PATCH("/admin/warehouse/waitlist/:id",a.warehouseWaitlistUpdate)
 	api.GET("/admin/media", a.adminMediaList)
