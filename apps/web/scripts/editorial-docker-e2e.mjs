@@ -111,6 +111,11 @@ try{
   await command("Emulation.setDeviceMetricsOverride",{width,height:900,deviceScaleFactor:1,mobile:width<=375});
   await command("Page.navigate",{url:browserOrigin+"/"});
   await until("document.querySelectorAll('#featured-products .latest-editorial-item').length===5","five product cards "+width);
+  // Next.js dev can stream the server-rendered card HTML before its CSS
+  // chunks finish loading. Do not measure the unstyled one-column flash.
+  const expectedColumns=width>=1024?3:2;
+  await until("(()=>{const g=document.querySelector('.latest-editorial-grid');return g&&getComputedStyle(g).display==='grid'&&getComputedStyle(g).gridTemplateColumns.split(' ').length==="+expectedColumns+"})()",
+   "editorial stylesheet and grid columns at "+width);
   const r=await evaluate(measure);
   check(r.names===5&&r.prices===5,"Missing titles/prices at "+width);
   check(r.hrefs.every((href,i)=>href==="/products/"+topFive[i].slug),"Product order/link incorrect at "+width+": "+r.hrefs.join(","));
