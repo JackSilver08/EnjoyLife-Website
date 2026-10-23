@@ -45,6 +45,7 @@ type Product struct {
 	PriceVND     int64          `json:"price_vnd"`
 	Variants     []Variant      `json:"variants"`
 	Images       []GalleryImage `json:"images"`
+ Colors       []ProductColor `json:"colors"`
 }
 type OrderItemRequest struct {
 	VariantID string `json:"variant_id" binding:"required"`
@@ -253,15 +254,30 @@ func (a *App) product(c *gin.Context) {
 		serverError(c, err)
 		return
 	}
-	p.Images = []GalleryImage{}
-	imageRows, imageErr := a.DB.Query(ctx, `SELECT url,alt FROM product_images WHERE product_id=$1 ORDER BY position`, p.ID)
+ p.Colors=[]ProductColor{}
+ colorRows,colorErr:=a.DB.Query(ctx,`SELECT pc.name,pc.hex,pc.color_group,pc.swatch_url
+  FROM product_colorways pc WHERE pc.product_id=$1 AND EXISTS(
+   SELECT 1 FROM product_variants v WHERE v.product_id=pc.product_id AND v.color=pc.name AND v.active)
+  ORDER BY pc.name`,p.ID)
+ if colorErr!=nil{serverError(c,colorErr);return}
+ for colorRows.Next(){
+  var color ProductColor
+  if err=colorRows.Scan(&color.Name,&color.Hex,&color.Group,&color.SwatchURL);err!=nil{
+   colorRows.Close();serverError(c,err);return
+  }
+  p.Colors=append(p.Colors,color)
+ }
+ colorErr=colorRows.Err();colorRows.Close()
+ if colorErr!=nil{serverError(c,colorErr);return}
+ p.Images=[]GalleryImage{}
+ imageRows,imageErr:=a.DB.Query(ctx,`SELECT url,alt,color FROM product_images WHERE product_id=$1 ORDER BY position`,p.ID)
 	if imageErr != nil {
 		serverError(c, imageErr)
 		return
 	}
 	for imageRows.Next() {
 		var img GalleryImage
-		if err = imageRows.Scan(&img.URL, &img.Alt); err != nil {
+		if err = imageRows.Scan(&img.URL, &img.Alt, &img.Color); err != nil {
 			imageRows.Close()
 			serverError(c, err)
 			return
