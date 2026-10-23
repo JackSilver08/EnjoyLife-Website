@@ -5,11 +5,19 @@ import {ArrowUpRight,Plus,RefreshCcw,Trash2,Edit3,Send,FilePenLine} from "lucide
 import {journalApi} from "@/lib/blog-api";
 import {AdminModal} from "@/components/admin/admin-modal";
 import {AdminFeedback} from "@/components/admin/admin-toast";
+import {JournalArticleForm} from "@/components/admin/journal-article-form";
+import {useAdminData} from "@/components/admin/admin-data";
 import {asSlug,type BlogArticle,type BlogCategory,type BlogTag,type BlogStatus} from "@/lib/blog-types";
 
 const statusLabel:{[key in BlogStatus]:string}={DRAFT:"Bản nháp",PUBLISHED:"Đã xuất bản"};
 const PAGE_SIZE=12;
 
+function EditorFromID({id,onSaved,onClose}:{id:string;onSaved:(published:boolean)=>void;onClose:()=>void}){
+ const {data,loading,error,reload}=useAdminData<BlogArticle>("admin/blog/articles/"+id);
+ if(loading)return <p>Đang tải bài viết...</p>;
+ if(error||!data)return <><AdminFeedback error={error||"Không tìm thấy bài viết."}/><button onClick={()=>void reload()}>Thử lại</button></>;
+ return <JournalArticleForm key={data.id} initial={data} onSaved={onSaved} onCancel={onClose}/>;
+}
 export default function AdminBlog(){
  const [items,setItems]=useState<BlogArticle[]>([]);
  const [count,setCount]=useState(0);
@@ -23,6 +31,7 @@ export default function AdminBlog(){
  const [categories,setCategories]=useState<BlogCategory[]>([]);
  const [tags,setTags]=useState<BlogTag[]>([]);
  const [taxonomyModal,setTaxonomyModal]=useState<"category"|"tag"|null>(null);
+ const [articleModal,setArticleModal]=useState<"new"|string|null>(null);
  const [categoryName,setCategoryName]=useState("");
  const [categoryDescription,setCategoryDescription]=useState("");
  const [tagName,setTagName]=useState("");
@@ -85,7 +94,7 @@ export default function AdminBlog(){
   <div className="cms-page-heading">
    <div><span className="eyebrow">ENJOY LIFE / CONTENT STUDIO</span><h1>Enjoy Journal</h1>
    <p>Quản lý nội dung thời trang, phê duyệt xuất bản và chuẩn bị dữ liệu SEO từ PostgreSQL.</p></div>
-   <Link className="cms-primary-action" href="/admin/blog/new"><Plus size={17}/> Viết bài mới</Link>
+   <button type="button" className="cms-primary-action" onClick={()=>setArticleModal("new")}><Plus size={17}/> Viết bài mới</button>
   </div>
   <div className="cms-kpi-row">
    <div><strong>{count}</strong><span>Bài trong bộ lọc</span></div>
@@ -109,7 +118,7 @@ export default function AdminBlog(){
    {loading?<div className="cms-loading">Đang tải bài viết...</div>:matches.length===0?
     <div className="cms-empty"><FilePenLine size={38}/><h2>Chưa có bài viết phù hợp</h2>
      <p>Bắt đầu bằng một bài nháp mới hoặc thay đổi bộ lọc.</p>
-     <Link href="/admin/blog/new" className="cms-primary-action"><Plus size={17}/> Tạo bài viết</Link></div>
+     <button type="button" onClick={()=>setArticleModal("new")} className="cms-primary-action"><Plus size={17}/> Tạo bài viết</button></div>
     :<div className="admin-table-wrap">
       <table className="admin-table cms-table"><thead><tr><th>Bài viết</th><th>Danh mục</th><th>Trạng thái</th><th>Cập nhật</th><th>Thao tác</th></tr></thead>
        <tbody>{matches.map(item=><tr key={item.id}>
@@ -119,7 +128,7 @@ export default function AdminBlog(){
         <td><span className={item.status==="PUBLISHED"?"cms-status is-public":"cms-status"}>{statusLabel[item.status]}</span><small>v{item.version}</small></td>
         <td>{new Date(item.updated_at).toLocaleString("vi-VN")}</td>
         <td><div className="cms-action-buttons">
-          <Link href={"/admin/blog/"+item.id+"/edit"}><Edit3 size={14}/> Sửa</Link>
+          <button type="button" onClick={()=>setArticleModal(item.id)}><Edit3 size={14}/> Sửa</button>
           <button disabled={!!working} type="button" onClick={()=>void switchStatus(item)}>
             <Send size={14}/>{item.status==="DRAFT"?"Xuất bản":"Gỡ bài"}</button>
           <button disabled={!!working} className="cms-danger" type="button" onClick={()=>void archive(item)}>
@@ -157,6 +166,11 @@ export default function AdminBlog(){
     </div>
    </div>
   </section>
+  {articleModal&&<AdminModal title={articleModal==="new"?"Viết bài Journal mới":"Chỉnh sửa bài Journal"} subtitle="Biên tập nội dung, hình ảnh, SEO và trạng thái xuất bản." onClose={()=>setArticleModal(null)} wide>
+   {articleModal==="new"
+     ?<JournalArticleForm onSaved={published=>{setArticleModal(null);setMessage(published?"Đã xuất bản bài viết thành công.":"Đã lưu bản nháp thành công.");void reload()}} onCancel={()=>setArticleModal(null)}/>
+     :<EditorFromID id={articleModal} onClose={()=>setArticleModal(null)} onSaved={published=>{setArticleModal(null);setMessage(published?"Đã cập nhật bài viết và xuất bản.":"Đã lưu thay đổi bài viết.");void reload()}}/>}
+  </AdminModal>}
   <div className="cms-note">Tài khoản Admin hiện được phép xuất bản. Tính năng AI viết bài sẽ chỉ tạo bản nháp để Admin kiểm duyệt ở sprint tích hợp AI. <Link href="/blog" target="_blank">Xem trang Journal <ArrowUpRight size={13}/></Link></div>
  </div>;
 }
