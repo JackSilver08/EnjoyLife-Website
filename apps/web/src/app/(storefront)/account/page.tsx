@@ -179,7 +179,7 @@ export default function AccountPage(){
       <button type="button" onClick={()=>void logout()}><LogOut size={17} aria-hidden="true"/> Đăng xuất</button>
      </div>
     </aside>
-    <main className="account-dashboard-content" id="account-main">
+    <section className="account-dashboard-content" id="account-main" aria-label="Nội dung tài khoản">
      {error&&<p className="form-error" role="alert">{error}</p>}
      {section==="overview"&&<>
       <div className="account-panel-heading">
@@ -233,7 +233,7 @@ export default function AccountPage(){
        <p className="account-security-tip"><ShieldCheck size={16} aria-hidden="true"/> Sau khi đổi mật khẩu, các phiên đăng nhập khác sẽ hết hiệu lực.</p>
       </div>
      </>}
-    </main>
+    </section>
    </div>
   </div>;
  }
