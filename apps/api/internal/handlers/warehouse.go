@@ -242,7 +242,8 @@ func(a *App) warehouseQC(c *gin.Context){
  VALUES($1,$2,$3,$4,$5)`,c.Param("id"),typ,change,strings.TrimSpace(in.Reason),actor.ID);err!=nil{serverError(c,err);return}
  if _,err=tx.Exec(ctx,`INSERT INTO admin_audit_logs(actor_id,action,target_id,details) VALUES($1,$2,$3,$4)`,actor.ID,typ,c.Param("id"),in.Reason);err!=nil{serverError(c,err);return}
  if err=tx.Commit(ctx);err!=nil{serverError(c,err);return}
- available:=hand-reserved-unavailable+in.Quantity
+ available:=hand-reserved-unavailable
+ if in.Action=="RELEASE"{available+=in.Quantity}
  c.JSON(200,gin.H{"status":"ok","available":available,"unavailable":unavailable-in.Quantity})
 }
 func(a *App) warehouseInsights(c *gin.Context){
