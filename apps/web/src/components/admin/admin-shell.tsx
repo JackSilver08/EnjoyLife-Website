@@ -1,18 +1,19 @@
 "use client";
 import Link from "next/link";
 import {AdminToastProvider} from "@/components/admin/admin-toast";
+import {AdminFlyoutNav,type FlyoutNavGroup} from "@/components/admin/admin-flyout-nav";
 import {usePathname,useRouter} from "next/navigation";
 import {createContext,useContext,useEffect} from "react";
-import {LayoutDashboard,ClipboardList,Package,Boxes,Users,BarChart3,Newspaper,Images,Palette,LogOut,ArrowUpRight,ShieldCheck,LockKeyhole,Truck,Sparkles,ChevronDown,RotateCcw} from "lucide-react";
+import {LayoutDashboard,ClipboardList,Package,Boxes,Users,BarChart3,Newspaper,Images,Palette,LogOut,ArrowUpRight,ShieldCheck,LockKeyhole,Truck,Sparkles,RotateCcw,Settings2,FolderClosed} from "lucide-react";
 
 type Role="ADMIN"|"STAFF";
 type NavItem={href:string;label:string;icon:typeof LayoutDashboard};
-type NavGroup={id:string;label:string;items:NavItem[]};
+
 const RoleContext=createContext<Role>("ADMIN");
 export function useAdminRole(){return useContext(RoleContext)}
 
-// AI-first navigation: important daily actions remain visible. No route has
-// been removed: the rest live in accessible, collapsible native details.
+// AI-first navigation: five daily tasks remain visible; the other links are
+// grouped into right-side flyout menus without changing route permissions.
 const primaryNav:NavItem[]=[
  {href:"/admin",label:"Tổng quan",icon:LayoutDashboard},
  {href:"/admin/orders",label:"Đơn hàng",icon:ClipboardList},
@@ -20,13 +21,13 @@ const primaryNav:NavItem[]=[
  {href:"/admin/inventory",label:"Kho hàng",icon:Boxes},
  {href:"/admin/warehouse/insights",label:"AI & Phân tích",icon:Sparkles}
 ];
-const secondaryNav:NavGroup[]=[
- {id:"operations",label:"Vận hành",items:[
+const secondaryNav:FlyoutNavGroup[]=[
+ {id:"operations",label:"Vận hành",icon:Settings2,items:[
   {href:"/admin/returns",label:"Đổi trả & Hoàn tiền",icon:RotateCcw},
   {href:"/admin/warehouse",label:"Phiếu nhập & NCC",icon:Truck},
   {href:"/admin/customers",label:"Khách hàng",icon:Users}
  ]},
- {id:"management",label:"Quản lý khác",items:[
+ {id:"management",label:"Quản lý khác",icon:FolderClosed,items:[
   {href:"/admin/staff",label:"Nhân viên & quyền",icon:ShieldCheck},
   {href:"/admin/reports",label:"Báo cáo",icon:BarChart3},
   {href:"/admin/blog",label:"Enjoy Journal",icon:Newspaper},
@@ -70,17 +71,8 @@ export function AdminShell({children,name,role}:{children:React.ReactNode;name:s
      ?<><div className="admin-nav-primary">
        {primaryNav.map(item=><NavLink key={item.href} item={item} pathname={pathname}/>)}
       </div>
-      <div className="admin-nav-groups">
-       {secondaryNav.map(group=><details className="admin-nav-group" key={group.id}
-        open={group.items.some(item=>isCurrent(pathname,item.href))}>
-        <summary className="admin-nav-group-trigger">
-         <span>{group.label}</span><ChevronDown size={16} aria-hidden="true"/>
-        </summary>
-        <div className="admin-nav-group-content">
-         {group.items.map(item=><NavLink key={item.href} item={item} pathname={pathname}/>)}
-        </div>
-       </details>)}
-      </div></>
+      <AdminFlyoutNav groups={secondaryNav} pathname={pathname}/>
+</>
      :<div className="admin-nav-primary">
        {staffNav.map(item=><NavLink key={item.href} item={item} pathname={pathname}/>)}
       </div>}
