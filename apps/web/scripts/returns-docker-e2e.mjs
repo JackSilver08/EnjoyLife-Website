@@ -54,6 +54,10 @@ const received=await request("admin/returns/"+rid+"/receive",{method:"POST",cook
 assert(received.code===201&&received.data.status==="RECEIVED","Paid COD return must await refund: "+received.text);
 const retry=await request("admin/returns/"+rid+"/receive",{method:"POST",cookie,body:receipt});
 assert(retry.code===200&&retry.data.idempotent===true,"Duplicate RMA receipt must be safe: "+retry.text);
+const refund=await request("admin/returns/"+rid+"/refund",{method:"POST",cookie,body:{reference:"ci-refund-"+seed,amount_vnd:190000}});
+assert(refund.code===200&&refund.data.status==="CLOSED","Manual refund confirmation failed: "+refund.text);
+const refundedAgain=await request("admin/returns/"+rid+"/refund",{method:"POST",cookie,body:{reference:"ci-refund-"+seed,amount_vnd:190000}});
+assert(refundedAgain.code===409,"Double refund confirmation must be blocked");
 const inv=await request("admin/inventory",{cookie});
 const stock=inv.data?.items?.find(x=>x.variant_id===sku);
 assert(stock?.on_hand===7&&stock?.unavailable===0,"Return stock should be shipped 2 then returned 1 exactly once: "+JSON.stringify(stock));
