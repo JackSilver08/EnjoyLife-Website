@@ -74,6 +74,7 @@ func Router(a *App) *gin.Engine {
 	api.Use(a.enforceAdminRole)
 	api.GET("/health", a.health)
 	api.GET("/media/:filename", a.publicMedia)
+	api.GET("/models/:filename", a.public3DModel)
 	api.GET("/site/content", a.siteContentGet)
 	api.GET("/products", a.products)
 	api.GET("/products/search", a.publicCatalogSearch)
@@ -171,6 +172,9 @@ func Router(a *App) *gin.Engine {
 	api.POST("/admin/blog/tags", a.adminBlogTagCreate)
 	api.GET("/admin/products/:id/images", a.adminGetGallery)
 	api.PUT("/admin/products/:id/images", a.adminSaveGallery)
+	api.GET("/admin/products/:id/models",a.adminProductModels)
+	api.POST("/admin/products/:id/models",a.adminUploadProductModel)
+	api.DELETE("/admin/products/:id/models",a.adminUnlinkProductModel)
 	api.GET("/admin/products/:id/variants", a.adminVariants)
 	api.POST("/admin/products/:id/variants", a.adminCreateVariant)
 	api.PATCH("/admin/variants/:id", a.adminUpdateVariant)
@@ -255,14 +259,14 @@ func (a *App) product(c *gin.Context) {
 		return
 	}
  p.Colors=[]ProductColor{}
- colorRows,colorErr:=a.DB.Query(ctx,`SELECT pc.name,pc.hex,pc.color_group,pc.swatch_url
+ colorRows,colorErr:=a.DB.Query(ctx,`SELECT pc.name,pc.hex,pc.color_group,pc.swatch_url,pc.model_url
   FROM product_colorways pc WHERE pc.product_id=$1 AND EXISTS(
    SELECT 1 FROM product_variants v WHERE v.product_id=pc.product_id AND v.color=pc.name AND v.active)
   ORDER BY pc.name`,p.ID)
  if colorErr!=nil{serverError(c,colorErr);return}
  for colorRows.Next(){
   var color ProductColor
-  if err=colorRows.Scan(&color.Name,&color.Hex,&color.Group,&color.SwatchURL);err!=nil{
+  if err=colorRows.Scan(&color.Name,&color.Hex,&color.Group,&color.SwatchURL,&color.ModelURL);err!=nil{
    colorRows.Close();serverError(c,err);return
   }
   p.Colors=append(p.Colors,color)

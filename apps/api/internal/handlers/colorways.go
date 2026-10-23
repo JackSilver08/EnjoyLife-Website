@@ -15,6 +15,7 @@ type ProductColor struct {
  Hex string `json:"hex"`
  Group string `json:"group"`
  SwatchURL string `json:"swatch_url"`
+ ModelURL string `json:"model_url"`
 }
 
 func validColorMetadata(hex,group string)bool{
