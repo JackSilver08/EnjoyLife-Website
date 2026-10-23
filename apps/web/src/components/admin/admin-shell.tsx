@@ -1,5 +1,6 @@
 "use client";
 import Link from "next/link";
+import {AdminToastProvider} from "@/components/admin/admin-toast";
 import {usePathname,useRouter} from "next/navigation";
 import {createContext,useContext,useEffect} from "react";
 import {LayoutDashboard,ClipboardList,Package,Boxes,Users,BarChart3,Newspaper,Images,Palette,LogOut,ArrowUpRight,ShieldCheck,LockKeyhole,Truck,ChartNoAxesCombined} from "lucide-react";
@@ -34,8 +35,8 @@ export function AdminShell({children,name,role}:{children:React.ReactNode;name:s
  useEffect(()=>{if(role==="STAFF"&&pathname==="/admin")router.replace("/admin/orders")},[role,pathname,router]);
  async function logout(){const res=await fetch("/api/store/auth/logout",{method:"POST"});if(res.ok){router.replace("/account");router.refresh()}}
  const nav=role==="ADMIN"?adminNav:staffNav;
- return <RoleContext.Provider value={role}><div className="admin-frame"><aside className="admin-sidebar"><Link className="brand" href="/">enjoy<span>life</span></Link><span className="eyebrow">{role==="STAFF"?"KHU VỰC NHÂN VIÊN":"TRUNG TÂM QUẢN TRỊ"}</span>
+ return <RoleContext.Provider value={role}><AdminToastProvider><div className="admin-frame"><aside className="admin-sidebar"><Link className="brand" href="/">enjoy<span>life</span></Link><span className="eyebrow">{role==="STAFF"?"KHU VỰC NHÂN VIÊN":"TRUNG TÂM QUẢN TRỊ"}</span>
   <nav aria-label="Điều hướng quản trị">{nav.map(item=><Link key={item.href} href={item.href} className={pathname===item.href||pathname.startsWith(item.href+"/")?"admin-nav-active":"admin-nav-item"} aria-current={pathname===item.href?"page":undefined}><item.icon size={18}/>{item.label}</Link>)}</nav>
   <div className="admin-sidebar-bottom"><span>{name} · {role==="STAFF"?"Nhân viên":"Quản trị viên"}</span><button onClick={()=>void logout()} type="button"><LogOut size={16}/> Đăng xuất</button><Link className="admin-back" href="/">VỀ CỬA HÀNG <ArrowUpRight size={16}/></Link></div>
- </aside><div className="admin-main"><header className="admin-topbar"><strong>Enjoy Life / {role==="STAFF"?"Staff":"Operations"}</strong><span>{name}</span></header><main className="admin-workspace">{allowed?children:<section className="admin-surface" role="alert"><h1>Không có quyền truy cập</h1><p>Tài khoản nhân viên chỉ được sử dụng các trang đã cấp quyền.</p><Link className="button-dark" href="/admin/orders">VỀ ĐƠN HÀNG</Link></section>}</main></div></div></RoleContext.Provider>;
+ </aside><div className="admin-main"><header className="admin-topbar"><strong>Enjoy Life / {role==="STAFF"?"Staff":"Operations"}</strong><span>{name}</span></header><main className="admin-workspace">{allowed?children:<section className="admin-surface" role="alert"><h1>Không có quyền truy cập</h1><p>Tài khoản nhân viên chỉ được sử dụng các trang đã cấp quyền.</p><Link className="button-dark" href="/admin/orders">VỀ ĐƠN HÀNG</Link></section>}</main></div></div></AdminToastProvider></RoleContext.Provider>;
 }

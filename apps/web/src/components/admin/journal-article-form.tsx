@@ -9,10 +9,11 @@ import {JournalRichTextEditor} from "@/components/admin/journal-rich-text-editor
 import {MediaPicker} from "@/components/admin/media-picker";
 import {BlogContentPreview} from "@/components/admin/blog-content-preview";
 import {journalApi} from "@/lib/blog-api";
+import {AdminFeedback} from "@/components/admin/admin-toast";
 import {asSlug,blankBlogArticle,inputFromArticle,isApprovedUrl,
   type BlogArticle,type BlogArticleInput,type BlogCategory,type BlogTag,type BlogStatus} from "@/lib/blog-types";
 
-export function JournalArticleForm({initial}:{initial?:BlogArticle}){
+export function JournalArticleForm({initial,onSaved,onCancel}:{initial?:BlogArticle;onSaved?:(published:boolean)=>void;onCancel?:()=>void}){
   const router=useRouter();
   const [data,setData]=useState<BlogArticleInput>(()=>initial?inputFromArticle(initial):blankBlogArticle());
   const [version,setVersion]=useState(initial?.version??0);
@@ -81,7 +82,8 @@ export function JournalArticleForm({initial}:{initial?:BlogArticle}){
       setData(v=>({...v,status:next,expected_version:response.version}));
       setDirty(false);
       setNotice(next==="PUBLISHED"?"Đã xuất bản; bài viết được cập nhật trên trang Journal công khai.":"Đã lưu bản nháp vào PostgreSQL.");
-      if(!articleId)router.replace("/admin/blog/"+id+"/edit");
+      if(onSaved)onSaved(next==="PUBLISHED");
+      else if(!articleId)router.replace("/admin/blog/"+id+"/edit");
     }catch(e){setError(e instanceof Error?e.message:"Lỗi lưu bài viết.")}
     finally{setStatus("idle")}
   }
@@ -89,16 +91,14 @@ export function JournalArticleForm({initial}:{initial?:BlogArticle}){
   const currentStatus=data.status;
   return <div className="cms-page">
     <div className="cms-page-heading">
-      <div><Link href="/admin/blog" className="cms-back"><ArrowLeft size={16}/> Danh sách bài viết</Link>
+      <div>{onCancel?<button type="button" onClick={onCancel} className="cms-back"><ArrowLeft size={16}/> Danh sách bài viết</button>:<Link href="/admin/blog" className="cms-back"><ArrowLeft size={16}/> Danh sách bài viết</Link>}
         <span className="eyebrow">ENJOY JOURNAL / BIÊN TẬP</span>
         <h1>{initial?"Chỉnh sửa bài viết":"Viết bài mới"}</h1>
         <p>{currentStatus==="PUBLISHED"?"Bài đã xuất bản. Thay đổi cần lưu lại để cập nhật.":"Lưu nháp để tiếp tục biên tập, chỉ xuất bản sau khi đã kiểm tra nội dung."}</p>
       </div>
       <span className={currentStatus==="PUBLISHED"?"cms-status is-public":"cms-status"}>{currentStatus==="PUBLISHED"?"ĐÃ XUẤT BẢN":"BẢN NHÁP"} · v{version||1}{dirty?" · Chưa lưu":""}</span>
     </div>
-    {error&&<div className="admin-error" role="alert">{error}</div>}
-    {notice&&<div className="admin-notice" role="status">{notice}</div>}
-    {taxonomyError&&<p role="alert" className="admin-error">Không tải được danh mục/tags: {taxonomyError}</p>}
+    <AdminFeedback message={notice} error={error|| (taxonomyError?"Không tải được danh mục/tags: "+taxonomyError:"")}/>
     <div className="cms-form-actions">
       <button type="button" className="cms-secondary-action" onClick={()=>setPreview(v=>!v)}>
         {preview?<EyeOff size={17}/>:<Eye size={17}/>} {preview?"Quay lại chỉnh sửa":"Xem trước"}</button>

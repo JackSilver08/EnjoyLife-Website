@@ -3,6 +3,7 @@ import {useEffect,useRef,useState} from "react";
 import {ArrowDown,ArrowUp,Images,Trash2,UploadCloud} from "lucide-react";
 import {adminAction,useAdminData} from "@/components/admin/admin-data";
 import {MediaPicker} from "@/components/admin/media-picker";
+import {AdminFeedback} from "@/components/admin/admin-toast";
 import {uploadMedia} from "@/lib/media-api";
 import {optimizeProductImage} from "@/lib/image-optimizer";
 
@@ -55,8 +56,7 @@ export function ProductGalleryManager({productId,onSaved}:{productId:string;onSa
  return <section className="admin-product-gallery">
   <div className="admin-gallery-head"><div><h3>Album ảnh sản phẩm</h3><p className="admin-help">Tối đa 12 ảnh. Ảnh đầu tiên là ảnh đại diện; sử dụng mũi tên để thay đổi thứ tự.</p></div>
    <span>{images.length}/12 ảnh</span></div>
-  {error&&<p role="alert" className="admin-error">{error}</p>}
-  {message&&<p role="status" className="admin-notice">{message}</p>}
+  <AdminFeedback error={error} message={message}/>
   {loading?<p>Đang tải ảnh...</p>:<>
    <div className="admin-gallery-grid">
     {images.map((img,index)=><div className="admin-gallery-item" key={img.url}>

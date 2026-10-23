@@ -1,5 +1,6 @@
 "use client";
 import {useState,type FormEvent} from "react";
+import {AdminFeedback} from "@/components/admin/admin-toast";
 export function ChangePasswordForm(){
  const[oldPassword,setOldPassword]=useState("");const[newPassword,setNewPassword]=useState("");const[confirm,setConfirm]=useState("");const[busy,setBusy]=useState(false);const[notice,setNotice]=useState("");const[error,setError]=useState("");
  async function submit(e:FormEvent<HTMLFormElement>){
@@ -17,6 +18,6 @@ export function ChangePasswordForm(){
  <label>Mật khẩu mới (12–72 ký tự)<input required minLength={12} maxLength={72} autoComplete="new-password" type="password" value={newPassword} onChange={e=>setNewPassword(e.target.value)}/></label>
  <label>Nhập lại mật khẩu mới<input required minLength={12} maxLength={72} autoComplete="new-password" type="password" value={confirm} onChange={e=>setConfirm(e.target.value)}/></label>
  <button className="button-dark" type="submit" disabled={busy}>{busy?"ĐANG CẬP NHẬT...":"ĐỔI MẬT KHẨU"}</button>
- {notice&&<p className="admin-notice" role="status">{notice}</p>}{error&&<p className="admin-error" role="alert">{error}</p>}
+ <AdminFeedback message={notice} error={error}/>
  </form>;
 }

@@ -3,6 +3,8 @@ import {useEffect,useMemo,useState,type FormEvent} from "react";
 import Link from "next/link";
 import {adminAction,useAdminData} from "@/components/admin/admin-data";
 import {useAdminRole} from "@/components/admin/admin-shell";
+import {AdminModal} from "@/components/admin/admin-modal";
+import {AdminFeedback} from "@/components/admin/admin-toast";
 
 type Stock={
  variant_id:string;product_id:string;product_slug:string;
@@ -83,8 +85,7 @@ export default function Inventory(){
    <label><input type="checkbox" checked={showInactive} onChange={e=>setShowInactive(e.target.checked)}/> Cả hàng ngừng bán / đã xóa</label>
    <button type="button" onClick={()=>void reload()}>Làm mới</button>
   </div>
-  {notice&&<p role="status" className="admin-notice">{notice}</p>}
-  {error&&<p role="alert" className="admin-error">{error}</p>}
+  <AdminFeedback message={notice} error={error}/>
   <section className="admin-surface">
    {loading?<p>Đang tải...</p>:rows.length===0?<p className="admin-empty">Không có mã hàng phù hợp. Hãy thử bật hiển thị hàng ngừng bán hoặc xóa bộ lọc.</p>
    :<div className="admin-table-wrap"><table className="admin-table">
@@ -104,7 +105,7 @@ export default function Inventory(){
     </tr>)}</tbody>
    </table></div>}
   </section>
-  {edit&&rows.some(r=>r.variant_id===edit)&&<section className="admin-surface inventory-edit-panel">
+  {edit&&rows.some(r=>r.variant_id===edit)&&<AdminModal title="Nhập / Xuất / Kiểm kê kho" subtitle="Chỉnh tồn theo đúng SKU và lưu lịch sử biến động." onClose={()=>!busy&&setEdit(null)} busy={busy}><section className="admin-surface inventory-edit-panel">
    {(()=>{const item=rows.find(r=>r.variant_id===edit)!;return <>
     <h2>Thao tác kho — {item.name}</h2>
     <p className="admin-help">{item.sku} · {item.color} / {item.size} · Tồn thực tế hiện tại: {item.on_hand}</p>
@@ -122,8 +123,8 @@ export default function Inventory(){
      <button className="button-dark" disabled={busy} type="submit">{busy?"ĐANG LƯU...":"XÁC NHẬN "+operations.find(op=>op.value===action)?.label.toUpperCase()}</button>
     </form>
    </>})()}
-  </section>}
-  {history&&<section className="admin-surface"><StockHistory variantId={history}/></section>}
+  </section></AdminModal>}
+  {history&&<AdminModal title="Lịch sử biến động kho" subtitle="Tra cứu tất cả lần thay đổi tồn của SKU này." onClose={()=>setHistory(null)} wide><section className="admin-surface"><StockHistory variantId={history}/></section></AdminModal>}
   <p className="admin-help">Tồn khả dụng = Tồn thực tế − Đã giữ − Không khả dụng. Hàng ngừng bán vẫn còn trong kho vật lý; chỉ sản phẩm đang hoạt động mới được bán. Không thể xuất nhiều hơn phần tồn chưa giữ.</p>
  </>;
 }
