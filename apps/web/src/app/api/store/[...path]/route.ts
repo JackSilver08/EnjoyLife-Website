@@ -64,7 +64,7 @@ async function forward(req:NextRequest,params:Promise<{path:string[]}>,method:"G
   const headersUpstream:Record<string,string>={"Cookie":req.headers.get("cookie")??""};
   if(upload)headersUpstream["Content-Type"]=req.headers.get("content-type")??"";
   else headersUpstream["Content-Type"]="application/json";
-  const upstream=await fetch(url,{method,headers:headersUpstream,body:payload,cache:"no-store",signal:AbortSignal.timeout(bulk?120000:upload?30000:12000)});
+  const upstream=await fetch(url,{method,headers:headersUpstream,body:payload,cache:"no-store",signal:AbortSignal.timeout(bulk?120000:upload?30000:path==="admin/warehouse/ai-review"?32000:12000)});
   const headers=new Headers({"Content-Type":"application/json","Cache-Control":"no-store","X-Content-Type-Options":"nosniff"});
   upstream.headers.forEach((value,key)=>{if(key.toLowerCase()==="set-cookie")headers.append("Set-Cookie",value)});
   if(upstream.status===204||upstream.status===205||upstream.status===304){
