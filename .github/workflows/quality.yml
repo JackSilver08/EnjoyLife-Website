@@ -115,6 +115,7 @@ jobs:
           node --check apps/web/scripts/warehouse-docker-e2e.mjs
           node --check apps/web/scripts/returns-docker-e2e.mjs
           node --check apps/web/scripts/colors-docker-e2e.mjs
+          node --check apps/web/scripts/models-3d-docker-e2e.mjs
           node --check apps/web/scripts/admin-variant-editor-browser-e2e.mjs
           node --check apps/web/scripts/editorial-docker-e2e.mjs
           node --check apps/web/scripts/test-payos-qr.mjs
@@ -191,6 +192,8 @@ jobs:
         run: node apps/web/scripts/returns-docker-e2e.mjs
       - name: Product colorways and selected-color photo BFF E2E
         run: node apps/web/scripts/colors-docker-e2e.mjs
+      - name: GLB 3D model upload, colorway and secure binary proxy E2E
+        run: node apps/web/scripts/models-3d-docker-e2e.mjs
       - name: Admin variant price editor actual Chrome click regression
         run: |
           command -v google-chrome || command -v google-chrome-stable || command -v chromium
