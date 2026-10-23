@@ -2,6 +2,8 @@
 import {useState} from "react";
 import Link from "next/link";
 import {adminAction,moneyVND,useAdminData} from "@/components/admin/admin-data";
+import {AdminModal} from "@/components/admin/admin-modal";
+import {AdminFeedback} from "@/components/admin/admin-toast";
 
 type Insight={sku:string;name:string;color:string;size:string;available:number;threshold:number;sold_30d:number;daily_average:number;lead_days_estimate:number;days_cover:number|null;reorder_point:number;suggested_order:number;status:string};
 type Waiting={id:string;name:string;color:string;size:string;email:string;status:string;created_at:string};
@@ -12,6 +14,7 @@ export default function WarehouseInsights(){
  const waiting=useAdminData<{items:Waiting[]}>("admin/warehouse/waitlist");
  const stock=useAdminData<{items:Stock[]}>("admin/inventory");
  const [filter,setFilter]=useState("ATTENTION");
+ const [qcOpen,setQcOpen]=useState(false);
  const [chosen,setChosen]=useState("");
  const [quantity,setQuantity]=useState("");
  const [reason,setReason]=useState("");
@@ -35,7 +38,7 @@ export default function WarehouseInsights(){
   setBusy(true);setMessage("");
   try{
    await adminAction("admin/warehouse/qc/"+chosen,"POST",{action,quantity:Number(quantity),reason});
-   setMessage("Đã ghi nhận xử lý hàng cách ly.");setQuantity("");setReason("");
+   setMessage("Đã ghi nhận xử lý hàng cách ly.");setQuantity("");setReason("");setQcOpen(false);
    await Promise.all([insights.reload(),stock.reload()])
   }catch(e){setMessage(e instanceof Error?e.message:"Không xử lý được hàng cách ly.")}
   finally{setBusy(false)}
@@ -49,8 +52,7 @@ export default function WarehouseInsights(){
  return <><span className="eyebrow">SPRINT 9 / PHÂN TÍCH KHO</span><h1>Smart Inventory</h1>
  <p className="admin-subtitle">Cảnh báo theo SKU, hàng đang cách ly và nhu cầu khách chờ. Đề xuất nhập hàng dùng số liệu 30 ngày, không phải dự báo AI.</p>
  <div className="admin-toolbar"><button type="button" onClick={()=>{void insights.reload();void waiting.reload();void stock.reload()}}>Làm mới</button><Link href="/admin/warehouse">Phiếu đặt nhập ↗</Link><Link href="/admin/inventory">Tồn theo SKU ↗</Link></div>
- {message&&<p role="status" className="admin-notice">{message}</p>}
- {(insights.error||waiting.error||stock.error)&&<p role="alert" className="admin-error">{insights.error||waiting.error||stock.error}</p>}
+ <AdminFeedback message={message} error={insights.error||waiting.error||stock.error}/>
  <section className="admin-surface">
   <div className="admin-section-top"><div><h2>AI phân tích tồn kho</h2><p>AI đọc tối đa 25 SKU đã tổng hợp, không đọc email khách và không được nhập/xuất kho.</p></div>
     <button disabled={aiBusy} onClick={()=>void requestAI()}>{aiBusy?"Đang phân tích…":"Phân tích bằng AI"}</button>
@@ -74,13 +76,14 @@ export default function WarehouseInsights(){
  <div className="warehouse-grid">
   <section className="admin-surface"><h2>Xử lý hàng cách ly</h2>
    <p className="admin-subtitle">Hàng lỗi/đang kiểm tra nằm trong tồn thực tế nhưng không thể bán. Chỉ nhân viên được ủy quyền phê duyệt bán hoặc loại khỏi kho.</p>
-   <div className="warehouse-form">
+   <button type="button" className="button-dark" onClick={()=>setQcOpen(true)}>Xử lý hàng cách ly</button>
+   {qcOpen&&<AdminModal title="Kiểm tra và xử lý hàng cách ly" subtitle="Nhập lý do và số lượng được duyệt bán hoặc loại bỏ." onClose={()=>!busy&&setQcOpen(false)} busy={busy}><div className="warehouse-form">
     <label>SKU đang cách ly<select value={chosen} onChange={e=>setChosen(e.target.value)}><option value="">Chọn SKU</option>{stock.data?.items.filter(s=>s.unavailable>0).map(i=><option key={i.variant_id} value={i.variant_id}>{i.sku} · {i.name} · {i.color}/{i.size} · cách ly {i.unavailable}</option>)}</select></label>
     <label>Xử lý<select value={action} onChange={e=>setAction(e.target.value)}><option value="RELEASE">Đã kiểm tra đạt — chuyển sang có thể bán</option><option value="SCRAP">Hàng hỏng — loại bỏ khỏi kho</option></select></label>
     <label>Số lượng<input type="number" min={1} max={10000} value={quantity} onChange={e=>setQuantity(e.target.value)}/></label>
     <label>Biên bản và lý do<input required minLength={6} maxLength={300} value={reason} onChange={e=>setReason(e.target.value)}/></label>
     <button className="button-dark" disabled={busy||!chosen||!Number.isSafeInteger(Number(quantity))||Number(quantity)<=0||reason.trim().length<6} onClick={()=>void qc()}>Xác nhận xử lý</button>
-   </div>
+   </div></AdminModal>}
   </section>
   <section className="admin-surface"><h2>Khách chờ hàng</h2>
    <p className="admin-subtitle">Yêu cầu có đồng ý nhận liên hệ cho đúng màu/size. Hiện cửa hàng liên hệ thủ công; chưa có email tự động.</p>
