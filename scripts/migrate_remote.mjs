@@ -5,7 +5,7 @@ import { stdin as input, stdout as output } from 'node:process';
 import { products } from './import_products.mjs';
 
 const API_BASE = (process.env.MIGRATION_API_BASE || 'https://enjoylife-api.onrender.com/api/v1').replace(/\/$/, '');
-const ZIP_PATH = process.env.MIGRATION_MEDIA_ZIP || 'products_media_full.zip';
+const ZIP_PATH = process.env.MIGRATION_MEDIA_ZIP || 'products_media_original.zip';
 
 function localJson(sql) {
   const raw = execFileSync('docker', ['compose', 'exec', '-T', 'db', 'psql', '-U', 'enjoylife', '-d', 'enjoylife', '-At', '-c', sql], { encoding: 'utf8' }).trim();
@@ -84,13 +84,15 @@ async function main() {
   const existingSlugs = new Set((existing.body.items || []).map(item => item.slug));
   const pending = sourceProducts.filter(product => !existingSlugs.has(product.slug));
   console.log(`Catalog local: ${sourceProducts.length}; trùng: ${sourceProducts.length - pending.length}; import mới: ${pending.length}`);
-  if (pending.length) {
+  const batchSize = 8;
+  for (let start = 0; start < pending.length; start += batchSize) {
+    const batch = pending.slice(start, start + batchSize);
     const imported = await request('/admin/products/import', {
       method: 'POST',
       headers: { ...authHeaders, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ rows: pending }),
+      body: JSON.stringify({ rows: batch }),
     });
-    console.log('Import catalog:', imported.body);
+    console.log(`Import catalog batch ${Math.floor(start / batchSize) + 1}:`, imported.body);
   }
 
   const afterImport = await request('/admin/products', { headers: authHeaders });
@@ -98,7 +100,7 @@ async function main() {
   for (const item of afterImport.body.items || []) {
     if (item.published) continue;
     await request(`/admin/products/${item.id}`, {
-      method: 'PUT',
+      method: 'PATCH',
       headers: { ...authHeaders, 'Content-Type': 'application/json' },
       body: JSON.stringify({ name: item.name, description: item.description, collection: item.collection, published: true, image_url: item.image_url }),
     });
