@@ -54,4 +54,8 @@ const waiting=await request("admin/warehouse/waitlist",{cookie});
 assert(waiting.status===200&&waiting.data.items?.some(x=>x.email==="ci@example.com"),"Admin cannot see opt-in waitlist.");
 const unauthorized=await request("admin/warehouse/waitlist");
 assert(unauthorized.status===401,"Public endpoint exposed waitlist contact data.");
+const aiConfig=await request("admin/warehouse/ai-review",{method:"POST",cookie});
+assert(aiConfig.status===503&&typeof aiConfig.data?.error==="string","AI review should explain missing CI OpenAI key without touching paid service.");
+const aiUnauthorized=await request("admin/warehouse/ai-review",{method:"POST"});
+assert(aiUnauthorized.status===401,"Anonymous user reached private stock AI analysis.");
 console.log("SPRINT9 BFF E2E PASSED: supplier, PO, partial QC receive, idempotent retries, waitlist consent, stock insights and authenticated contact access.");
