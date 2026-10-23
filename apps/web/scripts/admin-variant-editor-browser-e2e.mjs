@@ -73,7 +73,7 @@ try{
  assert(sidebar.groups.length===2&&sidebar.groups.some(x=>x.includes("Vận hành"))&&sidebar.groups.some(x=>x.includes("Quản lý khác"))&&sidebar.collapsed&&JSON.stringify(sidebar.active)==='["/admin"]',"Unexpected sidebar groups: "+JSON.stringify(sidebar));
  const openManagement=await run('(()=>{const b=[...document.querySelectorAll("button.admin-flyout-trigger")].find(x=>x.textContent.includes("Quản lý khác"));if(!b)return false;b.click();return true})()');
  assert(openManagement,"Cannot activate Quản lý khác");
- await until('!!document.querySelector(".admin-flyout-panel a[href=\"/admin/reports\"]")&&[...document.querySelectorAll(".admin-flyout-trigger")].some(x=>x.getAttribute("aria-expanded")==="true")',
+ await until(`!!document.querySelector('.admin-flyout-panel a[href="/admin/reports"]')&&[...document.querySelectorAll(".admin-flyout-trigger")].some(x=>x.getAttribute("aria-expanded")==="true")`,
   "flyout popup opened");
  const flyoutGeometry=await run('(()=>{const sidebar=document.querySelector(".admin-sidebar").getBoundingClientRect(),pop=document.querySelector(".admin-flyout-panel").getBoundingClientRect();return {sidebarRight:sidebar.right,left:pop.left,right:pop.right,top:pop.top,bottom:pop.bottom,viewport:innerWidth,height:innerHeight,links:document.querySelectorAll(".admin-flyout-panel a").length,portal:!document.querySelector(".admin-sidebar .admin-flyout-panel")}})()');
  assert(flyoutGeometry.portal&&flyoutGeometry.left>=flyoutGeometry.sidebarRight&&flyoutGeometry.right<=flyoutGeometry.viewport&&flyoutGeometry.top>=0&&flyoutGeometry.bottom<=flyoutGeometry.height+2&&flyoutGeometry.links===6,
@@ -84,7 +84,7 @@ try{
  await until('!document.querySelector(".admin-flyout-panel")',"Escape dismisses flyout");
  assert(await run('document.activeElement?.classList.contains("admin-flyout-trigger")'),"Escape must restore sidebar trigger focus");
  await run('(()=>{const b=[...document.querySelectorAll("button.admin-flyout-trigger")].find(x=>x.textContent.includes("Quản lý khác"));b.click()})()');
- await until('!!document.querySelector(".admin-flyout-panel a[href=\"/admin/reports\"]")',"management popup reopened");
+ await until(`!!document.querySelector('.admin-flyout-panel a[href="/admin/reports"]')`,"management popup reopened");
  await run('document.querySelector(\'.admin-flyout-panel a[href="/admin/reports"]\').click()');
  await until('location.pathname==="/admin/reports"&&!!document.querySelector(\'.admin-sidebar .admin-flyout-trigger-active\')',
   "Report navigation keeps group highlighted");
