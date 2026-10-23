@@ -10,6 +10,8 @@ type Config struct {
 	Port             string
 	OpenAIAPIKey     string
 	AIModel          string
+	// OpenAIBaseURL is test-only. Production config Load() never reads an external override.
+	OpenAIBaseURL string
 	AdminKey         string
 	PaymentEnabled   bool
 	PayOSClientID    string
@@ -35,7 +37,7 @@ func Load() Config {
 	}
 	aiModel := strings.TrimSpace(os.Getenv("AI_MODEL"))
 	if aiModel == "" {
-		aiModel = "gpt-6-luna"
+		aiModel = "gpt-4.1-mini"
 	}
 	return Config{
 		DatabaseURL:      os.Getenv("DATABASE_URL"),
