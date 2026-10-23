@@ -5,7 +5,7 @@ import {ProductImageGallery} from "@/components/product-image-gallery";
 import {ProductPicker} from "@/components/product-picker";
 import {Virtual3DStudio} from "@/components/virtual-3d-studio";
 import {visualColor} from "@/lib/product-colors";
-import {Image as ImageIcon, Box, Sparkles} from "lucide-react";
+import {Image as ImageIcon, Box} from "lucide-react";
 
 export function ProductExperience({product}:{product:Product}){
  const colors=[...new Set(product.variants.map(v=>v.color))];
@@ -28,8 +28,6 @@ export function ProductExperience({product}:{product:Product}){
      onClick={()=>setMode("photos")}><ImageIcon size={16}/> Ảnh 2D</button>
     <button type="button" role="tab" aria-selected={mode==="3d"} className={mode==="3d"?"active":""}
      onClick={()=>setMode("3d")}><Box size={17}/> Xem 3D</button>
-    <button type="button" role="tab" aria-selected={false} disabled
-      aria-label="AI thử đồ chưa khả dụng" title="AI thử đồ đang được phát triển"><Sparkles size={16}/> AI thử đồ <span>Sắp có</span></button>
    </div>
    <div role="tabpanel" aria-label={mode==="photos"?"Ảnh sản phẩm":"Không gian 3D"}>
     {mode==="photos"?<ProductImageGallery key={color} product={product} color={color}/>:

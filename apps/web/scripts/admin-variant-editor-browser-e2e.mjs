@@ -207,18 +207,22 @@ try{
  assert(accountFixture.status===201&&accountFixture.data?.variant_id,"Account fixture product not created: "+accountFixture.text);
  // 3D studio UX: 2D remains default; selecting 3D loads the lazy WebGL pane.
  await call("Page.navigate",{url:browserOrigin+"/products/"+accountFixture.data.slug});
- await until('document.querySelectorAll(".virtual-experience-tabs button").length===3',
+ await until('document.querySelectorAll(".virtual-experience-tabs button").length===2',
   "virtual studio tabs present on product detail",30);
  assert(await run('document.querySelector(".virtual-experience-tabs button.active")?.textContent?.includes("Ảnh 2D")'),
   "Photo gallery must stay the default, never block checkout with WebGL");
- assert(await run('document.querySelector(".virtual-experience-tabs button:disabled")?.textContent?.includes("AI thử đồ")'),
-  "AI try-on should be honestly marked unavailable");
+ assert(await run('!document.querySelector(".virtual-experience-tabs button:disabled")'),
+  "The 2D / 3D tabs must both be usable");
+ assert(await run('![...document.querySelectorAll(".virtual-experience-tabs button")].some(b=>b.textContent.includes("AI"))'),
+  "AI try-on tab must be removed from the product page");
  await until('Object.keys(document.querySelector(".virtual-experience-tabs button")||{}).some(k=>k.startsWith("__reactProps$"))',
   "3D client-side hydration completed",50);
  await delay(650);
  await run('document.querySelectorAll(".virtual-experience-tabs button")[1].click()');
  await until('!!document.querySelector(".virtual-3d-host")&&!!document.querySelector(".virtual-studio")',
   "3D scene panel mounted",30);
+ assert(await run('document.querySelector(".virtual-studio-meta")?.textContent?.includes("Ma-nơ-canh trưng bày bán thân")'),
+  "The 3D fallback must identify its boutique dress form, not a human avatar");
  await until('!!document.querySelector(".virtual-3d-canvas")||!!document.querySelector(".virtual-3d-overlay[role=alert]")',
   "WebGL scene or graceful unsupported-device fallback",45);
  await run('document.querySelectorAll(".virtual-experience-tabs button")[0].click()');

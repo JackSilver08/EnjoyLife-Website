@@ -1284,14 +1284,12 @@ html{scroll-padding-top:calc(82px + 18px)}
 
 /* Enjoy Life Virtual Studio: 2D first, WebGL only after customer opt-in */
 .virtual-experience{min-width:0;width:100%}
-.virtual-experience-tabs{display:grid;grid-template-columns:1fr 1fr 1.16fr;background:#ebece6;border:1px solid #d9ddd5;padding:5px;margin-bottom:14px;gap:4px}
+.virtual-experience-tabs{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));background:#ebece6;border:1px solid #d9ddd5;padding:5px;margin-bottom:14px;gap:4px}
 .virtual-experience-tabs button{font:600 12px/1.35 var(--sans,Arial,sans-serif);border:1px solid transparent;background:transparent;color:#536056;padding:13px 9px;display:flex;justify-content:center;align-items:center;gap:8px;cursor:pointer;white-space:nowrap;min-width:0}
 .virtual-experience-tabs button.active{background:#283b2f;color:#fff}
 .virtual-experience-tabs button:focus-visible{outline:2px solid #34533c;outline-offset:3px}
-.virtual-experience-tabs button:disabled{cursor:not-allowed;opacity:.54}
-.virtual-experience-tabs button span{font-size:9px;padding:2px 5px;background:#e6e8dd;border-radius:3px;color:#435345}
-.virtual-studio{border:1px solid #e1e3da;background:#f9f8f3}
-.virtual-studio-stage{position:relative;background:radial-gradient(ellipse at 50% 40%,#f8f7f2 5%,#e1e2dc 100%);height:clamp(430px,55vw,680px);min-height:430px;overflow:hidden}
+.virtual-studio{border:1px solid #e1e3da;background:#f9f8f3;box-shadow:0 6px 22px #2c392c09}
+.virtual-studio-stage{position:relative;background:radial-gradient(ellipse at 45% 33%,#fbfaf6 5%,#eeede8 55%,#dcddd6 100%);height:clamp(430px,55vw,680px);min-height:430px;overflow:hidden}
 .virtual-studio-stage:fullscreen{width:100vw;height:100vh}
 .virtual-3d-host{width:100%;height:100%;touch-action:pan-y;position:absolute;inset:0}
 .virtual-3d-canvas{display:block;width:100%;height:100%;touch-action:none}
@@ -1324,7 +1322,6 @@ html{scroll-padding-top:calc(82px + 18px)}
 .color-gallery-empty .empty-photo{max-height:300px}
 @media(max-width:650px){
  .virtual-experience-tabs button{font-size:11px;padding:11px 5px;gap:5px}
- .virtual-experience-tabs button span{display:none}
  .virtual-studio-stage{height:min(110vw,510px);min-height:360px}
  .virtual-studio-meta{flex-wrap:wrap}
  .virtual-studio-hint{white-space:normal}
