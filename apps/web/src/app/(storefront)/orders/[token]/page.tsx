@@ -6,7 +6,7 @@ export const metadata={title:"Tra cứu đơn hàng",robots:{index:false,follow:
 const orderStatus:Record<string,string>={PENDING_CONFIRMATION:"Chờ xác nhận",CONFIRMED:"Đã xác nhận",PREPARING:"Đang chuẩn bị",SHIPPING:"Đang giao",DELIVERED:"Đã giao",COMPLETED:"Hoàn tất",CANCELLED:"Đã hủy",RETURNED:"Hàng đã hoàn về"};
 const paymentMethod:Record<string,string>={COD:"Thanh toán khi nhận hàng",PAYOS:"Mã QR payOS"};
 const paymentStatus:Record<string,string>={UNPAID:"Chưa thanh toán",PAID:"Đã thanh toán",REVIEW_REQUIRED:"Cần đối soát giao dịch"};
-type Order={order_no:string;status:string;payment_status:string;payment_method:string;total_vnd:number;checkout_url?:string;qr_code?:string;gateway_status?:string};
+type Order={order_no:string;status:string;payment_status:string;payment_method:string;total_vnd:number;checkout_url?:string;qr_code?:string;gateway_status?:string;return_kind?:string;return_status?:string;return_refund_status?:string};
 export default async function OrderPage({params}:{params:Promise<{token:string}>}){
  const {token}=await params;
  let order:Order|null=null;
@@ -29,6 +29,15 @@ export default async function OrderPage({params}:{params:Promise<{token:string}>
    <div><span>Thanh toán</span><strong>{paymentStatus[order.payment_status]??order.payment_status}</strong></div>
    <div><span>Tổng tiền hàng</span><strong>{money(order.total_vnd)}</strong></div>
   </div>
+  {order.return_status&&<section className="status-rma-progress" aria-label="Theo dõi đổi trả">
+   <strong>Thông tin đổi trả / hàng hoàn</strong>
+   <p>{order.return_kind==="DELIVERY_FAILED"?"Đơn giao không thành công":"Yêu cầu trả hàng"} · {{
+    REQUESTED:"Đang xét duyệt",APPROVED:"Đã duyệt, chờ nhận hàng",
+    RECEIVED:"Đã nhận hàng, chờ đối soát hoàn tiền",CLOSED:"Đã hoàn tất"
+   }[order.return_status]??order.return_status}</p>
+   {order.return_refund_status==="PENDING"&&<p>Khoản hoàn tiền đang chờ xử lý. Cửa hàng sẽ xác nhận sau khi đối soát.</p>}
+   {order.return_refund_status==="CONFIRMED"&&<p>Đã ghi nhận giao dịch hoàn tiền qua chứng từ đối soát.</p>}
+  </section>}
   {isPayOS&&order.status!=="CANCELLED"&&<PayOSPaymentPanel token={token} initialPaymentStatus={order.payment_status} initialCheckoutURL={order.checkout_url??""} initialQR={order.qr_code??""} amountVND={order.total_vnd} initialGatewayStatus={order.gateway_status??""}/>}
   <p className="status-note">Hãy giữ kín đường dẫn này vì nó dùng để tra cứu trạng thái đơn. Việc quay lại website không tự xác nhận đã nhận tiền.</p>
   <Link className="button-dark" href="/shop">TIẾP TỤC KHÁM PHÁ <ArrowUpRight size={16}/></Link>
