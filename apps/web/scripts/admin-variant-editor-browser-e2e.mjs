@@ -205,29 +205,52 @@ try{
   category:"ao",color:"Be",size:"M",price_vnd:159000,opening_stock:5,published:true
  });
  assert(accountFixture.status===201&&accountFixture.data?.variant_id,"Account fixture product not created: "+accountFixture.text);
- // 3D studio UX: 2D remains default; selecting 3D loads the lazy WebGL pane.
+ // The original product has NO real GLB. Never offer a fake 3D mannequin.
+ await call("Page.navigate",{url:browserOrigin+"/products/"+accountFixture.data.slug});
+ await until('location.pathname.startsWith("/products/")&&!!document.querySelector(".product-gallery")',
+  "product image gallery without GLB");
+ assert(await run('!document.querySelector(".virtual-experience-tabs")&&!document.querySelector(".virtual-3d-host")'),
+  "Products without GLB must remain photo-only");
+
+ // Attach a genuine minimal GLB fixture to the selected color, then verify the
+ // 2D/3D tabs appear and can be used without affecting buying.
+ const gltf={asset:{version:"2.0"},scene:0,scenes:[{nodes:[0]}],nodes:[{mesh:0}],
+  meshes:[{primitives:[{attributes:{POSITION:0}}]}],
+  accessors:[{bufferView:0,componentType:5126,count:3,type:"VEC3",min:[-.4,0,0],max:[.4,1,0]}],
+  bufferViews:[{buffer:0,byteOffset:0,byteLength:36}],buffers:[{byteLength:36}]};
+ const jsonBuf=Buffer.from(JSON.stringify(gltf)),pad=Math.ceil(jsonBuf.length/4)*4;
+ const bin=Buffer.alloc(36);
+ new Float32Array(bin.buffer,bin.byteOffset,9).set([-.4,0,0,.4,0,0,0,1,0]);
+ const glb=Buffer.alloc(12+8+pad+8+bin.length);
+ glb.write("glTF",0);glb.writeUInt32LE(2,4);glb.writeUInt32LE(glb.length,8);
+ glb.writeUInt32LE(pad,12);glb.write("JSON",16);jsonBuf.copy(glb,20);
+ glb.fill(0x20,20+jsonBuf.length,20+pad);
+ glb.writeUInt32LE(bin.length,20+pad);
+ glb.write("BIN\\u0000",24+pad,"binary");
+ bin.copy(glb,28+pad);
+ const form=new FormData();form.set("color","Be");
+ form.set("file",new Blob([glb],{type:"model/gltf-binary"}),"product-ci.glb");
+ const uploaded=await fetch(origin+"/api/store/admin/products/"+accountFixture.data.id+"/models",{
+  method:"POST",headers:{Cookie:cookie,Origin:origin,"Sec-Fetch-Site":"same-origin"},body:form});
+ assert(uploaded.status===201,"Cannot attach GLB for browser test: "+await uploaded.text());
  await call("Page.navigate",{url:browserOrigin+"/products/"+accountFixture.data.slug});
  await until('document.querySelectorAll(".virtual-experience-tabs button").length===2',
-  "virtual studio tabs present on product detail",30);
+  "2D and 3D tabs visible after GLB upload",40);
  assert(await run('document.querySelector(".virtual-experience-tabs button.active")?.textContent?.includes("Ảnh 2D")'),
-  "Photo gallery must stay the default, never block checkout with WebGL");
- assert(await run('!document.querySelector(".virtual-experience-tabs button:disabled")'),
-  "The 2D / 3D tabs must both be usable");
- assert(await run('![...document.querySelectorAll(".virtual-experience-tabs button")].some(b=>b.textContent.includes("AI"))'),
-  "AI try-on tab must be removed from the product page");
+  "Photo gallery must remain the default after GLB upload");
  await until('Object.keys(document.querySelector(".virtual-experience-tabs button")||{}).some(k=>k.startsWith("__reactProps$"))',
-  "3D client-side hydration completed",50);
- await delay(650);
+  "3D tabs hydrated",45);
+ await delay(400);
  await run('document.querySelectorAll(".virtual-experience-tabs button")[1].click()');
  await until('!!document.querySelector(".virtual-3d-host")&&!!document.querySelector(".virtual-studio")',
-  "3D scene panel mounted",30);
- assert(await run('document.querySelector(".virtual-studio-meta")?.textContent?.includes("Ma-nơ-canh trưng bày bán thân")'),
-  "The 3D fallback must identify its boutique dress form, not a human avatar");
- await until('!!document.querySelector(".virtual-3d-canvas")||!!document.querySelector(".virtual-3d-overlay[role=alert]")',
-  "WebGL scene or graceful unsupported-device fallback",45);
+  "Real GLB viewer mounted",30);
+ assert(await run('!document.querySelector(".virtual-studio-meta")?.textContent?.includes("ma-nơ-canh")'),
+  "Real model viewer must never show fake mannequin fallback");
+ await until('!!document.querySelector(".virtual-3d-controller")||!!document.querySelector(".virtual-3d-overlay[role=alert]")',
+  "GLB rendered or unsupported WebGL handled without fake model",45);
  await run('document.querySelectorAll(".virtual-experience-tabs button")[0].click()');
  await until('!!document.querySelector(".product-gallery")&&!!document.querySelector(".virtual-experience-tabs button.active")?.textContent?.includes("2D")',
-  "Returning from 3D must restore true product photo gallery",25);
+  "Photo gallery restored after GLB viewer",25);
  const customerOrder=await api("orders","POST",customer.cookie,{
   client_order_key:"account-ux-"+Date.now().toString(36),
   customer_name:"CI EnjoyLife Customer",customer_phone:"0901234567",
