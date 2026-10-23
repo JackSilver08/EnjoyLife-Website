@@ -112,6 +112,7 @@ jobs:
           node --check apps/web/scripts/chatbot-docker-e2e.mjs
           node --check apps/web/scripts/warehouse-docker-e2e.mjs
           node --check apps/web/scripts/admin-variant-editor-browser-e2e.mjs
+          node --check apps/web/scripts/editorial-docker-e2e.mjs
           node --check apps/web/scripts/test-payos-qr.mjs
           node --check apps/web/scripts/check-origin.mjs
       - name: Build web development image
@@ -169,6 +170,8 @@ jobs:
         run: |
           command -v google-chrome || command -v google-chrome-stable || command -v chromium
           node apps/web/scripts/admin-variant-editor-browser-e2e.mjs
+      - name: Sprint 10 editorial newest-five and responsive Chrome E2E
+        run: node apps/web/scripts/editorial-docker-e2e.mjs
       - name: Shopper AI diagnostics and browser proxy E2E
         run: |
           pwsh -NoProfile -NonInteractive -File scripts/check-openai.ps1 -CheckOnly
