@@ -23,13 +23,17 @@ type productForm struct{
  Category string `json:"category"`
  SKU string `json:"sku"`
  Color string `json:"color"`
+ ColorHex string `json:"color_hex"`
+ ColorGroup string `json:"color_group"`
  Size string `json:"size"`
+ Sizes []string `json:"sizes"`
  Price int64 `json:"price_vnd"`
  Stock int `json:"opening_stock"`
  Published bool `json:"published"`
 }
+func validProductSizeOptions(v productForm)bool{_,ok:=validatedSizes(v.Size,v.Sizes);return ok&&(len(v.Sizes)<=1||v.SKU=="")}
 func validProduct(v productForm)bool{
- return len(strings.TrimSpace(v.Name))>=3&&len(v.Name)<=140&&len(v.Slug)<=100&&slugPattern.MatchString(v.Slug)&&len(v.Description)<=3000&&len(v.Collection)<=100&&len(v.ImageURL)<=500&&validManagedImageURL(v.ImageURL)&&(v.SKU==""||skuPattern.MatchString(v.SKU))&&len(v.Color)>0&&len(v.Color)<=40&&len(v.Size)>0&&len(v.Size)<=20&&v.Price>0&&v.Price<1000000000&&v.Stock>=0&&v.Stock<=100000&&len(v.Category)>0
+ return len(strings.TrimSpace(v.Name))>=3&&len(v.Name)<=140&&len(v.Slug)<=100&&slugPattern.MatchString(v.Slug)&&len(v.Description)<=3000&&len(v.Collection)<=100&&len(v.ImageURL)<=500&&validManagedImageURL(v.ImageURL)&&(v.SKU==""||skuPattern.MatchString(v.SKU))&&len(strings.TrimSpace(v.Color))>0&&len(v.Color)<=40&&validColorMetadata(v.ColorHex,v.ColorGroup)&&validProductSizeOptions(v)&&v.Price>0&&v.Price<1000000000&&v.Stock>=0&&v.Stock<=100000&&len(v.Category)>0
 }
 func(a *App) adminProducts(c *gin.Context){
  if a.requireAdmin(c)==nil{return}
@@ -57,7 +61,7 @@ func(a *App) adminCreateProduct(c *gin.Context){
  actor:=a.requireAdmin(c);if actor==nil{return}
  var input productForm
  if c.ShouldBindJSON(&input)!=nil||!validProduct(input){c.JSON(400,gin.H{"error":"Sản phẩm không hợp lệ; kiểm tra tên, slug, SKU, giá và tồn."});return}
- ctx,cancel:=context.WithTimeout(c.Request.Context(),7*time.Second);defer cancel()
+ ctx,cancel:=context.WithTimeout(c.Request.Context(),12*time.Second);defer cancel()
  tx,err:=a.DB.Begin(ctx);if err!=nil{serverError(c,err);return};defer tx.Rollback(ctx)
  if input.SKU==""{
   input.SKU,err=nextProductSKU(ctx,tx)
@@ -69,18 +73,30 @@ func(a *App) adminCreateProduct(c *gin.Context){
  SELECT $1,id,$2,$3,$4,$5,$6,$7 FROM categories WHERE slug=$8`,productID,input.Slug,strings.TrimSpace(input.Name),input.Description,input.ImageURL,input.Collection,input.Published,input.Category)
  if err!=nil{c.JSON(409,gin.H{"error":"Slug đã tồn tại hoặc dữ liệu không hợp lệ."});return}
  if tag.RowsAffected()!=1{c.JSON(400,gin.H{"error":"Danh mục không tồn tại."});return}
- _,err=tx.Exec(ctx,`INSERT INTO product_variants(id,product_id,sku,color,size,price_vnd) VALUES($1,$2,$3,$4,$5,$6)`,variantID,productID,input.SKU,input.Color,input.Size,input.Price)
- if err!=nil{c.JSON(409,gin.H{"error":"SKU đã tồn tại hoặc không hợp lệ."});return}
- _,err=tx.Exec(ctx,`INSERT INTO inventory(variant_id,on_hand) VALUES($1,$2)`,variantID,input.Stock)
- if err!=nil{serverError(c,err);return}
- if input.Stock>0{
-  _,err=tx.Exec(ctx,`INSERT INTO stock_movements(variant_id,movement_type,on_hand_delta) VALUES($1,'INITIAL_STOCK',$2)`,variantID,input.Stock)
-  if err!=nil{serverError(c,err);return}
+ if err=upsertProductColorway(ctx,tx,productID,input.Color,input.ColorHex,input.ColorGroup);err!=nil{serverError(c,err);return}
+ sizes,_:=validatedSizes(input.Size,input.Sizes)
+ created:=[]string{}
+ for i,size:=range sizes{
+  id,sku:=variantID,input.SKU
+  if i>0{
+   id,err=uuid();if err!=nil{serverError(c,err);return}
+   sku,err=nextProductSKU(ctx,tx);if err!=nil{serverError(c,err);return}
+  }
+  if _,err=tx.Exec(ctx,`INSERT INTO product_variants(id,product_id,sku,color,size,price_vnd) VALUES($1,$2,$3,$4,$5,$6)`,
+   id,productID,sku,strings.TrimSpace(input.Color),size,input.Price);err!=nil{
+   c.JSON(409,gin.H{"error":"SKU hoặc màu/size đã tồn tại."});return
+  }
+  if _,err=tx.Exec(ctx,`INSERT INTO inventory(variant_id,on_hand) VALUES($1,$2)`,id,input.Stock);err!=nil{serverError(c,err);return}
+  if input.Stock>0{
+   if _,err=tx.Exec(ctx,`INSERT INTO stock_movements(variant_id,movement_type,on_hand_delta) VALUES($1,'INITIAL_STOCK',$2)`,
+    id,input.Stock);err!=nil{serverError(c,err);return}
+  }
+  created=append(created,id)
  }
  _,err=tx.Exec(ctx,`INSERT INTO admin_audit_logs(actor_id,action,target_id,details) VALUES($1,'PRODUCT_CREATE',$2,$3)`,actor.ID,productID,input.SKU)
  if err!=nil{serverError(c,err);return}
  if err=tx.Commit(ctx);err!=nil{serverError(c,err);return}
- c.JSON(201,gin.H{"id":productID,"slug":input.Slug,"variant_id":variantID,"sku":input.SKU})
+ c.JSON(201,gin.H{"id":productID,"slug":input.Slug,"variant_id":variantID,"sku":input.SKU,"variant_ids":created})
 }
 func(a *App) adminUpdateProduct(c *gin.Context){
  actor:=a.requireAdmin(c);if actor==nil{return}
