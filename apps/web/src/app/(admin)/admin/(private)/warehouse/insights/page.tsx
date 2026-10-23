@@ -18,6 +18,16 @@ export default function WarehouseInsights(){
  const [action,setAction]=useState("RELEASE");
  const [busy,setBusy]=useState(false);
  const [message,setMessage]=useState("");
+ const [aiAnswer,setAIAnswer]=useState("");
+ const [aiBusy,setAIBusy]=useState(false);
+ async function requestAI(){
+  setAIBusy(true);setAIAnswer("");setMessage("");
+  try{
+   const result=await adminAction("admin/warehouse/ai-review","POST");
+   setAIAnswer(result.answer);
+  }catch(e){setMessage(e instanceof Error?e.message:"Chưa phân tích được kho.")}
+  finally{setAIBusy(false)}
+ }
  const entries=(insights.data?.items??[]).filter(item=>filter==="ALL"||(filter==="ATTENTION"?(item.status==="LOW_STOCK"||item.status==="OUT_OF_STOCK"):item.status===filter));
  async function qc(){
   if(!chosen)return;
@@ -41,6 +51,12 @@ export default function WarehouseInsights(){
  <div className="admin-toolbar"><button type="button" onClick={()=>{void insights.reload();void waiting.reload();void stock.reload()}}>Làm mới</button><Link href="/admin/warehouse">Phiếu đặt nhập ↗</Link><Link href="/admin/inventory">Tồn theo SKU ↗</Link></div>
  {message&&<p role="status" className="admin-notice">{message}</p>}
  {(insights.error||waiting.error||stock.error)&&<p role="alert" className="admin-error">{insights.error||waiting.error||stock.error}</p>}
+ <section className="admin-surface">
+  <div className="admin-section-top"><div><h2>AI phân tích tồn kho</h2><p>AI đọc tối đa 25 SKU đã tổng hợp, không đọc email khách và không được nhập/xuất kho.</p></div>
+    <button disabled={aiBusy} onClick={()=>void requestAI()}>{aiBusy?"Đang phân tích…":"Phân tích bằng AI"}</button>
+  </div>
+  {aiAnswer?<div className="warehouse-ai-answer" role="status">{aiAnswer}</div>:<p className="admin-help">Phân tích tham khảo từ số đã xuất 30 ngày; các quyết định nhập hàng cần được quản lý duyệt.</p>}
+ </section>
  <section className="admin-surface">
  <div className="admin-section-top"><div><h2>Cảnh báo và đề xuất nhập hàng</h2><p>Đã xuất kho 30 ngày từ sổ kho, không tính giỏ hàng hoặc đơn chưa gửi.</p></div>
   <label>Hiển thị<select value={filter} onChange={e=>setFilter(e.target.value)}><option value="ATTENTION">Cần chú ý</option><option value="ALL">Tất cả</option><option value="OUT_OF_STOCK">Hết hàng</option><option value="LOW_STOCK">Sắp hết</option><option value="NO_SALES_30D">Chưa bán 30 ngày</option></select></label>
