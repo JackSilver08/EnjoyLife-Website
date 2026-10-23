@@ -17,7 +17,7 @@ const transitions:Record<string,string[]>={
 const status:Record<string,string>={
  PENDING_CONFIRMATION:"Chờ xác nhận",CONFIRMED:"Đã xác nhận",
  PREPARING:"Đang chuẩn bị",SHIPPING:"Đang giao",
- DELIVERED:"Đã giao",COMPLETED:"Hoàn tất",CANCELLED:"Đã hủy"
+ DELIVERED:"Đã giao",COMPLETED:"Hoàn tất",CANCELLED:"Đã hủy",RETURNED:"Hàng hoàn về"
 };
 const paymentLabel:Record<string,string>={PAID:"Đã thu tiền",UNPAID:"Chưa thu tiền",REVIEW_REQUIRED:"Cần đối soát"};
 function nextStates(order:Order):string[]{
