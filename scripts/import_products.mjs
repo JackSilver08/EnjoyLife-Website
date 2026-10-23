@@ -577,6 +577,8 @@ const products = [
   }
 ];
 
+export { products };
+
 async function main() {
   console.log('=== BẮT ĐẦU NHẬP LIỆU SẢN PHẨM ENJOY LIFE ===\n');
 
@@ -641,7 +643,7 @@ async function main() {
   console.log('\n=== HOÀN TẤT NHẬP LIỆU THÀNH CÔNG! ===');
 }
 
-main().catch(err => {
+if (process.argv[1] && new URL(import.meta.url).pathname.toLowerCase().endsWith(process.argv[1].replaceAll('\\', '/').toLowerCase())) main().catch(err => {
   console.error('LỖI THỰC THI:', err);
   process.exit(1);
 });
