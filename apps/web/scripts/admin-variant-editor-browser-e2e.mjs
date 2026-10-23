@@ -30,17 +30,18 @@ const name=["google-chrome","google-chrome-stable","chromium","chromium-browser"
 assert(name,"Chrome/Chromium not installed in CI runner");
 const dir=mkdtempSync(join(tmpdir(),"enjoy-chrome-"));
 const chrome=spawn(name,["--headless=new","--no-sandbox","--disable-gpu","--disable-dev-shm-usage",
- "--no-first-run","--remote-allow-origins=*","--remote-debugging-port=0","--user-data-dir="+dir,"about:blank"],{stdio:"ignore"});
+ "--no-first-run","--remote-allow-origins=*","--remote-debugging-port=0","--user-data-dir="+dir,"about:blank"],{stdio:["ignore","ignore","pipe"]});
+let chromeErrors="";chrome.stderr.on("data",chunk=>{chromeErrors+=String(chunk).slice(0,2000)});
 let ws;
 function cleanup(){try{ws?.close()}catch{}try{chrome.kill("SIGKILL")}catch{}try{rmSync(dir,{recursive:true,force:true})}catch{}}
 process.on("exit",cleanup);
 let port=0;
 for(let i=0;i<120;i++){
- if(chrome.exitCode!==null)throw Error("Chrome failed to start");
+ if(chrome.exitCode!==null||chrome.signalCode!==null)throw Error("Chrome failed to start: "+chromeErrors.slice(-1300));
  if(existsSync(join(dir,"DevToolsActivePort"))){port=Number(readFileSync(join(dir,"DevToolsActivePort"),"utf8").split("\n")[0]);break}
  await delay(150);
 }
-assert(port>0,"Chrome debug port missing");
+assert(port>0,"Chrome debug port missing; browser="+name+"; "+chromeErrors.slice(-1600));
 const targets=await(await fetch("http://127.0.0.1:"+port+"/json/list")).json();
 const page=targets.find(x=>x.type==="page");
 assert(page?.webSocketDebuggerUrl,"No Chrome debugging tab");
