@@ -988,3 +988,94 @@ html{scroll-padding-top:calc(82px + 18px)}
 @media(prefers-reduced-motion:reduce){
  .admin-nav-group-trigger>svg{transition:none}
 }
+
+
+/* Admin right-flyout navigation: full-width sidebar rows; popup is portalled to
+   document.body so the independent sidebar scroll area never clips it. */
+.admin-sidebar nav > .admin-flyout-triggers{
+ display:grid!important;
+ grid-template-columns:minmax(0,1fr)!important;
+ gap:4px;
+ margin-top:12px;
+ padding:12px 0 0;
+ border-top:1px solid rgba(255,255,255,.16);
+}
+.admin-flyout-trigger{
+ display:flex;
+ align-items:center;
+ width:100%;min-height:43px;
+ gap:13px;
+ padding:11px 12px;
+ border:0;border-radius:5px;
+ background:transparent;
+ font-size:13px;font-weight:500;
+ text-align:left;
+ color:#d3d8d1;
+ transition:background .18s ease,color .18s ease;
+}
+.admin-flyout-trigger>span{flex:1;min-width:0;white-space:nowrap}
+.admin-flyout-trigger>svg:first-child{flex:0 0 auto}
+.admin-flyout-trigger-arrow{flex:0 0 auto;color:#aebeb0;transition:transform .18s ease}
+.admin-flyout-trigger:hover,
+.admin-flyout-trigger-open,
+.admin-flyout-trigger-active{
+ background:#4b5b4e;color:#fff;
+}
+.admin-flyout-trigger-open .admin-flyout-trigger-arrow{transform:rotate(90deg);color:#fff}
+.admin-flyout-panel{
+ position:fixed;
+ z-index:10080;
+ width:min(280px,calc(100vw - 24px));
+ max-height:calc(100dvh - 24px);
+ overflow-x:hidden;overflow-y:auto;
+ border:1px solid #526356;border-radius:9px;
+ background:#28352b;
+ color:#f6f7f1;
+ box-shadow:0 24px 65px rgba(12,24,16,.35);
+ scrollbar-width:thin;scrollbar-color:#637666 transparent;
+}
+.admin-flyout-header{
+ display:flex;align-items:center;justify-content:space-between;
+ gap:12px;padding:17px 14px 12px 18px;
+ border-bottom:1px solid rgba(255,255,255,.13);
+ font-size:12px;letter-spacing:.06em;font-weight:700;
+}
+.admin-flyout-header button{
+ display:grid;place-items:center;
+ width:29px;height:29px;
+ padding:0;border:0;border-radius:5px;
+ background:transparent;color:#cad5c9;
+}
+.admin-flyout-header button:hover{background:rgba(255,255,255,.12);color:#fff}
+.admin-flyout-links{display:grid;gap:3px;padding:9px}
+.admin-flyout-link{
+ display:flex;align-items:center;gap:11px;
+ min-height:41px;padding:11px 10px;
+ border-radius:5px;color:#d9e2d8;
+ font-size:12px;line-height:1.4;text-decoration:none;
+ transition:background .18s ease,color .18s ease;
+}
+.admin-flyout-link svg{flex-shrink:0}
+.admin-flyout-link span:nth-child(2){flex:1;overflow-wrap:anywhere}
+.admin-flyout-link:hover,
+.admin-flyout-link-active{background:#4b5f50;color:#fff}
+.admin-flyout-current{flex:0 0 6px!important;height:6px;width:6px;background:#b5e0bd;border-radius:50%}
+.admin-flyout-panel :is(a,button):focus-visible{
+ outline:2px solid #c6e9cb;outline-offset:2px;
+}
+@media(max-width:900px){
+ .admin-sidebar nav > .admin-flyout-triggers{
+  grid-template-columns:minmax(0,1fr)!important;
+  width:100%;
+  gap:4px;margin:10px 0 0;
+ }
+ .admin-flyout-trigger{font-size:13px;padding:11px 12px}
+ .admin-flyout-panel-compact{
+  width:calc(100vw - 24px);
+  max-height:calc(100dvh - 24px);
+  border-radius:12px;
+ }
+}
+@media(prefers-reduced-motion:reduce){
+ .admin-flyout-trigger,.admin-flyout-trigger-arrow,.admin-flyout-link{transition:none}
+}
