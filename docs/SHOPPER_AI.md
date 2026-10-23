@@ -5,7 +5,7 @@
 1. Tạo hoặc mở `.env` ở thư mục gốc dự án.
 2. Thêm `OPENAI_API_KEY=...` bằng API key của OpenAI. Không đưa khóa này vào
    `apps/web`, `NEXT_PUBLIC_*`, Git, hoặc mã nguồn trình duyệt.
-3. Giữ `AI_MODEL=gpt-6-luna` để dùng cấu hình mặc định tiết kiệm chi phí.
+3. Dùng `AI_MODEL=gpt-4.1-mini` (mặc định đã sửa). `gpt-6-luna` không phải model API được hỗ trợ và sẽ khiến OpenAI từ chối yêu cầu.
 4. Khởi động lại API và web: `docker compose up -d --build --force-recreate api web`.
 
 Nếu không có khóa, nút chat vẫn hiển thị nhưng API trả thông báo trung thực rằng
