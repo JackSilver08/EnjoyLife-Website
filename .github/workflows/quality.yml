@@ -92,8 +92,10 @@ jobs:
           node-version: '22'
       - name: Configure local Compose development
         run: cp .env.example .env
-      - name: Check dependency startup shell syntax
-        run: sh -n apps/web/scripts/ensure-deps.sh
+      - name: Check dependency and Next.js startup shell syntax
+        run: |
+          sh -n apps/web/scripts/ensure-deps.sh
+          sh -n apps/web/scripts/prepare-next-dev.sh
       - name: Simulate Windows CRLF checkout for mounted shell script
         run: |
           python3 - <<'PY'
@@ -137,12 +139,29 @@ jobs:
             tr -d "\015" < scripts/ensure-deps.sh | sh
             node -e "require.resolve(\"@tiptap/extension-image\")"
           '
+      - name: Seed intentionally broken manifests into persistent web cache volume
+        run: |
+          docker compose run --rm --no-deps --entrypoint sh web -ec '
+            mkdir -p .next/server .next/dev/server .next/cache
+            printf "{" > .next/server/ci-broken-manifest.json
+            : > .next/dev/server/ci-empty-manifest.json
+            printf "keep-web-build-cache" > .next/cache/ci-sentinel
+          '
       - name: Boot full development Compose stack and wait for health
         run: |
           docker compose up -d --build --wait --wait-timeout 300
           docker compose ps
           curl --fail --silent --show-error --max-time 15 http://127.0.0.1:3000/api/health | grep '"status":"ok"'
           docker compose exec -T web node -p 'require.resolve("@tiptap/extension-image")'
+      - name: Verify dev startup repaired manifests and SSR account route
+        run: |
+          docker compose exec -T web sh -ec '
+            test ! -e .next/server/ci-broken-manifest.json
+            test ! -e .next/dev/server/ci-empty-manifest.json
+            test "$(cat .next/cache/ci-sentinel)" = keep-web-build-cache
+          '
+          curl --fail --silent --show-error --max-time 30 http://127.0.0.1:3000/account > /tmp/enjoy-account-ssr.html
+          test -s /tmp/enjoy-account-ssr.html
       - name: Verify Go build cache persists for API development
         run: |
           test "$(docker compose exec -T api go env GOCACHE | tr -d '\r')" = /go/build-cache
