@@ -2,6 +2,7 @@
 import {useState} from "react";
 import {adminAction,moneyVND,useAdminData} from "@/components/admin/admin-data";
 import {useAdminRole} from "@/components/admin/admin-shell";
+import Link from "next/link";
 import {AdminFeedback,useAdminToast} from "@/components/admin/admin-toast";
 
 type Order={order_no:string;customer_name:string;phone?:string;shipping_address?:string;status:string;payment_status:string;payment_method?:string;total_vnd:number;created_at:string};
@@ -66,7 +67,7 @@ export default function OrdersPage(){
  }
  return <><span className="eyebrow">VẬN HÀNH / ĐƠN HÀNG</span><h1>Quản lý đơn hàng</h1>
  <p className="admin-subtitle">Chọn trạng thái kế tiếp cho từng đơn rồi nhấn Cập nhật. Đơn payOS chỉ được xử lý sau khi xác nhận thanh toán.</p>
- <div className="admin-toolbar"><label>Trạng thái <select value={filter} onChange={e=>setFilter(e.target.value)}>
+ <div className="admin-toolbar"><Link href="/admin/returns">Đổi trả / hoàn kho ↗</Link><label>Trạng thái <select value={filter} onChange={e=>setFilter(e.target.value)}>
   <option value="ALL">Tất cả</option>{Object.entries(status).map(([k,v])=><option value={k} key={k}>{v}</option>)}
  </select></label><button type="button" onClick={()=>void reload()}>Làm mới</button></div>
  <AdminFeedback error={error}/>
