@@ -2,7 +2,7 @@ import Link from "next/link";
 import { ArrowDown, ArrowUpRight } from "lucide-react";
 import { ContactForm } from "@/components/contact-form";
 import { fetchProducts } from "@/lib/api";
-import { ProductCard } from "@/components/product-card";
+import { LatestEditorialProducts } from "@/components/latest-editorial-products";
 import { JournalGrid } from "@/components/journal-grid";
 import { fetchSiteContent } from "@/lib/site-content";
 import { getPublishedArticles } from "@/lib/journal-api";
@@ -63,17 +63,13 @@ export default async function HomePage() {
     <section id="featured-products" className="arrivals home-products page-shell" aria-labelledby="featured-title">
       <div className="section-heading">
         <div>
-          <span className="eyebrow">02 / NHỮNG LỰA CHỌN ĐÁNG KHÁM PHÁ</span>
+          <span className="eyebrow">02 / NEW ARRIVALS</span>
           <h2 id="featured-title">Mặc đẹp <em>mỗi ngày.</em></h2>
-          <p className="home-section-subtitle">Những thiết kế đang có tại Enjoy Life, dành cho nhịp sống của bạn.</p>
+          <p className="home-section-subtitle">Năm lựa chọn mới, một phong cách rất riêng.</p>
         </div>
         <Link className="text-link" href="/shop">XEM TẤT CẢ SẢN PHẨM <ArrowUpRight size={16} aria-hidden="true"/></Link>
       </div>
-      {products.length > 0
-        ? <div className="products-grid">{products.slice(0, 4).map(product => (
-            <ProductCard key={product.id} product={product}/>
-          ))}</div>
-        : <div className="empty-state">Cửa hàng đang cập nhật các sản phẩm mới. <Link href="/shop">Đến cửa hàng ↗</Link></div>}
+      <LatestEditorialProducts products={products}/>
     </section>
 
     <section id="journal" className="home-journal" aria-labelledby="journal-title">
