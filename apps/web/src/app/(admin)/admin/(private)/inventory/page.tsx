@@ -74,7 +74,7 @@ export default function Inventory(){
   }catch(err){setNotice(err instanceof Error?err.message:"Không thể điều chỉnh kho.")}
   finally{setBusy(false)}
  }
- return <><span className="eyebrow">VẬN HÀNH / TỒN KHO</span>
+ return <><span className="eyebrow">QUẢN LÝ / TỒN KHO</span>
   <h1>Quản lý kho hàng</h1>
   <p className="admin-subtitle">Tồn kho gắn trực tiếp với từng size/màu của sản phẩm. Mọi lần nhập, xuất và kiểm kê được ghi lịch sử.</p>
   {productFilter&&<div className="admin-inventory-filter"><span>Đang xem kho: <strong>{productName||"Sản phẩm đã chọn"}</strong></span>

@@ -63,15 +63,16 @@ try{
  await call("Network.setCookie",{name:cn,value:cv,url:browserOrigin,httpOnly:true,sameSite:"Lax"});
 
  await call("Emulation.setDeviceMetricsOverride",{width:1440,height:900,deviceScaleFactor:1,mobile:false});
- // Admin right-flyout regression: five primary links; two full-width sidebar
- // rows that open a separate popup to the RIGHT, never clipped by nav scrolling.
+ // Admin navigation regression: six primary links and a single right-side
+ // management flyout that is never clipped by sidebar scrolling.
  await call("Page.navigate",{url:browserOrigin+"/admin"});
- await until('location.pathname==="/admin"&&document.querySelectorAll(".admin-nav-primary>a").length===5&&document.querySelectorAll(".admin-flyout-trigger").length===2',
-  "AI-first sidebar and two flyout triggers");
+ await until('location.pathname==="/admin"&&document.querySelectorAll(".admin-nav-primary>a").length===6&&document.querySelectorAll(".admin-flyout-trigger").length===1',
+  "six primary links and a management flyout");
  await delay(750);
  const sidebar=await run('(()=>{const nav=document.querySelector(".admin-sidebar-navigation");return {primary:[...nav.querySelectorAll(".admin-nav-primary>a")].map(x=>new URL(x.href).pathname),groups:[...nav.querySelectorAll(".admin-flyout-trigger")].map(x=>x.textContent.trim()),collapsed:[...nav.querySelectorAll(".admin-flyout-trigger")].every(x=>x.getAttribute("aria-expanded")==="false"),active:[...nav.querySelectorAll("a[aria-current=page]")].map(x=>new URL(x.href).pathname)}})()');
- assert(JSON.stringify(sidebar.primary)===JSON.stringify(["/admin","/admin/orders","/admin/products","/admin/inventory","/admin/warehouse/insights"]),"Primary navigation changed: "+JSON.stringify(sidebar));
- assert(sidebar.groups.length===2&&sidebar.groups.some(x=>x.includes("Vận hành"))&&sidebar.groups.some(x=>x.includes("Quản lý khác"))&&sidebar.collapsed&&JSON.stringify(sidebar.active)==='["/admin"]',"Unexpected sidebar groups: "+JSON.stringify(sidebar));
+ assert(JSON.stringify(sidebar.primary)===JSON.stringify(["/admin","/admin/orders","/admin/products","/admin/inventory","/admin/customers","/admin/warehouse/insights"]),"Primary navigation changed: "+JSON.stringify(sidebar));
+ assert(sidebar.groups.length===1&&sidebar.groups[0].includes("Quản lý khác")&&sidebar.collapsed&&JSON.stringify(sidebar.active)==='["/admin"]',"Unexpected sidebar groups: "+JSON.stringify(sidebar));
+ assert(await run('(()=>{const ai=document.querySelector(".admin-nav-primary>a[href=\"/admin/warehouse/insights\"]");const panel=document.querySelector(".admin-flyout-triggers");return ai&&panel&&getComputedStyle(ai).borderTopWidth==="0px"&&getComputedStyle(panel).borderTopWidth==="0px"})()'),"AI and flyout must not have separator lines");
  const openManagement=await run('(()=>{const b=[...document.querySelectorAll("button.admin-flyout-trigger")].find(x=>x.textContent.includes("Quản lý khác"));if(!b)return false;b.click();return true})()');
  assert(openManagement,"Cannot activate Quản lý khác");
  await until(`!!document.querySelector('.admin-flyout-panel a[href="/admin/reports"]')&&[...document.querySelectorAll(".admin-flyout-trigger")].some(x=>x.getAttribute("aria-expanded")==="true")`,
@@ -91,22 +92,21 @@ try{
   "Report navigation keeps group highlighted");
  await until('!document.querySelector(".admin-flyout-panel")',"Group flyout closes after navigation");
 
- // Narrow viewport fallback: menu must remain inside viewport while both
- // trigger rows stay full-width, not two cramped tiny columns.
+ // Narrow viewport fallback: the single management menu stays full-width.
  await call("Emulation.setDeviceMetricsOverride",{width:375,height:810,deviceScaleFactor:1,mobile:true});
  await call("Page.navigate",{url:browserOrigin+"/admin"});
- await until('document.querySelectorAll(".admin-flyout-trigger").length===2',"mobile flyout buttons");
+ await until('document.querySelectorAll(".admin-flyout-trigger").length===1',"mobile management flyout");
  await delay(1400);
- const narrowRow=await run('(()=>{const nav=document.querySelector(".admin-nav-groups").getBoundingClientRect(),buttons=[...document.querySelectorAll(".admin-flyout-trigger")].map(x=>x.getBoundingClientRect());return {width:innerWidth,navWidth:nav.width,first:buttons[0].width,second:buttons[1].width,vertical:buttons[1].top>buttons[0].bottom-1}})()');
- assert(narrowRow.vertical&&narrowRow.first>narrowRow.navWidth*.88&&narrowRow.second>narrowRow.navWidth*.88,"Mobile menu triggers should be two stacked rows: "+JSON.stringify(narrowRow));
+ const narrowRow=await run('(()=>{const nav=document.querySelector(".admin-nav-groups").getBoundingClientRect(),button=document.querySelector(".admin-flyout-trigger").getBoundingClientRect();return {width:innerWidth,navWidth:nav.width,buttonWidth:button.width}})()');
+ assert(narrowRow.buttonWidth>narrowRow.navWidth*.88,"Mobile management menu must be full width: "+JSON.stringify(narrowRow));
  await run('document.querySelector(".admin-flyout-trigger").click()');
  await until('!!document.querySelector(".admin-flyout-panel")',"mobile flyout open");
  const mobileGeometry=await run('(()=>{const r=document.querySelector(".admin-flyout-panel").getBoundingClientRect();return {left:r.left,right:r.right,top:r.top,bottom:r.bottom,width:innerWidth,height:innerHeight,links:document.querySelectorAll(".admin-flyout-link").length}})()');
- assert(mobileGeometry.left>=0&&mobileGeometry.right<=mobileGeometry.width+1&&mobileGeometry.top>=0&&mobileGeometry.bottom<=mobileGeometry.height+1&&mobileGeometry.links===3,"Mobile flyout escapes viewport: "+JSON.stringify(mobileGeometry));
+ assert(mobileGeometry.left>=0&&mobileGeometry.right<=mobileGeometry.width+1&&mobileGeometry.top>=0&&mobileGeometry.bottom<=mobileGeometry.height+1&&mobileGeometry.links===6,"Mobile flyout escapes viewport: "+JSON.stringify(mobileGeometry));
  await run('document.querySelector(".admin-flyout-header button").click()');
  await until('!document.querySelector(".admin-flyout-panel")',"mobile close button works");
  await call("Emulation.clearDeviceMetricsOverride");
- console.log("ADMIN RIGHT FLYOUT E2E PASSED: two full-width rows, right-side popup, clipped-safe portal, ESC, nested navigation, 375px mobile.");
+ console.log("ADMIN NAVIGATION E2E PASSED: six primary links, single right-side popup, ESC, nested navigation, 375px mobile.");
  await call("Page.navigate",{url:browserOrigin+"/admin/products?edit="+product.data.id});
  try{
   await until('document.querySelector(".admin-variants .admin-table tbody button")!==null',"variants loaded");
@@ -177,15 +177,12 @@ try{
  await until('!!document.querySelector("dialog.admin-modal[open] .cms-page")',"Journal rich-text editor modal");
  await run('document.querySelector("dialog.admin-modal[open] .admin-modal-close").click()');
  await until('document.querySelectorAll("dialog.admin-modal[open]").length===0',"Journal modal close");
- // Procurement forms must be actionable from large popups as well.
- await call("Page.navigate",{url:browserOrigin+"/admin/warehouse"});
- await until('location.pathname==="/admin/warehouse"&&[...document.querySelectorAll("button")].some(x=>x.textContent.trim()==="+ Nhà cung cấp")',"warehouse page");
- await until('!document.body.innerText.includes("Đang tải phiếu")',"warehouse React data hydration");
- const supplierOpened=await run('(()=>{const b=[...document.querySelectorAll("button")].find(x=>x.textContent.trim()==="+ Nhà cung cấp");if(!b)return false;b.click();return true})()');
- assert(supplierOpened,"Warehouse supplier modal opener missing");
- await until('!!document.querySelector("dialog.admin-modal[open] form.warehouse-form")',"supplier form modal");
- await run('document.querySelector("dialog.admin-modal[open] .admin-modal-close").click()');
- await until('document.querySelectorAll("dialog.admin-modal[open]").length===0',"supplier modal dismisses");
+ // Both retired management screens must return 404 for direct requests.
+ const retired=await run('(async()=>Promise.all(["/admin/returns","/admin/warehouse"].map(async path=>({path,status:(await fetch(path,{cache:"no-store"})).status}))))()');
+ assert(retired.length===2&&retired.every(x=>x.status===404),"Retired admin pages still accessible: "+JSON.stringify(retired));
+ // Customer management is now a standalone primary navigation item.
+ await call("Page.navigate",{url:browserOrigin+"/admin/customers"});
+ await until('location.pathname==="/admin/customers"&&!!document.querySelector(\'.admin-nav-primary>a[href="/admin/customers"][aria-current="page"]\')',"Customer primary navigation active");
  // Customer Account 2.0 regression, with a real owner-linked COD order.
  // No inline password form appears until Security is selected.
  const customer=await api("auth/register","POST","",{

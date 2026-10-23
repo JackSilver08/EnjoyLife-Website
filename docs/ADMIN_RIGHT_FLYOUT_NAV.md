@@ -1,23 +1,15 @@
-# Admin sidebar — menu xổ ngang sang phải
+# Admin sidebar — menu xổ ngang Quản lý khác
 
-## Thiết kế
-- Hai nhóm **Vận hành** và **Quản lý khác** hiện là hai hàng đầy đủ chiều ngang sidebar, có icon và mũi tên sang phải giống các mục chính.
-- Nhấn vào một nhóm mở hộp menu bên phải sidebar. Menu phụ được render qua React portal bên ngoài vùng sidebar có scroll, tránh bị cắt hoặc bị ẩn dưới nội dung chính.
-- Click mục con để chuyển trang; menu tự đóng. Nhóm chứa trang đang sử dụng được tô sáng.
-- Nhấn lại mục nhóm, nhấn nút X, click bên ngoài, Esc hoặc cuộn/resize trang để đóng. Khi dùng Esc, focus trả về nút nhóm.
-- Nếu màn hình hẹp (<=900px), hai nút vẫn xếp thành **hai hàng đầy đủ chiều rộng**; panel hiển thị trong viewport với kích thước phù hợp. Không cố ép flyout sang phải ngoài mép màn hình.
-- Không xóa bất kỳ đường dẫn cũ, không thay đổi phân quyền Admin/Staff, API, kho, payOS hay OpenAI.
+Sau khi tinh gọn, sidebar có **6 mục chính** và duy nhất một menu phụ **Quản lý khác**.
+
+- Nhóm Quản lý khác nằm trên một hàng đầy chiều ngang, bấm để xổ menu sang phải.
+- Popup render bằng React portal, không bị cắt bởi vùng cuộn sidebar.
+- Click mục con để chuyển trang, Esc trả focus về nút mở, nút X và click ngoài để đóng.
+- Trên màn hình hẹp (<=900px), popup luôn nằm trong viewport.
+- Khách hàng là mục chính, không còn nhóm Vận hành.
+- Hai trang Đổi trả/Hoàn tiền và Phiếu nhập NCC không còn trên frontend. API và dữ liệu lịch sử vẫn được giữ để bảo toàn nghiệp vụ.
+- Phân quyền ADMIN/STAFF, payOS, dữ liệu tồn kho và AI không thay đổi.
 
 ## Kiểm thử
-- Next.js lint, typecheck, build.
-- Chrome E2E đo trực tiếp tại desktop: 2 nhóm, menu portal thực sự ở phía phải của sidebar, chiều ngang không tràn cửa sổ; Escape và focus, chuyển sang Báo cáo và active trạng thái.
-- Chrome E2E tại mobile 375px: hai hàng đầy đủ chiều rộng, panel không tràn viewport, nút đóng hoạt động.
-- Giữ các regression về giá biến thể, đơn hàng, kho, thanh toán, Journal và chatbot hiện có.
 
-## Cập nhật
-```powershell
-git switch main
-git pull origin main
-docker compose up -d --build --wait --wait-timeout 300 web
-```
-Sau đó mở http://localhost:3000/admin và nhấn Ctrl+F5.
+Chrome E2E desktop/mobile xác nhận 6 liên kết, 1 flyout, popup bên phải, Escape, mobile 375px, link Khách hàng active và 404 đối với các trang đã bỏ.

@@ -920,9 +920,6 @@ html{scroll-padding-top:calc(82px + 18px)}
  color:#fff;
 }
 .admin-sidebar nav .admin-nav-primary>a[href="/admin/warehouse/insights"]{
- margin-top:7px;
- border-top:1px solid rgba(255,255,255,.12);
- padding-top:15px;
  color:#cfe1d0;
 }
 .admin-sidebar nav .admin-nav-primary>a[href="/admin/warehouse/insights"].admin-nav-active{
@@ -931,9 +928,7 @@ html{scroll-padding-top:calc(82px + 18px)}
 .admin-nav-groups{
  display:grid;
  gap:4px;
- margin-top:18px;
- padding-top:12px;
- border-top:1px solid rgba(255,255,255,.16);
+ margin-top:12px;
 }
 .admin-nav-group{min-width:0}
 .admin-nav-group-trigger{
@@ -974,7 +969,6 @@ html{scroll-padding-top:calc(82px + 18px)}
  .admin-sidebar-navigation{overflow:visible;padding:0}
  .admin-sidebar nav .admin-nav-primary{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}
  .admin-sidebar nav .admin-nav-primary>a{padding:10px;min-height:42px}
- .admin-sidebar nav .admin-nav-primary>a[href="/admin/warehouse/insights"]{margin:0;padding-top:10px;border-top:0}
  .admin-nav-groups{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-top:12px}
  .admin-sidebar-bottom{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
  .admin-sidebar-bottom>span{flex-basis:100%}
@@ -997,8 +991,8 @@ html{scroll-padding-top:calc(82px + 18px)}
  grid-template-columns:minmax(0,1fr)!important;
  gap:4px;
  margin-top:12px;
- padding:12px 0 0;
- border-top:1px solid rgba(255,255,255,.16);
+ padding:0;
+ border:0;
 }
 .admin-flyout-trigger{
  display:flex;

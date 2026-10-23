@@ -4,7 +4,7 @@ import {AdminToastProvider} from "@/components/admin/admin-toast";
 import {AdminFlyoutNav,type FlyoutNavGroup} from "@/components/admin/admin-flyout-nav";
 import {usePathname,useRouter} from "next/navigation";
 import {createContext,useContext,useEffect} from "react";
-import {LayoutDashboard,ClipboardList,Package,Boxes,Users,BarChart3,Newspaper,Images,Palette,LogOut,ArrowUpRight,ShieldCheck,LockKeyhole,Truck,Sparkles,RotateCcw,Settings2,FolderClosed} from "lucide-react";
+import {LayoutDashboard,ClipboardList,Package,Boxes,Users,BarChart3,Newspaper,Images,Palette,LogOut,ArrowUpRight,ShieldCheck,LockKeyhole,Sparkles,FolderClosed} from "lucide-react";
 
 type Role="ADMIN"|"STAFF";
 type NavItem={href:string;label:string;icon:typeof LayoutDashboard};
@@ -12,21 +12,17 @@ type NavItem={href:string;label:string;icon:typeof LayoutDashboard};
 const RoleContext=createContext<Role>("ADMIN");
 export function useAdminRole(){return useContext(RoleContext)}
 
-// AI-first navigation: five daily tasks remain visible; the other links are
-// grouped into right-side flyout menus without changing route permissions.
+// Six frequently used areas stay visible; secondary tools share one flyout.
+// Retired procurement and return screens are no longer exposed in Admin.
 const primaryNav:NavItem[]=[
  {href:"/admin",label:"Tổng quan",icon:LayoutDashboard},
  {href:"/admin/orders",label:"Đơn hàng",icon:ClipboardList},
  {href:"/admin/products",label:"Sản phẩm",icon:Package},
  {href:"/admin/inventory",label:"Kho hàng",icon:Boxes},
+ {href:"/admin/customers",label:"Khách hàng",icon:Users},
  {href:"/admin/warehouse/insights",label:"AI & Phân tích",icon:Sparkles}
 ];
 const secondaryNav:FlyoutNavGroup[]=[
- {id:"operations",label:"Vận hành",icon:Settings2,items:[
-  {href:"/admin/returns",label:"Đổi trả & Hoàn tiền",icon:RotateCcw},
-  {href:"/admin/warehouse",label:"Phiếu nhập & NCC",icon:Truck},
-  {href:"/admin/customers",label:"Khách hàng",icon:Users}
- ]},
  {id:"management",label:"Quản lý khác",icon:FolderClosed,items:[
   {href:"/admin/staff",label:"Nhân viên & quyền",icon:ShieldCheck},
   {href:"/admin/reports",label:"Báo cáo",icon:BarChart3},
@@ -84,7 +80,7 @@ export function AdminShell({children,name,role}:{children:React.ReactNode;name:s
    </div>
   </aside>
   <div className="admin-main"><header className="admin-topbar">
-   <strong>Enjoy Life / {role==="STAFF"?"Staff":"Operations"}</strong><span>{name}</span>
+   <strong>Enjoy Life / {role==="STAFF"?"Staff":"Admin"}</strong><span>{name}</span>
   </header><main className="admin-workspace">{allowed?children:
    <section className="admin-surface" role="alert">
     <h1>Không có quyền truy cập</h1>

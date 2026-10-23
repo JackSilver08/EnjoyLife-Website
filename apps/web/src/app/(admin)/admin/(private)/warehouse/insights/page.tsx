@@ -51,7 +51,7 @@ export default function WarehouseInsights(){
  }
  return <><span className="eyebrow">SPRINT 9 / PHÂN TÍCH KHO</span><h1>Smart Inventory</h1>
  <p className="admin-subtitle">Cảnh báo theo SKU, hàng đang cách ly và nhu cầu khách chờ. Đề xuất nhập hàng dùng số liệu 30 ngày, không phải dự báo AI.</p>
- <div className="admin-toolbar"><button type="button" onClick={()=>{void insights.reload();void waiting.reload();void stock.reload()}}>Làm mới</button><Link href="/admin/warehouse">Phiếu đặt nhập ↗</Link><Link href="/admin/inventory">Tồn theo SKU ↗</Link></div>
+ <div className="admin-toolbar"><button type="button" onClick={()=>{void insights.reload();void waiting.reload();void stock.reload()}}>Làm mới</button><Link href="/admin/inventory">Tồn theo SKU ↗</Link></div>
  <AdminFeedback message={message} error={insights.error||waiting.error||stock.error}/>
  <section className="admin-surface">
   <div className="admin-section-top"><div><h2>AI phân tích tồn kho</h2><p>AI đọc tối đa 25 SKU đã tổng hợp, không đọc email khách và không được nhập/xuất kho.</p></div>
