@@ -62,6 +62,7 @@ try{
  const [cn,cv]=cookie.split("=");
  await call("Network.setCookie",{name:cn,value:cv,url:browserOrigin,httpOnly:true,sameSite:"Lax"});
 
+ await call("Emulation.setDeviceMetricsOverride",{width:1440,height:900,deviceScaleFactor:1,mobile:false});
  // Admin right-flyout regression: five primary links; two full-width sidebar
  // rows that open a separate popup to the RIGHT, never clipped by nav scrolling.
  await call("Page.navigate",{url:browserOrigin+"/admin"});
