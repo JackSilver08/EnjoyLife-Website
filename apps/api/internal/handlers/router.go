@@ -34,17 +34,17 @@ type Variant struct {
 	Available int    `json:"available"`
 }
 type Product struct {
-	ID           string    `json:"id"`
-	Slug         string    `json:"slug"`
-	Name         string    `json:"name"`
-	Description  string    `json:"description"`
-	ImageURL     string    `json:"image_url"`
-	Collection   string    `json:"collection"`
-	CategorySlug string    `json:"category_slug"`
-	Available    int       `json:"available"`
-	PriceVND     int64     `json:"price_vnd"`
-	Variants     []Variant `json:"variants"`
- Images       []GalleryImage `json:"images"`
+	ID           string         `json:"id"`
+	Slug         string         `json:"slug"`
+	Name         string         `json:"name"`
+	Description  string         `json:"description"`
+	ImageURL     string         `json:"image_url"`
+	Collection   string         `json:"collection"`
+	CategorySlug string         `json:"category_slug"`
+	Available    int            `json:"available"`
+	PriceVND     int64          `json:"price_vnd"`
+	Variants     []Variant      `json:"variants"`
+	Images       []GalleryImage `json:"images"`
 }
 type OrderItemRequest struct {
 	VariantID string `json:"variant_id" binding:"required"`
@@ -78,11 +78,11 @@ func Router(a *App) *gin.Engine {
 	api.GET("/products/search", a.publicCatalogSearch)
 	api.GET("/products/filters", a.publicCatalogFilters)
 	api.GET("/products/:slug", a.product)
-    // Enjoy Journal public: only published, non-archived articles.
-    api.GET("/blog/articles", a.blogFeed)
-    api.GET("/blog/articles/:slug", a.blogDetail)
-    api.GET("/blog/categories", a.blogCategories)
-    api.GET("/blog/tags", a.blogTags)
+	// Enjoy Journal public: only published, non-archived articles.
+	api.GET("/blog/articles", a.blogFeed)
+	api.GET("/blog/articles/:slug", a.blogDetail)
+	api.GET("/blog/categories", a.blogCategories)
+	api.GET("/blog/tags", a.blogTags)
 	api.POST("/auth/register", a.register)
 	api.POST("/auth/login", a.login)
 	api.POST("/auth/admin-demo", a.devAdminLogin)
@@ -91,12 +91,15 @@ func Router(a *App) *gin.Engine {
 	api.GET("/auth/me", a.me)
 	api.GET("/account/orders", a.myOrders)
 	api.POST("/orders", a.createOrder)
-    api.POST("/orders/:token/payment-link",a.createPayOSLink)
-    api.POST("/orders/:token/cancel-payment",a.cancelPayOS)
-    api.GET("/orders/:token/payment-status",a.payOSStatus)
-    api.POST("/payments/payos/webhook",a.payOSWebhook)
+	api.POST("/orders/:token/payment-link", a.createPayOSLink)
+	api.POST("/orders/:token/cancel-payment", a.cancelPayOS)
+	api.GET("/orders/:token/payment-status", a.payOSStatus)
+	api.POST("/payments/payos/webhook", a.payOSWebhook)
 	api.GET("/orders/:token", a.orderStatus)
-	api.GET("/payments/config",func(c *gin.Context){state:=a.payOSConfigStatus();c.JSON(200,gin.H{"payos_enabled":state=="enabled","status":state})})
+	api.GET("/payments/config", func(c *gin.Context) {
+		state := a.payOSConfigStatus()
+		c.JSON(200, gin.H{"payos_enabled": state == "enabled", "status": state})
+	})
 	api.GET("/policies", func(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{"policies": []gin.H{
 			{"title": "Thanh toán", "content": "Enjoy Life hỗ trợ COD và thanh toán QR payOS khi kênh được bật."},
@@ -104,9 +107,7 @@ func Router(a *App) *gin.Engine {
 			{"title": "Đổi trả", "content": "Vui lòng liên hệ cửa hàng để xác minh điều kiện đổi trả. Chính sách chính thức sẽ được công bố trước khi mở bán."},
 		}})
 	})
-	api.POST("/ai/customer", func(c *gin.Context) {
-		c.JSON(http.StatusNotImplemented, gin.H{"error": "Chưa cấu hình LLM; không giả lập câu trả lời AI."})
-	})
+	api.POST("/ai/customer", a.customerAI)
 	api.GET("/admin/media", a.adminMediaList)
 	api.POST("/admin/media", a.adminMediaUpload)
 	api.POST("/admin/media/bulk", a.adminMediaBulkZip)
@@ -131,15 +132,15 @@ func Router(a *App) *gin.Engine {
 	api.DELETE("/admin/products/:id", a.adminArchiveProduct)
 	api.POST("/admin/products/:id/restore", a.adminRestoreProduct)
 	api.GET("/admin/reports", a.adminReports)
-    // Enjoy Journal admin: session/role checked inside every handler.
-    api.GET("/admin/blog/articles", a.adminBlogFeed)
-    api.GET("/admin/blog/articles/:id", a.adminBlogDetail)
-    api.POST("/admin/blog/articles", a.adminBlogCreate)
-    api.PUT("/admin/blog/articles/:id", a.adminBlogUpdate)
-    api.PATCH("/admin/blog/articles/:id/status", a.adminBlogStatus)
-    api.DELETE("/admin/blog/articles/:id", a.adminBlogArchive)
-    api.POST("/admin/blog/categories", a.adminBlogCategoryCreate)
-    api.POST("/admin/blog/tags", a.adminBlogTagCreate)
+	// Enjoy Journal admin: session/role checked inside every handler.
+	api.GET("/admin/blog/articles", a.adminBlogFeed)
+	api.GET("/admin/blog/articles/:id", a.adminBlogDetail)
+	api.POST("/admin/blog/articles", a.adminBlogCreate)
+	api.PUT("/admin/blog/articles/:id", a.adminBlogUpdate)
+	api.PATCH("/admin/blog/articles/:id/status", a.adminBlogStatus)
+	api.DELETE("/admin/blog/articles/:id", a.adminBlogArchive)
+	api.POST("/admin/blog/categories", a.adminBlogCategoryCreate)
+	api.POST("/admin/blog/tags", a.adminBlogTagCreate)
 	api.GET("/admin/products/:id/images", a.adminGetGallery)
 	api.PUT("/admin/products/:id/images", a.adminSaveGallery)
 	api.GET("/admin/products/:id/variants", a.adminVariants)
@@ -225,17 +226,31 @@ func (a *App) product(c *gin.Context) {
 		serverError(c, err)
 		return
 	}
-	p.Images=[]GalleryImage{}
- imageRows,imageErr:=a.DB.Query(ctx,`SELECT url,alt FROM product_images WHERE product_id=$1 ORDER BY position`,p.ID)
- if imageErr!=nil{serverError(c,imageErr);return}
- for imageRows.Next(){var img GalleryImage
-  if err=imageRows.Scan(&img.URL,&img.Alt);err!=nil{imageRows.Close();serverError(c,err);return}
-  p.Images=append(p.Images,img)
- }
- imageErr=imageRows.Err();imageRows.Close()
- if imageErr!=nil{serverError(c,imageErr);return}
- if len(p.Images)==0&&p.ImageURL!=""{p.Images=append(p.Images,GalleryImage{URL:p.ImageURL,Alt:p.Name})}
- c.JSON(http.StatusOK, p)
+	p.Images = []GalleryImage{}
+	imageRows, imageErr := a.DB.Query(ctx, `SELECT url,alt FROM product_images WHERE product_id=$1 ORDER BY position`, p.ID)
+	if imageErr != nil {
+		serverError(c, imageErr)
+		return
+	}
+	for imageRows.Next() {
+		var img GalleryImage
+		if err = imageRows.Scan(&img.URL, &img.Alt); err != nil {
+			imageRows.Close()
+			serverError(c, err)
+			return
+		}
+		p.Images = append(p.Images, img)
+	}
+	imageErr = imageRows.Err()
+	imageRows.Close()
+	if imageErr != nil {
+		serverError(c, imageErr)
+		return
+	}
+	if len(p.Images) == 0 && p.ImageURL != "" {
+		p.Images = append(p.Images, GalleryImage{URL: p.ImageURL, Alt: p.Name})
+	}
+	c.JSON(http.StatusOK, p)
 }
 
 func randomHex(n int) (string, error) {
@@ -291,9 +306,12 @@ func (a *App) createOrder(c *gin.Context) {
 	defer cancel()
 	// Idempotency: same client_order_key returns the original order instead of double-reserving.
 	var existingToken, existingNo, existingMethod, existingPayment string
-	e := a.DB.QueryRow(ctx, "SELECT public_token,order_no,payment_method,payment_status FROM orders WHERE client_order_key=$1", input.ClientOrderKey).Scan(&existingToken, &existingNo,&existingMethod,&existingPayment)
+	e := a.DB.QueryRow(ctx, "SELECT public_token,order_no,payment_method,payment_status FROM orders WHERE client_order_key=$1", input.ClientOrderKey).Scan(&existingToken, &existingNo, &existingMethod, &existingPayment)
 	if e == nil {
-        if existingMethod != input.PaymentMethod {c.JSON(409, gin.H{"error":"Không được đổi phương thức của đơn đã tạo."});return}
+		if existingMethod != input.PaymentMethod {
+			c.JSON(409, gin.H{"error": "Không được đổi phương thức của đơn đã tạo."})
+			return
+		}
 		c.JSON(http.StatusOK, gin.H{"order_token": existingToken, "order_no": existingNo, "status": "PENDING_CONFIRMATION", "payment_status": existingPayment})
 		return
 	}
@@ -358,7 +376,7 @@ func (a *App) createOrder(c *gin.Context) {
 	_, err = tx.Exec(ctx, `INSERT INTO orders(id,public_token,client_order_key,order_no,customer_name,
 	      customer_phone,shipping_address,note,payment_method,payment_status,status,total_vnd,user_id)
 	      VALUES($1,$2,$3,$4,$5,$6,$7,$8,$11,'UNPAID','PENDING_CONFIRMATION',$9,$10)`,
-		orderID, token, input.ClientOrderKey, orderNo, input.CustomerName, input.CustomerPhone, input.ShippingAddress, input.Note, total, userID,input.PaymentMethod)
+		orderID, token, input.ClientOrderKey, orderNo, input.CustomerName, input.CustomerPhone, input.ShippingAddress, input.Note, total, userID, input.PaymentMethod)
 	if err != nil {
 		serverError(c, err)
 		return
@@ -413,12 +431,15 @@ func (a *App) orderStatus(c *gin.Context) {
 		serverError(c, err)
 		return
 	}
-	var payURL,qr,attemptState string
-    if method=="PAYOS"{
-      e:=a.DB.QueryRow(c.Request.Context(),`SELECT COALESCE(checkout_url,''),COALESCE(qr_code,''),status FROM payment_attempts WHERE order_id=(SELECT id FROM orders WHERE public_token=$1) AND provider='PAYOS'`,tok).Scan(&payURL,&qr,&attemptState)
-      if e!=nil && !errors.Is(e,pgx.ErrNoRows){serverError(c,e);return}
-    }
-    c.JSON(http.StatusOK, gin.H{"order_no": orderNo, "status": status, "payment_status": paymentStatus, "payment_method": method, "total_vnd": total, "created_at": created,"checkout_url":payURL,"qr_code":qr,"gateway_status":attemptState})
+	var payURL, qr, attemptState string
+	if method == "PAYOS" {
+		e := a.DB.QueryRow(c.Request.Context(), `SELECT COALESCE(checkout_url,''),COALESCE(qr_code,''),status FROM payment_attempts WHERE order_id=(SELECT id FROM orders WHERE public_token=$1) AND provider='PAYOS'`, tok).Scan(&payURL, &qr, &attemptState)
+		if e != nil && !errors.Is(e, pgx.ErrNoRows) {
+			serverError(c, e)
+			return
+		}
+	}
+	c.JSON(http.StatusOK, gin.H{"order_no": orderNo, "status": status, "payment_status": paymentStatus, "payment_method": method, "total_vnd": total, "created_at": created, "checkout_url": payURL, "qr_code": qr, "gateway_status": attemptState})
 }
 func (a *App) adminAuth(c *gin.Context) {
 	if a.Config.AdminKey == "" {

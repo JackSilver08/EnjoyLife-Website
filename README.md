@@ -155,7 +155,7 @@ enjoy-life-starter/
 | POST | `/api/v1/orders` | COD only; reserves selected SKUs in a DB transaction |
 | GET | `/api/v1/orders/:token` | Guest lookup via private random token |
 | GET | `/api/v1/policies` | Placeholder policies; **not official** |
-| POST | `/api/v1/ai/customer` | 501 until LLM integration is completed |
+| POST | `/api/v1/ai/customer` | Shopper assistant; reads only the published catalogue, variants/inventory and published placeholder policies through server-side tools |
 | GET | `/api/v1/admin/summary`, `/admin/orders`, `/admin/users` | Requires a signed-in `ADMIN` account |
 
 **For test orders**: enter sample contact details only. Do not expose to the Internet, enter real customer data, or send real money using this code.
@@ -178,7 +178,7 @@ Requires locally installed Postgres 17, Go >=1.25, Node >=20.9 (Next 16), and In
 - The bootstrap administrator and local HTTP cookie setup are for development only; add HTTPS-only cookies, password reset/verification, rate limits and audit logs before production.
 - Browser cart prices are indicative; actual checkout price is always calculated from Postgres.
 - Cart may show stale stock; server rejects insufficient inventory with HTTP 409.
-- No AI model calls are performed. Both shopper assistant and Admin AI require tool whitelists, server-side keys, roles, prompt-injection controls and evaluation.
+- The shopper assistant uses server-side OpenAI function calling only when `OPENAI_API_KEY` is configured. It cannot access orders, accounts, payments, admin routes, or arbitrary SQL. It is limited to 12 requests/minute per browser visitor; use a shared rate limiter before scaling to multiple API replicas. Admin AI is not implemented.
 - External Unsplash images are sample visuals, require brand-approved assets/licensing before public use. Images may not render offline.
 - `robots: noindex` is set globally to avoid search indexing of prototype pages. Adjust only when ready to launch.
 - Delivery fees, return policy, terms and contact information are placeholders, not legal/business promises.
