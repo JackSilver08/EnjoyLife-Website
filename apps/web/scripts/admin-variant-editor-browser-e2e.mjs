@@ -186,33 +186,77 @@ try{
  await until('!!document.querySelector("dialog.admin-modal[open] form.warehouse-form")',"supplier form modal");
  await run('document.querySelector("dialog.admin-modal[open] .admin-modal-close").click()');
  await until('document.querySelectorAll("dialog.admin-modal[open]").length===0',"supplier modal dismisses");
- // A customer's /account route renders the shared password form OUTSIDE the
- // protected Admin shell. This used to crash with "useAdminToast must be used
- // inside AdminToastProvider" when redirected from an unauthorized /admin.
+ // Customer Account 2.0 regression, with a real owner-linked COD order.
+ // No inline password form appears until Security is selected.
  const customer=await api("auth/register","POST","",{
-  name:"CI Account Toast Regression",
-  email:"ci-account-toast-"+Date.now()+"@example.test",
+  name:"CI EnjoyLife Customer",
+  email:"ci-account-ux-"+Date.now()+"@example.test",
   password:"CiAccountPassword123!"
  });
  assert(customer.status===200&&customer.cookie.startsWith("enjoy_life_session="),
-  "Could not create isolated customer account: "+customer.text);
- const [customerCookieName,customerCookieValue]=customer.cookie.split("=");
- await call("Network.setCookie",{
-  name:customerCookieName,value:customerCookieValue,url:browserOrigin,
-  httpOnly:true,sameSite:"Lax"
+  "Could not register isolated shopper: "+customer.text);
+ const accountFixture=await api("admin/products","POST",cookie,{
+  name:"Account UX Test Dress",slug:"ci-account-ux-"+Date.now().toString(36),
+  category:"ao",color:"Be",size:"M",price_vnd:159000,opening_stock:5,published:true
  });
+ assert(accountFixture.status===201&&accountFixture.data?.variant_id,"Account fixture product not created: "+accountFixture.text);
+ const customerOrder=await api("orders","POST",customer.cookie,{
+  client_order_key:"account-ux-"+Date.now().toString(36),
+  customer_name:"CI EnjoyLife Customer",customer_phone:"0901234567",
+  shipping_address:"1 CI Order Street, Viet Nam",payment_method:"COD",
+  items:[{variant_id:accountFixture.data.variant_id,quantity:1}]
+ });
+ assert(customerOrder.status===201&&customerOrder.data?.order_token,"Customer could not place linked order: "+customerOrder.text);
+ const history=await api("account/orders","GET",customer.cookie);
+ assert(history.status===200&&history.data?.items?.some(o=>
+  o.order_no===customerOrder.data.order_no&&o.tracking_token===customerOrder.data.order_token),
+  "Owned order history must return its exact private tracking token: "+history.text);
+ const other=await api("auth/register","POST","",{
+  name:"CI Other Shopper",email:"ci-account-privacy-"+Date.now()+"@example.test",
+  password:"CiAccountPassword123!"
+ });
+ assert(other.status===200&&other.cookie,"Could not register second privacy test shopper: "+other.text);
+ const otherHistory=await api("account/orders","GET",other.cookie);
+ assert(otherHistory.status===200&&!otherHistory.data?.items?.some(o=>
+  o.order_no===customerOrder.data.order_no),
+  "Another customer can access someone else's order history.");
+ const [customerCookieName,customerCookieValue]=customer.cookie.split("=");
+ await call("Network.setCookie",{name:customerCookieName,value:customerCookieValue,url:browserOrigin,httpOnly:true,sameSite:"Lax"});
+ await call("Emulation.setDeviceMetricsOverride",{width:1440,height:900,deviceScaleFactor:1,mobile:false});
  await call("Page.navigate",{url:browserOrigin+"/account"});
- await until('location.pathname==="/account"&&!!document.querySelector(".sprint7-password-form")',
-  "customer account password form renders without AdminToastProvider",20);
- const publicForm=await run('({notice:!!document.querySelector(".sprint7-password-form"),account:document.body?.innerText?.includes("Bảo mật tài khoản"),overlay:!!document.querySelector("nextjs-portal")?.shadowRoot?.textContent?.includes("useAdminToast must be used inside")})');
- assert(publicForm.notice&&publicForm.account&&!publicForm.overlay,
-  "Account page crashed while rendering password form outside provider: "+JSON.stringify(publicForm));
+ await until('location.pathname==="/account"&&document.querySelectorAll(".account-section-tab").length===3&&document.querySelector(".account-summary-grid")!==null',
+  "customer account summary dashboard");
+ await until('document.querySelector(".account-order-link")!==null',"recent order tracking link in dashboard");
+ const overview=await run('(()=>({sections:[...document.querySelectorAll(".account-section-tab")].map(x=>x.textContent.trim()),links:[...document.querySelectorAll(".account-order-link")].map(x=>new URL(x.href).pathname),securityHidden:!document.querySelector(".sprint7-password-form"),layout:!!document.querySelector(".account-dashboard-layout")}))()');
+ assert(overview.sections.length===3&&overview.sections[0].includes("Tổng quan")&&overview.sections[1].includes("Đơn mua")&&overview.sections[2].includes("Bảo mật")&&overview.securityHidden&&overview.layout,"Customer account overview layout failed: "+JSON.stringify(overview));
+ assert(overview.links.includes("/orders/"+customerOrder.data.order_token),"Account dashboard does not link to owner order token: "+JSON.stringify(overview));
+ await run('(()=>{[...document.querySelectorAll(".account-section-tab")].find(x=>x.textContent.includes("Đơn mua")).click()})()');
+ await until('!!document.querySelector(".account-order-filters")&&!!document.querySelector(".account-order-card")',"customer orders tab");
+ await run('(()=>{[...document.querySelectorAll(".account-order-filters button")].find(x=>x.textContent.includes("Đã kết thúc")).click()})()');
+ await until('!!document.querySelector(".account-empty-state")',"orders filtered empty state");
+ await run('(()=>{[...document.querySelectorAll(".account-order-filters button")].find(x=>x.textContent.includes("Tất cả")).click()})()');
+ await until('!!document.querySelector(".account-order-link")',"restore all orders list");
+ await run('(()=>{[...document.querySelectorAll(".account-section-tab")].find(x=>x.textContent.includes("Bảo mật")).click()})()');
+ await until('!!document.querySelector(".sprint7-password-form")',"security form lazy view without admin toast context");
+ const errOverlay=await run('!!document.querySelector("nextjs-portal")?.shadowRoot?.textContent?.includes("useAdminToast must be used inside")');
+ assert(!errOverlay,"Account Security reproduced the old AdminToastProvider runtime crash");
+
+ // User profile, tab buttons, order and password inputs must fit narrow mobile.
+ await call("Emulation.setDeviceMetricsOverride",{width:375,height:812,deviceScaleFactor:1,mobile:true});
+ await call("Page.navigate",{url:browserOrigin+"/account"});
+ await until('document.querySelectorAll(".account-section-tab").length===3',"mobile customer account loaded");
+ await delay(500);
+ const mobileAccount=await run('(()=>({viewport:innerWidth,docWidth:document.documentElement.scrollWidth,navWidth:document.querySelector(".account-section-nav").getBoundingClientRect().width,btns:[...document.querySelectorAll(".account-section-tab")].map(b=>b.getBoundingClientRect().width)}))()');
+ assert(mobileAccount.docWidth<=mobileAccount.viewport+2&&mobileAccount.btns.every(n=>n>70),"Customer account horizontal mobile overflow: "+JSON.stringify(mobileAccount));
+ await call("Emulation.clearDeviceMetricsOverride");
+
+ // An ordinary customer navigating /admin must still redirect to their account.
  await call("Page.navigate",{url:browserOrigin+"/admin"});
- await until('location.pathname==="/account"&&!!document.querySelector(".sprint7-password-form")',
-  "customer redirected from admin can still view Account page",20);
+ await until('location.pathname==="/account"&&!!document.querySelector(".account-dashboard-layout")',
+  "customer redirected from admin to account dashboard",20);
  const redirectError=await run('!!document.querySelector("nextjs-portal")?.shadowRoot?.textContent?.includes("useAdminToast must be used inside")');
- assert(!redirectError,"Unauthenticated Admin redirect reproduced the toast context crash");
- console.log("ACCOUNT TOAST REGRESSION PASSED: customer account and unauthorized admin redirect render without AdminToastProvider.");
+ assert(!redirectError,"Customer /admin redirect triggered AdminToastProvider error");
+ console.log("CUSTOMER ACCOUNT UX E2E PASSED: owner-only order tracking, translated cards, filters, security, redirect and 375px mobile.");
  console.log("ADMIN MODAL/TOAST CHROME E2E PASSED: nested edit, success toast, product add, Escape, inventory modal and staff modal.");
  console.log("Admin variant browser E2E PASSED: edit stays open, no autosave, deliberate Save updates PostgreSQL.");
 }finally{cleanup()}
