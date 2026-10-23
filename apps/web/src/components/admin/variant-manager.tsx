@@ -9,7 +9,7 @@ import {SizeMultiSelect} from "@/components/admin/size-multi-select";
 import {visualColor} from "@/lib/product-colors";
 type Variant={id:string;sku:string;color:string;size:string;price_vnd:number;active:boolean;on_hand:number;reserved:number;available:number;low_stock_threshold:number;color_hex:string;color_group:string};
 const blank={sku:"",color:"",color_hex:"",color_group:"",size:"M",sizes:["M"],price_vnd:0,opening_stock:0};
-export function VariantManager({productId}:{productId:string}){
+export function VariantManager({productId,onChanged}:{productId:string;onChanged?:()=>void}){
  const {data,error,loading,reload}=useAdminData<{items:Variant[]}>("admin/products/"+productId+"/variants");
  const [form,setForm]=useState(blank);
  const [adding,setAdding]=useState(false);
@@ -21,7 +21,7 @@ export function VariantManager({productId}:{productId:string}){
   e.preventDefault();if(busy)return;setBusy(true);setMessage("");
   try{const created=await adminAction("admin/products/"+productId+"/variants","POST",{...form,sku:""});
    setMessage("Đã thêm "+created.variant_ids?.length+" SKU màu "+form.color+" (bắt đầu từ "+created.sku+").");
-   setForm(blank);setAdding(false);await reload();
+   setForm(blank);setAdding(false);await reload();onChanged?.();
   }catch(err){setMessage(err instanceof Error?err.message:"Không thêm được size/màu mới.")}
   finally{setBusy(false)}
  }
@@ -46,7 +46,7 @@ export function VariantManager({productId}:{productId:string}){
     ...draft,color:draft.color.trim(),size:draft.size.trim(),active:v.active
    });
    setMessage("Đã cập nhật biến thể "+v.sku+".");
-   setEditing(null);await reload();
+   setEditing(null);await reload();onChanged?.();
   }catch(err){setMessage(err instanceof Error?err.message:"Không thể cập nhật biến thể.")}
   finally{setBusy(false)}
  }

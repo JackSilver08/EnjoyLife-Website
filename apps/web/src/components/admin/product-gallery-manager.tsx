@@ -9,9 +9,10 @@ import {optimizeProductImage} from "@/lib/image-optimizer";
 
 type ImageItem={url:string;alt:string;color:string};
 type StockColor={color:string};
-export function ProductGalleryManager({productId,onSaved}:{productId:string;onSaved?:(url:string)=>void}){
+export function ProductGalleryManager({productId,onSaved,colorVersion=0}:{productId:string;onSaved?:(url:string)=>void;colorVersion?:number}){
  const {data,loading,error,reload}=useAdminData<{images:ImageItem[]}>("admin/products/"+productId+"/images");
- const {data:variantData}=useAdminData<{items:StockColor[]}>("admin/products/"+productId+"/variants");
+ const {data:variantData,reload:reloadVariants}=useAdminData<{items:StockColor[]}>("admin/products/"+productId+"/variants");
+ useEffect(()=>{if(colorVersion>0){void reloadVariants()}},[colorVersion,reloadVariants]);
  const colorNames=[...new Set((variantData?.items??[]).map(v=>v.color))];
  const [images,setImages]=useState<ImageItem[]>([]);
  const [busy,setBusy]=useState(false);
