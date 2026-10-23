@@ -2,11 +2,11 @@
 
 ## Phạm vi phiên bản này
 Xử lý chứng từ RMA thật cho shop thời trang nữ với các nghiệp vụ:
-1. Khách đổi/trả **sau khi DELIVERED hoặc COMPLETED**: nhân viên quản trị tạo RMA, chọn dòng SKU, số lượng và lý do. Cho phép trả một phần (theo số lượng của mỗi SKU); nhiều RMA trên một đơn không được vượt số đã bán.
+1. Khách đổi/trả **sau khi DELIVERED hoặc COMPLETED và đã xác nhận thu tiền (PAID)**: nhân viên quản trị tạo RMA, chọn dòng SKU, số lượng và lý do. Cho phép trả một phần (theo số lượng của mỗi SKU); nhiều RMA trên một đơn không được vượt số đã bán.
 2. Giao thất bại **đang SHIPPING**: RMA phải chứa đủ toàn bộ số hàng trong đơn. Đơn vẫn SHIPPING cho đến khi kho nhận hàng vật lý; sau đó chuyển thành RETURNED. Không hoàn lại reserved vì đã trừ từ lúc SHIPPING.
 3. Admin duyệt/từ chối; chỉ phiếu APPROVED mới được nhận hàng. Nhận **đầy đủ các dòng trong một lần** theo hai nhóm **good** (bán được) và **quarantined** (cách ly, không bán được).
 4. Một transaction duy nhất cập nhật tồn, tạo sổ kho RETURN_GOOD / RETURN_QC_HOLD, cập nhật trạng thái RMA và audit log. **request_key** đảm bảo retry không cộng tồn hai lần; tài khoản không có quyền Admin không được tạo/duyệt/nhận/đối soát.
-5. Sau khi xác thực số tiền đã thu: RMA giữ refund_status=PENDING. Admin **tự thực hiện hoàn tiền ngoài hệ thống**, đối chiếu mã tham chiếu và số tiền chính xác, sau đó mới ghi nhận CONFIRMED. Đơn đã PAID vẫn giữ payment_status='PAID' của giao dịch gốc; KHÔNG giả lập một lệnh chuyển tiền qua payOS.
+5. Chỉ tạo phiếu khách đổi/trả sau khi đã thu đủ COD hoặc xác nhận payOS PAID; không hoàn nhầm đơn chưa thu tiền. Sau khi xác thực số tiền đã thu: RMA giữ refund_status=PENDING. Admin **tự thực hiện hoàn tiền ngoài hệ thống**, đối chiếu mã tham chiếu và số tiền chính xác, sau đó mới ghi nhận CONFIRMED. Đơn đã PAID vẫn giữ payment_status='PAID' của giao dịch gốc; KHÔNG giả lập một lệnh chuyển tiền qua payOS.
 6. Hàng cách ly được xử lý tiếp bằng trang **Phân tích tồn kho → QC** từ Sprint 9.
 
 ### Luồng trạng thái
