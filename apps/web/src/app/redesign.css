@@ -770,3 +770,115 @@ html{scroll-padding-top:calc(82px + 18px)}
  .home-contact{padding-block:65px}
  .enjoy-contact-form{gap:16px}
 }
+
+
+/* Sprint 10 — Minimal Editorial Fashion. Homepage only; /shop stays a regular catalog. */
+.home-products .section-heading{margin-bottom:clamp(30px,4vw,50px)}
+.latest-editorial-grid{
+ display:grid;grid-template-columns:minmax(0,1.26fr) repeat(2,minmax(0,1fr));
+ gap:clamp(12px,1.45vw,20px);align-items:stretch;min-width:0
+}
+.latest-editorial-item{
+ position:relative;display:flex;flex-direction:column;min-width:0;
+ text-decoration:none;color:var(--ink);outline-offset:5px
+}
+.latest-editorial-item:focus-visible{outline:3px solid #876b52}
+.latest-editorial-photo{
+ position:relative;overflow:hidden;aspect-ratio:1.06 / 1;
+ background:#e8e7e0;isolation:isolate
+}
+.latest-editorial-item:nth-child(3n) .latest-editorial-photo{background:#e9e3db}
+.latest-editorial-item:nth-child(3n + 2) .latest-editorial-photo{background:#e3e9e2}
+.latest-editorial-image{
+ object-fit:contain;object-position:center;
+ padding:clamp(10px,1.2vw,19px);
+ transition:transform .5s cubic-bezier(.2,.75,.3,1)
+}
+.latest-editorial-placeholder{
+ display:flex;align-items:center;justify-content:center;flex-direction:column;
+ position:absolute;inset:0;gap:8px;background:#e8e6de;color:#65716b
+}
+.latest-editorial-placeholder span{font:italic clamp(20px,2.7vw,42px)/1.1 var(--serif)}
+.latest-editorial-placeholder small{font-size:9px;letter-spacing:.2em}
+.latest-editorial-sold-out{
+ position:absolute;top:14px;left:14px;padding:8px 10px;
+ background:rgba(249,247,243,.94);color:#3b443d;font-weight:700;
+ font-size:10px;letter-spacing:.08em;z-index:2
+}
+.latest-editorial-info{
+ display:flex;align-items:flex-start;justify-content:space-between;
+ gap:12px;padding:16px 0 5px;min-width:0
+}
+.latest-editorial-copy{display:flex;flex-direction:column;gap:7px;min-width:0;flex:1}
+.latest-editorial-copy h3{
+ font:normal clamp(16px,1.55vw,22px)/1.3 var(--serif);
+ letter-spacing:-.025em;margin:0;
+ display:-webkit-box;-webkit-line-clamp:2;line-clamp:2;-webkit-box-orient:vertical;
+ overflow:hidden;overflow-wrap:anywhere
+}
+.latest-editorial-price{font-size:12px;font-weight:600;letter-spacing:.015em;white-space:nowrap}
+.latest-editorial-arrow{flex:0 0 auto;margin-top:3px;color:#738172;transition:transform .25s ease}
+.latest-editorial-hero{grid-row:span 2}
+.latest-editorial-hero .latest-editorial-photo{
+ flex:1;min-height:590px;aspect-ratio:auto;background:#e1e7df
+}
+.latest-editorial-hero .latest-editorial-image{
+ padding:clamp(20px,3vw,45px) clamp(18px,2vw,32px) 112px;
+ object-position:center 45%
+}
+.latest-editorial-photo-index{
+ position:absolute;top:24px;left:24px;z-index:2;
+ font-size:10px;letter-spacing:.15em;font-weight:700;color:#3d5948
+}
+.latest-editorial-hero .latest-editorial-info{
+ position:absolute;bottom:0;left:0;right:0;
+ align-items:flex-end;z-index:1;padding:78px clamp(19px,2.6vw,38px) 26px;
+ background:linear-gradient(0deg,rgba(26,43,33,.89),rgba(26,43,33,.35) 65%,transparent);
+ color:#fff
+}
+.latest-editorial-hero .latest-editorial-copy h3{font-size:clamp(27px,2.8vw,42px);line-height:1.15}
+.latest-editorial-hero .latest-editorial-price{font-size:15px}
+.latest-editorial-hero .latest-editorial-arrow{color:#fff}
+.latest-editorial-hero .latest-editorial-sold-out{top:50px}
+.latest-editorial-count-1{grid-template-columns:minmax(0,560px)}
+.latest-editorial-count-2{grid-template-columns:minmax(0,1.2fr) minmax(0,1fr)}
+.latest-editorial-count-2 .latest-editorial-hero{grid-row:auto}
+.latest-editorial-count-3,.latest-editorial-count-4{grid-template-columns:repeat(2,minmax(0,1fr))}
+.latest-editorial-count-3 .latest-editorial-hero,.latest-editorial-count-4 .latest-editorial-hero{grid-row:span 2}
+@media(hover:hover) and (pointer:fine){
+ .latest-editorial-item:hover .latest-editorial-image{transform:scale(1.035)}
+ .latest-editorial-item:hover .latest-editorial-arrow{transform:translate(3px,-3px)}
+}
+@media(max-width:1023px){
+ .latest-editorial-grid,.latest-editorial-count-1,.latest-editorial-count-2,
+ .latest-editorial-count-3,.latest-editorial-count-4{
+  grid-template-columns:repeat(2,minmax(0,1fr))
+ }
+ .latest-editorial-hero,.latest-editorial-count-2 .latest-editorial-hero,
+ .latest-editorial-count-3 .latest-editorial-hero,.latest-editorial-count-4 .latest-editorial-hero{
+  grid-column:1/-1;grid-row:auto
+ }
+ .latest-editorial-hero .latest-editorial-photo{min-height:clamp(390px,55vw,560px)}
+ .latest-editorial-photo{aspect-ratio:4 / 5}
+ .latest-editorial-hero .latest-editorial-image{padding-bottom:105px}
+}
+@media(max-width:600px){
+ .home-products .section-heading{margin-bottom:25px}
+ .latest-editorial-grid{gap:23px 12px}
+ .latest-editorial-hero .latest-editorial-photo{min-height:clamp(350px,108vw,480px)}
+ .latest-editorial-hero .latest-editorial-info{padding:74px 20px 22px}
+ .latest-editorial-hero .latest-editorial-copy h3{font-size:clamp(26px,7vw,35px)}
+ .latest-editorial-photo-index{top:18px;left:17px}
+ .latest-editorial-info{padding-top:11px;gap:4px}
+ .latest-editorial-copy h3{font-size:clamp(14px,3.9vw,18px)}
+ .latest-editorial-price{font-size:11px}
+ .latest-editorial-arrow{width:15px;height:15px}
+ .latest-editorial-sold-out{top:8px;left:8px;font-size:9px;padding:6px 7px}
+ .latest-editorial-image{padding:7px}
+ .latest-editorial-hero .latest-editorial-image{padding:22px 12px 105px}
+}
+@media(prefers-reduced-motion:reduce){
+ .latest-editorial-image,.latest-editorial-arrow{transition:none!important}
+ .latest-editorial-item:hover .latest-editorial-image,
+ .latest-editorial-item:hover .latest-editorial-arrow{transform:none!important}
+}
