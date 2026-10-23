@@ -67,8 +67,16 @@ check(detail.status===200&&detail.json.colors?.find(x=>x.name==="Kem")?.model_ur
  "Public product detail lost model URL");
 const model=await fetch(origin+good.json.model_url);
 const modelBytes=Buffer.from(await model.arrayBuffer());
-check(model.status===200&&model.headers.get("content-type")==="model/gltf-binary"&&
- modelBytes.subarray(0,4).toString()==="glTF","Model proxy does not serve binary GLB");
+if(model.status!==200||model.headers.get("content-type")!=="model/gltf-binary"||
+ modelBytes.subarray(0,4).toString()!=="glTF"){
+ const direct=await fetch("http://127.0.0.1:8081/api/v1/models/"+good.json.model_url.split("/").pop());
+ console.error("3D file diagnostic",{
+  url:good.json.model_url,webStatus:model.status,webContentType:model.headers.get("content-type"),
+  webFirstBytes:modelBytes.subarray(0,12).toString(),
+  apiStatus:direct.status,apiContentType:direct.headers.get("content-type")
+ });
+ throw Error("Model proxy does not serve binary GLB");
+}
 const rejected=await fetch(origin+"/models/../../etc/passwd");
 check(rejected.status!==200,"Model router accepted unsafe path");
 const unlinked=await api("admin/products/"+productId+"/models",{method:"DELETE",cookie,body:{color:"Kem"}});
