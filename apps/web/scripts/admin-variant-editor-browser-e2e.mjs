@@ -119,6 +119,23 @@ try{
  await until('!!document.querySelector("dialog.admin-modal[open] .sprint7-form")',"staff creation modal");
  await run('document.querySelector("dialog.admin-modal[open] .admin-modal-close").click()');
  await until('document.querySelectorAll("dialog.admin-modal[open]").length===0',"staff form dismissal");
+ // New Journal articles use a fully sized editor dialog instead of navigating
+ // away from the management list.
+ await call("Page.navigate",{url:browserOrigin+"/admin/blog"});
+ await until('document.querySelector(".cms-primary-action")!==null',"Journal dashboard");
+ const blogOpened=await run('(()=>{const b=[...document.querySelectorAll("button")].find(x=>x.textContent.includes("Viết bài mới"));if(!b)return false;b.click();return true})()');
+ assert(blogOpened,"Cannot open Journal creation modal");
+ await until('!!document.querySelector("dialog.admin-modal[open] .cms-page")',"Journal rich-text editor modal");
+ await run('document.querySelector("dialog.admin-modal[open] .admin-modal-close").click()');
+ await until('document.querySelectorAll("dialog.admin-modal[open]").length===0',"Journal modal close");
+ // Procurement forms must be actionable from large popups as well.
+ await call("Page.navigate",{url:browserOrigin+"/admin/warehouse"});
+ await until('document.querySelector(".admin-toolbar button")!==null',"warehouse page");
+ const supplierOpened=await run('(()=>{const b=[...document.querySelectorAll("button")].find(x=>x.textContent.trim()==="+ Nhà cung cấp");if(!b)return false;b.click();return true})()');
+ assert(supplierOpened,"Warehouse supplier modal opener missing");
+ await until('!!document.querySelector("dialog.admin-modal[open] form.warehouse-form")',"supplier form modal");
+ await run('document.querySelector("dialog.admin-modal[open] .admin-modal-close").click()');
+ await until('document.querySelectorAll("dialog.admin-modal[open]").length===0',"supplier modal dismisses");
  console.log("ADMIN MODAL/TOAST CHROME E2E PASSED: nested edit, success toast, product add, Escape, inventory modal and staff modal.");
  console.log("Admin variant browser E2E PASSED: edit stays open, no autosave, deliberate Save updates PostgreSQL.");
 }finally{cleanup()}
