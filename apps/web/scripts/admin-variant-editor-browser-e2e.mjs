@@ -56,7 +56,7 @@ ws.addEventListener("message",ev=>{
 });
 function call(method,params={}){return new Promise((ok,bad)=>{const seq=++id;pending.set(seq,{ok,bad});ws.send(JSON.stringify({id:seq,method,params}))})}
 async function run(js){const r=await call("Runtime.evaluate",{expression:js,returnByValue:true,awaitPromise:true});if(r.exceptionDetails)throw Error("Browser JS exception: "+JSON.stringify(r.exceptionDetails));return r.result.value}
-async function until(js,label,seconds=30){const end=Date.now()+seconds*1000;while(Date.now()<end){if(await run(js))return;await delay(300)}throw Error("Browser condition not met: "+label)}
+async function until(js,label,seconds=30){const end=Date.now()+seconds*1000;while(Date.now()<end){if(await run(js))return;await delay(300)}const debug=await run('({path:location.pathname,heading:document.querySelector("h1")?.textContent,modalCount:document.querySelectorAll("dialog.admin-modal[open]").length,body:document.body?.innerText?.slice(0,450)})()');throw Error("Browser condition not met: "+label+" "+JSON.stringify(debug))}
 try{
  await call("Page.enable");await call("Runtime.enable");await call("Network.enable");
  const [cn,cv]=cookie.split("=");
@@ -115,6 +115,8 @@ try{
  // Create and password-reset staff forms are no longer permanent inline forms.
  await call("Page.navigate",{url:browserOrigin+"/admin/staff"});
  await until('location.pathname==="/admin/staff"&&[...document.querySelectorAll(".admin-toolbar button")].some(x=>x.textContent.includes("Thêm nhân viên"))',"staff management loaded");
+ await until('!document.body.innerText.includes("Đang tải...")',"staff React data hydration");
+ await delay(250);
  await run('(()=>{const b=[...document.querySelectorAll(".admin-toolbar button")].find(x=>x.textContent.includes("Thêm nhân viên"));if(b)b.click()})()');
  await until('!!document.querySelector("dialog.admin-modal[open] .sprint7-form")',"staff creation modal");
  await run('document.querySelector("dialog.admin-modal[open] .admin-modal-close").click()');
@@ -123,6 +125,7 @@ try{
  // away from the management list.
  await call("Page.navigate",{url:browserOrigin+"/admin/blog"});
  await until('location.pathname==="/admin/blog"&&[...document.querySelectorAll("button")].some(x=>x.textContent.includes("Viết bài mới"))',"Journal dashboard");
+ await until('!document.body.innerText.includes("Đang tải bài viết")',"Journal React data hydration");
  const blogOpened=await run('(()=>{const b=[...document.querySelectorAll("button")].find(x=>x.textContent.includes("Viết bài mới"));if(!b)return false;b.click();return true})()');
  assert(blogOpened,"Cannot open Journal creation modal");
  await until('!!document.querySelector("dialog.admin-modal[open] .cms-page")',"Journal rich-text editor modal");
@@ -131,6 +134,7 @@ try{
  // Procurement forms must be actionable from large popups as well.
  await call("Page.navigate",{url:browserOrigin+"/admin/warehouse"});
  await until('location.pathname==="/admin/warehouse"&&[...document.querySelectorAll("button")].some(x=>x.textContent.trim()==="+ Nhà cung cấp")',"warehouse page");
+ await until('!document.body.innerText.includes("Đang tải phiếu")',"warehouse React data hydration");
  const supplierOpened=await run('(()=>{const b=[...document.querySelectorAll("button")].find(x=>x.textContent.trim()==="+ Nhà cung cấp");if(!b)return false;b.click();return true})()');
  assert(supplierOpened,"Warehouse supplier modal opener missing");
  await until('!!document.querySelector("dialog.admin-modal[open] form.warehouse-form")',"supplier form modal");
