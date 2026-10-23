@@ -70,3 +70,5 @@
 .stock-waitlist-card button:disabled{opacity:.5}
 @media(max-width:900px){.warehouse-grid{grid-template-columns:1fr}}
 @media(max-width:500px){.warehouse-fields{grid-template-columns:1fr}}
+
+.warehouse-ai-answer{background:#f1f5ee;border:1px solid #c3d3c1;padding:20px;white-space:pre-wrap;color:#2e4c36;font-size:14px;line-height:1.8;overflow-wrap:anywhere}
