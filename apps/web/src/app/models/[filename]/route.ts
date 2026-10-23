@@ -1,6 +1,6 @@
 import {NextResponse} from "next/server";
 const base=process.env.API_INTERNAL_URL??"http://localhost:8081";
-const filenamePattern=/^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}\.glb$/;
+const filenamePattern=/^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}\.glb$/;
 export async function GET(_request:Request,{params}:{params:Promise<{filename:string}>}){
  const {filename}=await params;
  if(!filenamePattern.test(filename))return new NextResponse(null,{status:404});
