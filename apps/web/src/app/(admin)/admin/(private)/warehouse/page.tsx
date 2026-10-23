@@ -1,6 +1,8 @@
 "use client";
 import {useEffect,useRef,useState,type FormEvent} from "react";
 import Link from "next/link";
+import {AdminModal} from "@/components/admin/admin-modal";
+import {AdminFeedback} from "@/components/admin/admin-toast";
 import {adminAction,moneyVND,useAdminData} from "@/components/admin/admin-data";
 
 type Supplier={id:string;name:string;contact:string;lead_days:number;active:boolean};
@@ -14,6 +16,8 @@ export default function WarehouseOperations(){
  const suppliers=useAdminData<{items:Supplier[]}>("admin/warehouse/suppliers");
  const inventory=useAdminData<{items:Stock[]}>("admin/inventory");
  const purchases=useAdminData<{items:Purchase[]}>("admin/warehouse/purchases");
+ const [supplierOpen,setSupplierOpen]=useState(false);
+ const [purchaseOpen,setPurchaseOpen]=useState(false);
  const [supplierName,setSupplierName]=useState("");
  const [supplierContact,setSupplierContact]=useState("");
  const [leadDays,setLeadDays]=useState(7);
@@ -43,7 +47,7 @@ export default function WarehouseOperations(){
  },[chosen,purchases.data]);
  async function createSupplier(e:FormEvent){
   e.preventDefault();setWorking(true);setFeedback("");
-  try{await adminAction("admin/warehouse/suppliers","POST",{name:supplierName,contact:supplierContact,lead_days:leadDays});setSupplierName("");setSupplierContact("");await suppliers.reload();setFeedback("Đã thêm nhà cung cấp.")}
+  try{await adminAction("admin/warehouse/suppliers","POST",{name:supplierName,contact:supplierContact,lead_days:leadDays});setSupplierName("");setSupplierContact("");await suppliers.reload();setSupplierOpen(false);setFeedback("Đã thêm nhà cung cấp.")}
   catch(err){setFeedback(err instanceof Error?err.message:"Không thể thêm nhà cung cấp.")}
   finally{setWorking(false)}
  }
@@ -63,7 +67,7 @@ export default function WarehouseOperations(){
     supplier_id:selectedSupplier,expected_date:expected,note,
     items:lines.map(({variant_id,quantity,unit_cost_vnd})=>({variant_id,quantity,unit_cost_vnd}))
    });
-   setLines([]);setExpected("");setNote("");await purchases.reload();setChosen(result.id);
+   setLines([]);setExpected("");setNote("");await purchases.reload();setPurchaseOpen(false);setChosen(result.id);
    setFeedback("Đã tạo phiếu "+result.po_no+". Hàng chưa được cộng tồn cho đến khi nhận thực tế.")
   }catch(err){setFeedback(err instanceof Error?err.message:"Không tạo được phiếu đặt nhập.")}
   finally{setWorking(false)}
@@ -100,19 +104,19 @@ export default function WarehouseOperations(){
  return <><span className="eyebrow">SPRINT 9 / NGHIỆP VỤ KHO THỜI TRANG</span><h1>Nhập hàng & nhà cung cấp</h1>
  <p className="admin-subtitle">Tạo đơn đặt nhập, nhận theo từng SKU/màu/size, phân loại hàng đạt và hàng cách ly. Chỉ hàng đã nhận thực tế mới được cộng kho.</p>
  <div className="admin-toolbar"><button type="button" onClick={()=>{void suppliers.reload();void purchases.reload();void inventory.reload()}}>Làm mới dữ liệu</button><Link href="/admin/inventory">Tồn kho chi tiết ↗</Link><Link href="/admin/warehouse/insights">Phân tích & danh sách chờ ↗</Link></div>
- {feedback&&<p className="admin-notice" role="status">{feedback}</p>}
- {(suppliers.error||purchases.error||inventory.error)&&<p role="alert" className="admin-error">{suppliers.error||purchases.error||inventory.error}</p>}
+ <AdminFeedback message={feedback} error={suppliers.error||purchases.error||inventory.error}/>
+ <div className="admin-toolbar"><button type="button" onClick={()=>setSupplierOpen(true)}>+ Nhà cung cấp</button><button type="button" className="button-dark" onClick={()=>setPurchaseOpen(true)}>+ Lập phiếu nhập</button></div>
  <div className="warehouse-grid">
   <section className="admin-surface"><h2>Nhà cung cấp</h2>
-   <form onSubmit={e=>void createSupplier(e)} className="warehouse-form">
+   {supplierOpen&&<AdminModal title="Thêm nhà cung cấp" subtitle="Lưu thông tin và thời gian giao hàng dự kiến." onClose={()=>!working&&setSupplierOpen(false)} busy={working}><form onSubmit={e=>void createSupplier(e)} className="warehouse-form">
     <label>Tên nhà cung cấp<input required minLength={2} maxLength={120} value={supplierName} onChange={e=>setSupplierName(e.target.value)} placeholder="Ví dụ: Xưởng may A"/></label>
     <label>Liên hệ (nội bộ)<input maxLength={150} value={supplierContact} onChange={e=>setSupplierContact(e.target.value)} placeholder="Số điện thoại hoặc email"/></label>
     <label>Số ngày nhập hàng dự kiến<input required type="number" min={1} max={365} value={leadDays} onChange={e=>setLeadDays(Number(e.target.value))}/></label>
     <button className="button-dark" disabled={working} type="submit">Lưu nhà cung cấp</button>
-   </form>
+   </form></AdminModal>}
    <div className="warehouse-supplier-list">{suppliers.data?.items.map(s=><div key={s.id}><strong>{s.name}</strong><small>Nhập hàng khoảng {s.lead_days} ngày</small></div>)}</div>
   </section>
-  <section className="admin-surface"><h2>Lập phiếu đặt nhập</h2>
+  {purchaseOpen&&<AdminModal title="Lập phiếu đặt nhập" subtitle="Chọn nhà cung cấp, nhiều biến thể và giá vốn từng SKU." onClose={()=>!working&&setPurchaseOpen(false)} busy={working} wide><section className="admin-surface"><h2>Lập phiếu đặt nhập</h2>
    <form className="warehouse-form" onSubmit={e=>void createPurchase(e)}>
     <label>Nhà cung cấp<select required value={selectedSupplier} onChange={e=>setSelectedSupplier(e.target.value)}><option value="">Chọn nhà cung cấp</option>{suppliers.data?.items.filter(s=>s.active).map(s=><option value={s.id} key={s.id}>{s.name}</option>)}</select></label>
     <label>Ngày dự kiến nhận hàng<input type="date" value={expected} onChange={e=>setExpected(e.target.value)}/></label>
@@ -123,13 +127,13 @@ export default function WarehouseOperations(){
     <label>Ghi chú<input maxLength={300} value={note} onChange={e=>setNote(e.target.value)}/></label>
     <button className="button-dark" type="submit" disabled={!selectedSupplier||!lines.length||working}>Tạo phiếu đặt nhập</button>
    </form>
-  </section>
+  </section></AdminModal>}
  </div>
  <section className="admin-surface"><h2>Danh sách phiếu nhập</h2>
  {purchases.loading?<p>Đang tải phiếu...</p>:!purchases.data?.items.length?<p>Chưa có phiếu nhập.</p>:
  <div className="admin-table-wrap"><table className="admin-table"><thead><tr><th>Mã phiếu</th><th>Nhà cung cấp</th><th>Tiến độ</th><th>Nhận hàng</th></tr></thead><tbody>{purchases.data.items.map(p=><tr key={p.id}><td><strong>{p.po_no}</strong><small>{p.expected_date&&"Dự kiến: "+p.expected_date}</small></td><td>{p.supplier}</td><td>{p.received}/{p.quantity} · {labels[p.status]||p.status}</td><td><button type="button" onClick={()=>{if(chosen===p.id){void purchases.reload()}else{setChosen(p.id);setDetail(null);key.current=null}}}>{chosen===p.id?"Đang chọn":"Xem / nhận"}</button></td></tr>)}</tbody></table></div>}
  </section>
- {chosen&&<section className="admin-surface">
+ {chosen&&<AdminModal title={"Chi tiết phiếu nhập"} subtitle="Xác nhận số lượng thực nhận và cách ly hàng lỗi." onClose={()=>!working&&setChosen("")} busy={working} wide><section className="admin-surface">
   {!detail?<p>Đang tải chi tiết phiếu...</p>:<>
    <h2>Nhận hàng — {detail.po_no}</h2>
    <p className="admin-subtitle">{detail.supplier} · {labels[detail.status]||detail.status}. Số hàng lỗi sẽ vào khu cách ly, không thể bán.</p>
@@ -140,7 +144,7 @@ export default function WarehouseOperations(){
     {detail.status==="ORDERED"&&<button type="button" disabled={working} onClick={()=>void cancelPurchase()}>Hủy phiếu chưa nhận</button>}
    </div>}
   </>}
- </section>}
+ </section></AdminModal>}
  <p className="admin-help">Lưu ý: chưa tích hợp gửi đơn mua tới nhà cung cấp; phiếu này là chứng từ nội bộ. Giá vốn được ghi theo dòng đặt nhập để làm nền tảng tính lợi nhuận sau này.</p>
  </>;
 }
