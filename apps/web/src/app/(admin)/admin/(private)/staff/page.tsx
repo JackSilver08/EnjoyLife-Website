@@ -12,7 +12,7 @@ export default function StaffPage(){
  const [busy,setBusy]=useState("");const[notice,setNotice]=useState("");const[failed,setFailed]=useState("");
  async function create(e:FormEvent<HTMLFormElement>){
   e.preventDefault();setBusy("create");setFailed("");setNotice("");
-  try{await adminAction("admin/staff","POST",{name,email,password});setNotice("Đã tạo tài khoản nhân viên. Hãy cấp mật khẩu qua kênh riêng an toàn.");setName("");setEmail("");setPassword("");await reload()}
+  try{await adminAction("admin/staff","POST",{name,email,password});setCreating(false);setNotice("Đã tạo tài khoản nhân viên. Hãy cấp mật khẩu qua kênh riêng an toàn.");setName("");setEmail("");setPassword("");await reload()}
   catch(err){setFailed(err instanceof Error?err.message:"Không tạo được tài khoản.")}
   finally{setBusy("")}
  }
