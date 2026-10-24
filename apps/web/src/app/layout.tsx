@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { CartProvider } from "@/components/cart-provider";
+import { AppDialogProvider } from "@/components/app-dialog";
 import { canonical,getSiteUrl,mayIndex } from "@/lib/site-url";
 import "./globals.css";
 import "./redesign.css";
@@ -13,5 +14,5 @@ export const metadata: Metadata = {
   robots: {index: mayIndex(),follow: mayIndex()},
 };
 export default function RootLayout({ children }: Readonly<{children: React.ReactNode}>) {
-  return <html lang="vi"><body><CartProvider>{children}</CartProvider></body></html>;
+  return <html lang="vi"><body><AppDialogProvider><CartProvider>{children}</CartProvider></AppDialogProvider></body></html>;
 }

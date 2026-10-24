@@ -4,12 +4,14 @@ import Link from "next/link";
 import {adminAction,moneyVND,useAdminData} from "@/components/admin/admin-data";
 import {AdminModal} from "@/components/admin/admin-modal";
 import {AdminFeedback} from "@/components/admin/admin-toast";
+import {useAppDialog} from "@/components/app-dialog";
 import {ColorPicker} from "@/components/admin/color-picker";
 import {SizeMultiSelect} from "@/components/admin/size-multi-select";
 import {visualColor} from "@/lib/product-colors";
 type Variant={id:string;sku:string;color:string;size:string;price_vnd:number;active:boolean;on_hand:number;reserved:number;available:number;low_stock_threshold:number;color_hex:string;color_group:string};
 const blank={sku:"",color:"",color_hex:"",color_group:"",size:"M",sizes:["M"],price_vnd:0,opening_stock:0};
 export function VariantManager({productId,onChanged}:{productId:string;onChanged?:()=>void}){
+ const {confirm}=useAppDialog();
  const {data,error,loading,reload}=useAdminData<{items:Variant[]}>("admin/products/"+productId+"/variants");
  const [form,setForm]=useState(blank);
  const [adding,setAdding]=useState(false);
@@ -51,7 +53,7 @@ export function VariantManager({productId,onChanged}:{productId:string;onChanged
   finally{setBusy(false)}
  }
  async function toggle(v:Variant){
-  if(!window.confirm((v.active?"Ngừng bán ":"Mở bán ")+v.sku+"?"))return;
+  if(!await confirm({title:v.active?"Ngừng bán biến thể?":"Mở bán biến thể?",message:(v.active?"Ngừng bán ":"Mở bán ")+v.sku+"?",confirmLabel:v.active?"Ngừng bán":"Mở bán",cancelLabel:"Hủy",danger:v.active}))return;
   setBusy(true);setMessage("");
   try{await adminAction("admin/variants/"+v.id,"PATCH",{price_vnd:v.price_vnd,active:!v.active});
    setMessage("Đã cập nhật trạng thái "+v.sku+".");await reload();

@@ -4,12 +4,14 @@ import Link from "next/link";
 import {adminAction,moneyVND,useAdminData} from "@/components/admin/admin-data";
 import {AdminModal} from "@/components/admin/admin-modal";
 import {AdminFeedback} from "@/components/admin/admin-toast";
+import {useAppDialog} from "@/components/app-dialog";
 
 type Insight={sku:string;name:string;color:string;size:string;available:number;threshold:number;sold_30d:number;daily_average:number;lead_days_estimate:number;days_cover:number|null;reorder_point:number;suggested_order:number;status:string};
 type Waiting={id:string;name:string;color:string;size:string;email:string;status:string;created_at:string};
 type Stock={variant_id:string;sku:string;name:string;color:string;size:string;unavailable:number};
 const label:Record<string,string>={OUT_OF_STOCK:"Hết hàng",LOW_STOCK:"Sắp hết",NO_SALES_30D:"Chưa bán 30 ngày",NORMAL:"Bình thường"};
 export default function WarehouseInsights(){
+ const {confirm}=useAppDialog();
  const insights=useAdminData<{items:Insight[];method:string}>("admin/warehouse/insights");
  const waiting=useAdminData<{items:Waiting[]}>("admin/warehouse/waitlist");
  const stock=useAdminData<{items:Stock[]}>("admin/inventory");
@@ -34,7 +36,7 @@ export default function WarehouseInsights(){
  const entries=(insights.data?.items??[]).filter(item=>filter==="ALL"||(filter==="ATTENTION"?(item.status==="LOW_STOCK"||item.status==="OUT_OF_STOCK"):item.status===filter));
  async function qc(){
   if(!chosen)return;
-  if(action==="SCRAP"&&!window.confirm("Xác nhận loại bỏ hàng lỗi khỏi tồn thực tế?"))return;
+   if(action==="SCRAP"&&!await confirm({title:"Loại bỏ hàng lỗi?",message:"Số lượng này sẽ được ghi nhận là hàng lỗi và trừ khỏi tồn thực tế.",confirmLabel:"Xác nhận loại bỏ",cancelLabel:"Hủy",danger:true}))return;
   setBusy(true);setMessage("");
   try{
    await adminAction("admin/warehouse/qc/"+chosen,"POST",{action,quantity:Number(quantity),reason});

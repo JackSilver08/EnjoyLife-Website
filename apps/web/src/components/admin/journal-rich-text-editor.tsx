@@ -8,9 +8,11 @@ import {Bold,Italic,Underline,Strikethrough,Heading2,Heading3,List,ListOrdered,Q
   ImagePlus,Undo2,Redo2,Minus,Unlink} from "lucide-react";
 import {isApprovedLink,isApprovedUrl,normalizeBlogDocument} from "@/lib/blog-types";
 import {MediaPicker} from "@/components/admin/media-picker";
+import {useAppDialog} from "@/components/app-dialog";
 
 type Props={initial:JSONContent;onChange:(data:JSONContent)=>void;disabled?:boolean};
 export function JournalRichTextEditor({initial,onChange,disabled}:Props){
+  const {prompt}=useAppDialog();
   const [imageMode,setImageMode]=useState(false);
   const [imageURL,setImageURL]=useState("");
   const [imageAlt,setImageAlt]=useState("");
@@ -30,10 +32,10 @@ export function JournalRichTextEditor({initial,onChange,disabled}:Props){
     editorProps:{attributes:{class:"cms-prosemirror",role:"textbox","aria-label":"Nội dung bài viết","aria-multiline":"true"}},
     onUpdate:({editor:instance})=>onChange(normalizeBlogDocument(instance.getJSON())),
   });
-  function editLink(){
+  async function editLink(){
     if(!editor)return;
     const current=String(editor.getAttributes("link").href??"");
-    const value=window.prompt("Dán URL https:// hoặc đường dẫn nội bộ /...",current);
+    const value=await prompt({title:"Chèn liên kết",message:"Dán URL HTTPS hoặc đường dẫn nội bộ bắt đầu bằng /.",defaultValue:current,placeholder:"https://..."});
     if(value===null)return;
     const trimmed=value.trim();
     if(!trimmed){editor.chain().focus().unsetLink().run();setMessage("");return;}

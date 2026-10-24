@@ -2,9 +2,11 @@
 import {useState,type FormEvent} from "react";
 import {AdminModal} from "@/components/admin/admin-modal";
 import {AdminFeedback} from "@/components/admin/admin-toast";
+import {useAppDialog} from "@/components/app-dialog";
 import {adminAction,useAdminData} from "@/components/admin/admin-data";
 type Staff={id:string;email:string;name:string;disabled:boolean;created_at:string};
 export default function StaffPage(){
+ const {confirm}=useAppDialog();
  const {data,error,loading,reload}=useAdminData<{items:Staff[]}>("admin/staff");
  const [name,setName]=useState("");const[email,setEmail]=useState("");const[password,setPassword]=useState("");
  const [creating,setCreating]=useState(false);
@@ -17,7 +19,7 @@ export default function StaffPage(){
   finally{setBusy("")}
  }
  async function toggle(s:Staff){
-  if(!window.confirm((s.disabled?"Mở khóa":"Khóa")+" tài khoản "+s.email+"?"+(s.disabled?"":" Các phiên đăng nhập sẽ bị thu hồi.")))return;
+   if(!await confirm({title:s.disabled?"Mở khóa tài khoản?":"Khóa tài khoản?",message:(s.disabled?"Mở khóa":"Khóa")+" tài khoản "+s.email+"?"+(s.disabled?"":" Các phiên đăng nhập sẽ bị thu hồi."),confirmLabel:s.disabled?"Mở khóa":"Khóa tài khoản",cancelLabel:"Hủy",danger:!s.disabled}))return;
   setBusy(s.id);setFailed("");setNotice("");
   try{await adminAction("admin/staff/"+s.id,"PATCH",{disabled:!s.disabled});setNotice("Đã "+(s.disabled?"mở khóa":"khóa")+" "+s.email);await reload()}
   catch(err){setFailed(err instanceof Error?err.message:"Không thể cập nhật tài khoản.")}

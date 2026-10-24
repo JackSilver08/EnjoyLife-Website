@@ -3,6 +3,7 @@ import {useState} from "react";
 import {adminAction,moneyVND,useAdminData} from "@/components/admin/admin-data";
 import {useAdminRole} from "@/components/admin/admin-shell";
 import {AdminFeedback,useAdminToast} from "@/components/admin/admin-toast";
+import {useAppDialog} from "@/components/app-dialog";
 
 type Order={order_no:string;customer_name:string;phone?:string;shipping_address?:string;status:string;payment_status:string;payment_method?:string;total_vnd:number;created_at:string};
 type RowResult={ok:boolean;message:string};
@@ -30,6 +31,7 @@ function nextStates(order:Order):string[]{
 export default function OrdersPage(){
  const role=useAdminRole();
  const notify=useAdminToast();
+ const {confirm}=useAppDialog();
  const {data,loading,error,reload}=useAdminData<{items:Order[]}>("admin/orders");
  const [filter,setFilter]=useState("ALL");
  const [working,setWorking]=useState("");
@@ -41,7 +43,7 @@ export default function OrdersPage(){
   if(!nextStates(order).includes(next)){
    setFeedback(f=>({...f,[order.order_no]:{ok:false,message:"Không thể chuyển tới trạng thái này. Hãy làm theo từng bước xử lý đơn."}}));return;
   }
-  if(next==="CANCELLED"&&!window.confirm("Hủy đơn "+order.order_no+" và trả lại số lượng đã giữ chỗ?"))return;
+  if(next==="CANCELLED"&&!await confirm({title:"Hủy đơn hàng?",message:"Đơn "+order.order_no+" sẽ bị hủy và số lượng đã giữ chỗ sẽ được trả lại kho.",confirmLabel:"Hủy đơn",cancelLabel:"Giữ đơn",danger:true}))return;
   setWorking(order.order_no);
   setFeedback(f=>({...f,[order.order_no]:{ok:true,message:"Đang cập nhật..."}}));
   try{
@@ -55,7 +57,7 @@ export default function OrdersPage(){
   }finally{setWorking("")}
  }
  async function paid(order:Order){
-  if(!window.confirm("Xác nhận đã thu đủ COD cho đơn "+order.order_no+"?"))return;
+  if(!await confirm({title:"Xác nhận đã thu COD?",message:"Bạn xác nhận đã thu đủ tiền COD cho đơn "+order.order_no+"?",confirmLabel:"Đã thu tiền",cancelLabel:"Chưa thu"}))return;
   setWorking(order.order_no);
   try{
    await adminAction("admin/orders/"+order.order_no+"/paid","POST");

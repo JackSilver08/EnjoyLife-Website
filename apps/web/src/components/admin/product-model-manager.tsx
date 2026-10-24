@@ -2,9 +2,11 @@
 import {useRef,useState} from "react";
 import {Box,UploadCloud,Trash2,CheckCircle2} from "lucide-react";
 import {useAdminData} from "@/components/admin/admin-data";
+import {useAppDialog} from "@/components/app-dialog";
 type ModelRecord={color:string;model_url:string};
 const limit=15*1024*1024;
 export function ProductModelManager({productId,colorVersion=0}:{productId:string;colorVersion?:number}){
+ const {confirm}=useAppDialog();
  const {data,error,loading,reload}=useAdminData<{items:ModelRecord[]}>("admin/products/"+productId+"/models");
  const [busy,setBusy]=useState(false),[message,setMessage]=useState("");
  const [chosen,setChosen]=useState("");
@@ -32,7 +34,7 @@ export function ProductModelManager({productId,colorVersion=0}:{productId:string
  }
  async function unlink(){
   if(!color||busy||!items.find(x=>x.color===color)?.model_url)return;
-  if(!window.confirm("Ngừng sử dụng mô hình 3D của màu "+color+"? Ảnh 2D và SKU vẫn giữ nguyên."))return;
+  if(!await confirm({title:"Gỡ mô hình 3D?",message:"Mô hình 3D của màu "+color+" sẽ bị gỡ; ảnh 2D và SKU vẫn giữ nguyên.",confirmLabel:"Gỡ mô hình",cancelLabel:"Giữ lại",danger:true}))return;
   setBusy(true);setMessage("");
   try{
    const res=await fetch("/api/store/admin/products/"+productId+"/models",{

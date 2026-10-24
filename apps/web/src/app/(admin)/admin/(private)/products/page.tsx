@@ -11,11 +11,13 @@ import {MediaPicker} from "@/components/admin/media-picker";
 import {AdminModal} from "@/components/admin/admin-modal";
 import {AdminFeedback} from "@/components/admin/admin-toast";
 import {adminAction,moneyVND,useAdminData} from "@/components/admin/admin-data";
+import {useAppDialog} from "@/components/app-dialog";
 type Product={id:string;slug:string;name:string;description:string;image_url:string;collection:string;category:string;published:boolean;price_vnd:number;available:number;sku:string};
 const toSlug=(value:string)=>value.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/đ/g,"d").replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,"").slice(0,100).replace(/-$/,"");
 const empty={name:"",slug:"",description:"",image_url:"",collection:"",category:"ao",sku:"",color:"",color_hex:"",color_group:"",size:"M",sizes:["M"],price_vnd:0,opening_stock:0,published:false};
 export default function Products(){
  const [trash,setTrash]=useState(false);
+ const {confirm}=useAppDialog();
  const [colorVersion,setColorVersion]=useState(0);
  const {data,loading,error,reload}=useAdminData<{items:Product[]}>("admin/products"+(trash?"?view=trash":""));
  const [adding,setAdding]=useState(false);const [form,setForm]=useState(empty);const [editing,setEditing]=useState<Product|null>(null);const [busy,setBusy]=useState(false);const [importing,setImporting]=useState(false);const [csvName,setCsvName]=useState("");const [csvRows,setCsvRows]=useState<ReturnType<typeof parseCSV>>([]);const [notice,setNotice]=useState("");const [search,setSearch]=useState("");const [slugCustom,setSlugCustom]=useState(false);
@@ -44,7 +46,7 @@ export default function Products(){
   catch(err){setNotice(err instanceof Error?err.message:"Không lưu được.")}finally{setBusy(false)}
  }
  async function archiveProduct(item:Product){
-  if(!window.confirm("Chuyển \""+item.name+"\" vào Thùng rác?\\nSản phẩm sẽ ẩn khỏi cửa hàng, nhưng lịch sử đơn hàng và kho vẫn được giữ. Bạn có thể khôi phục sau."))return;
+  if(!await confirm({title:"Chuyển sản phẩm vào thùng rác?",message:"\""+item.name+"\" sẽ ẩn khỏi cửa hàng; lịch sử đơn hàng và kho vẫn được giữ. Bạn có thể khôi phục sau.",confirmLabel:"Chuyển vào thùng rác",cancelLabel:"Giữ lại",danger:true}))return;
   setBusy(true);setNotice("");
   try{
    const response=await fetch("/api/store/admin/products/"+item.id,{method:"DELETE"});

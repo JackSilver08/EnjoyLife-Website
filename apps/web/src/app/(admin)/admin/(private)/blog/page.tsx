@@ -7,6 +7,7 @@ import {AdminModal} from "@/components/admin/admin-modal";
 import {AdminFeedback} from "@/components/admin/admin-toast";
 import {JournalArticleForm} from "@/components/admin/journal-article-form";
 import {useAdminData} from "@/components/admin/admin-data";
+import {useAppDialog} from "@/components/app-dialog";
 import {asSlug,type BlogArticle,type BlogCategory,type BlogTag,type BlogStatus} from "@/lib/blog-types";
 
 const statusLabel:{[key in BlogStatus]:string}={DRAFT:"Bản nháp",PUBLISHED:"Đã xuất bản"};
@@ -19,6 +20,7 @@ function EditorFromID({id,onSaved,onClose}:{id:string;onSaved:(published:boolean
  return <JournalArticleForm key={data.id} initial={data} onSaved={onSaved} onCancel={onClose}/>;
 }
 export default function AdminBlog(){
+ const {confirm}=useAppDialog();
  const [items,setItems]=useState<BlogArticle[]>([]);
  const [count,setCount]=useState(0);
  const [filter,setFilter]=useState<"ALL"|BlogStatus>("ALL");
@@ -56,7 +58,7 @@ export default function AdminBlog(){
  async function switchStatus(item:BlogArticle){
   const next=item.status==="DRAFT"?"PUBLISHED":"DRAFT";
   const msg=next==="PUBLISHED"?"Xuất bản bài \""+item.title+"\"?":"Gỡ xuất bản bài \""+item.title+"\"?";
-  if(!window.confirm(msg))return;
+  if(!await confirm({title:next==="PUBLISHED"?"Xuất bản bài viết?":"Đưa bài viết về bản nháp?",message:msg,confirmLabel:next==="PUBLISHED"?"Xuất bản":"Đưa về bản nháp",cancelLabel:"Hủy"}))return;
   setWorking(item.id);setError("");setMessage("");
   try{
    await journalApi.setStatus(item.id,next,item.version);
@@ -66,7 +68,7 @@ export default function AdminBlog(){
   finally{setWorking("")}
  }
  async function archive(item:BlogArticle){
-  if(!window.confirm("Lưu trữ bài \""+item.title+"\"? Bài sẽ không còn xuất hiện trong danh sách và slug vẫn được giữ."))return;
+  if(!await confirm({title:"Lưu trữ bài viết?",message:"\""+item.title+"\" sẽ không còn xuất hiện trong danh sách; slug vẫn được giữ.",confirmLabel:"Lưu trữ",cancelLabel:"Giữ lại",danger:true}))return;
   setWorking(item.id);setError("");setMessage("");
   try{await journalApi.archive(item.id,item.version);setMessage("Đã lưu trữ bài viết.");await reload();}
   catch(e){setError(e instanceof Error?e.message:"Không thể lưu trữ.");}

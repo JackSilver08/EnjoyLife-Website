@@ -129,3 +129,13 @@
  .admin-toast-stack{top:12px;right:12px;width:calc(100vw - 24px)}
 }
 @media(prefers-reduced-motion:reduce){.admin-toast{animation:none}}
+
+/* Shared, accessible confirmation/prompt dialog. Keeps destructive workflows
+   explicit without relying on browser-native alert/confirm/prompt chrome. */
+.app-dialog-backdrop{position:fixed;inset:0;z-index:2147483601;display:grid;place-items:center;padding:20px;background:rgba(24,31,25,.48);backdrop-filter:blur(5px);animation:app-dialog-fade .18s ease}
+.app-dialog{display:flex;width:min(480px,100%);background:#fffefa;border:1px solid #d9ddd5;border-radius:12px;box-shadow:0 24px 80px rgba(20,31,23,.28);padding:25px;gap:16px;animation:app-dialog-rise .2s ease;color:#29342b}
+.app-dialog-icon{display:grid;place-items:center;flex:0 0 42px;width:42px;height:42px;border-radius:50%;background:#e8f0e7;color:#45664d}.app-dialog-icon.is-danger{background:#f8e8df;color:#a34d36}
+.app-dialog-body{min-width:0;flex:1}.app-dialog-heading{display:flex;align-items:start;gap:15px}.app-dialog h2{font:normal 25px/1.2 var(--serif);margin:1px 0 10px;letter-spacing:-.02em}.app-dialog p{color:#6f786f;font-size:13px;line-height:1.65;margin:0 0 19px;white-space:pre-line}.app-dialog-close{margin-left:auto;display:grid;place-items:center;border:0;background:transparent;color:#788178;padding:2px;cursor:pointer}.app-dialog-close:hover{color:#29342b}.app-dialog-input{width:100%;min-height:44px;border:1px solid #cbd5ca;border-radius:5px;background:#fff;padding:11px 12px;font:13px var(--sans);outline:none;margin:-3px 0 18px}.app-dialog-input:focus{border-color:#55755b;box-shadow:0 0 0 3px #55755b22}.app-dialog-actions{display:flex;justify-content:flex-end;gap:9px}.app-dialog-actions button{min-height:40px;border-radius:5px;padding:9px 15px;font:600 12px var(--sans);cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:7px}.app-dialog-cancel{border:1px solid #d2d8d0;background:#fff;color:#59645a}.app-dialog-cancel:hover{background:#f3f5f1}.app-dialog-confirm{border:1px solid #304b37;background:#304b37;color:#fff}.app-dialog-confirm:hover{background:#41634a}.app-dialog-confirm.is-danger{border-color:#a84d38;background:#a84d38}.app-dialog-confirm.is-danger:hover{background:#873a2a}
+@keyframes app-dialog-fade{from{opacity:0}to{opacity:1}}@keyframes app-dialog-rise{from{opacity:0;transform:translateY(8px) scale(.98)}to{opacity:1;transform:translateY(0) scale(1)}}
+@media(max-width:480px){.app-dialog{padding:20px;gap:12px}.app-dialog-icon{flex-basis:36px;width:36px;height:36px}.app-dialog h2{font-size:22px}.app-dialog-actions{display:grid;grid-template-columns:1fr 1fr}.app-dialog-actions button{width:100%}}
+@media(prefers-reduced-motion:reduce){.app-dialog-backdrop,.app-dialog{animation:none}}

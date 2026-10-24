@@ -4,6 +4,7 @@ import {useRouter} from "next/navigation";
 import {ArrowUpRight,CheckCircle2,RefreshCw,ShieldCheck} from "lucide-react";
 import {PayOSQRCode} from "@/components/payos-qr-code";
 import {money} from "@/lib/format";
+import {useAppDialog} from "@/components/app-dialog";
 
 type Props={
  token:string;
@@ -24,6 +25,7 @@ function validQR(value:string):boolean{
 }
 export function PayOSPaymentPanel({token,initialPaymentStatus,initialCheckoutURL,initialQR,amountVND,initialGatewayStatus}:Props){
  const router=useRouter();
+ const {confirm}=useAppDialog();
  const [status,setStatus]=useState(initialPaymentStatus);
  const [url,setURL]=useState(officialURL(initialCheckoutURL)?initialCheckoutURL:"");
  const [qr,setQR]=useState(validQR(initialQR)?initialQR:"");
@@ -66,7 +68,7 @@ export function PayOSPaymentPanel({token,initialPaymentStatus,initialCheckoutURL
  },[status,review,failed,cancelled,token]);
 
  async function cancelOrder(){
-  if(!window.confirm("Hủy đơn thanh toán QR? Nếu payOS đã nhận tiền, đơn sẽ không thể hủy."))return;
+  if(!await confirm({title:"Hủy thanh toán QR?",message:"Nếu payOS đã nhận tiền, đơn sẽ không thể hủy.",confirmLabel:"Hủy đơn",cancelLabel:"Giữ đơn",danger:true}))return;
   setBusy(true);setError("");
   try{
    const res=await fetch("/api/store/orders/"+token+"/cancel-payment",{method:"POST"});
