@@ -85,7 +85,7 @@ func (s *cloudMediaStore) upload(ctx context.Context,filename,mime string,conten
  req,err:=http.NewRequestWithContext(ctx,http.MethodPost,s.objectURL(filename),bytes.NewReader(content))
  if err!=nil{return err}
  req.Header.Set("apikey",s.key)
- req.Header.Set("Authorization","Bearer "+s.key)
+ if strings.Count(s.key,".")==2{req.Header.Set("Authorization","Bearer "+s.key)}
  req.Header.Set("Content-Type",mime)
  req.Header.Set("x-upsert","false")
  resp,err:=s.client.Do(req)
@@ -102,7 +102,7 @@ func (s *cloudMediaStore) remove(filename string) {
  req,err:=http.NewRequestWithContext(ctx,http.MethodDelete,s.objectURL(filename),nil)
  if err!=nil{return}
  req.Header.Set("apikey",s.key)
- req.Header.Set("Authorization","Bearer "+s.key)
+ if strings.Count(s.key,".")==2{req.Header.Set("Authorization","Bearer "+s.key)}
  resp,err:=s.client.Do(req)
  if err==nil {io.Copy(io.Discard,io.LimitReader(resp.Body,1024));resp.Body.Close()}
 }
