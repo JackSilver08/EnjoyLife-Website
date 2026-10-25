@@ -73,7 +73,7 @@ export function MediaPicker({label="Ảnh",value,onSelect,onUpload,compact=false
      <img src={item.url} alt={item.original_name} loading="lazy"/>
      <span>{item.original_name}</span>
     </button>)}</div>}
-   <p className="media-picker-help"><ImagePlus size={15}/> JPG, PNG hoặc WebP; tối đa 8MB/ảnh. Lưu trên Docker volume riêng, không xóa khi restart.</p>
+   <p className="media-picker-help"><ImagePlus size={15}/> JPG, PNG hoặc WebP; tối đa 8MB/ảnh. Ảnh production lưu trên Supabase Storage.</p>
   </div>}
  </div>;
 }

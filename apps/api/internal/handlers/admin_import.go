@@ -37,13 +37,13 @@ func(a *App) adminImportProducts(c *gin.Context){
    if !importImageName.MatchString(row.ImageURL){
     c.JSON(400,gin.H{"error":"Tên file ảnh không hợp lệ. Hãy upload ảnh vào Media Manager trước.","row":index+1});return
    }
-   var filename string
-   err=tx.QueryRow(ctx,`SELECT filename FROM media_assets WHERE original_name=$1 ORDER BY created_at DESC,id DESC LIMIT 1`,row.ImageURL).Scan(&filename)
+   var filename,provider string
+   err=tx.QueryRow(ctx,`SELECT filename,storage_provider FROM media_assets WHERE original_name=$1 ORDER BY created_at DESC,id DESC LIMIT 1`,row.ImageURL).Scan(&filename,&provider)
    if errors.Is(err,pgx.ErrNoRows){
     c.JSON(400,gin.H{"error":"Chưa tìm thấy ảnh đã tải lên với tên file: "+row.ImageURL,"row":index+1});return
    }
    if err!=nil{serverError(c,err);return}
-   row.ImageURL="/media/"+filename
+   if provider=="supabase"{row.ImageURL=cloudMediaURL(filename)}else{row.ImageURL="/media/"+filename}
   }
   if !validProduct(*row)||seenSlug[row.Slug]||(row.SKU!=""&&seenSKU[row.SKU]){
    c.JSON(400,gin.H{"error":"Dòng import sai thông tin hoặc trùng slug/SKU.","row":index+1});return

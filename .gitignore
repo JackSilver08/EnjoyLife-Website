@@ -11,3 +11,5 @@
 *.log
 *.sqlite
 **/.turbo
+
+/backups/

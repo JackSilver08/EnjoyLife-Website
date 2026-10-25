@@ -62,7 +62,7 @@ export default function AdminMedia(){
   <input hidden multiple ref={picker} type="file" accept="image/jpeg,image/png,image/webp,.jpg,.jpeg,.png,.webp"
    onChange={e=>void receive(e.target.files)}/>
   <div className="cms-note">Có file ZIP ảnh? Chọn <strong>Tải ZIP ảnh sản phẩm</strong> để tải toàn bộ ảnh một lần, không cần giải nén. Sau đó qua <Link href="/admin/products">Sản phẩm → Nhập danh mục CSV</Link>. Tên file gốc sẽ được tự đối chiếu với cột <code>image_url</code>. Nếu thiếu ảnh, import sẽ báo rõ tên file còn thiếu.</div>
-  <div className="cms-note">Ảnh được lưu trên volume <code>media_data</code> của Docker, không lưu trực tiếp trong PostgreSQL. Không chạy <code>docker compose down -v</code>. Khi đưa lên server cần backup cả database lẫn media.</div>
+  <div className="cms-note">Ảnh mới được lưu trên Supabase Storage ở production; database lưu metadata. Giữ backup database và Storage; ảnh local cũ vẫn cần khôi phục riêng.</div>
   <AdminFeedback message={message} error={error}/>
   {loading?<p className="cms-loading">Đang tải thư viện...</p>:
   items.length===0?<div className="cms-empty"><Images size={44}/><h2>Chưa có hình ảnh.</h2><p>Chọn ảnh từ máy để bắt đầu tạo kho media thật.</p></div>:
