@@ -7,6 +7,9 @@ import { JournalGrid } from "@/components/journal-grid";
 import { fetchSiteContent } from "@/lib/site-content";
 import { getPublishedArticles } from "@/lib/journal-api";
 import { HomeCinematicMotion } from "@/components/home-cinematic-motion";
+import { HomeChapterNav } from "@/components/home-chapter-nav";
+import { HomeEditorialLookbook } from "@/components/home-editorial-lookbook";
+import "./home-editorial-ux.css";
 import "./home-cinematic.css";
 
 export default async function HomePage() {
@@ -16,9 +19,11 @@ export default async function HomePage() {
     fetchSiteContent(),
   ]);
 
+  const lookbookProducts = products.filter(product=>Boolean(product.image_url)).slice(0,3);
+
   return <div className="home-cinematic">
     <HomeCinematicMotion/>
-    <section className="hero-editorial" aria-label="Chiến dịch thời trang Enjoy Life">
+    <section id="home-top" className="hero-editorial" aria-label="Chiến dịch thời trang Enjoy Life">
       <div className="hero-photo" data-cinematic-hero-photo role="img" aria-label="Hình ảnh thời trang đường phố" style={content?.hero_image_url?{backgroundImage:`url("${content.hero_image_url.replace(/[\\"\\\\]/g,"")}")`}:undefined}/>
       <div className="hero-scrim"/>
       <div className="hero-cinematic-atmosphere" data-cinematic-hero-atmosphere aria-hidden="true"/>
@@ -29,7 +34,7 @@ export default async function HomePage() {
       </div>
       <div className="hero-content" data-cinematic-hero-copy>
         <p>{content?.hero_eyebrow??"PHONG CÁCH ĐƯỢC ĐỊNH NGHĨA BỞI BẠN"}</p>
-        <h1>{content?.hero_title??"Sống theo"}<br/><em>{content?.hero_emphasis??"nhịp riêng."}</em></h1>
+        <h1><span className="home-kinetic-line">{content?.hero_title??"Sống theo"}</span><br/><em className="home-kinetic-line">{content?.hero_emphasis??"nhịp riêng."}</em></h1>
         <Link href="#our-story" className="button-ivory">
           KHÁM PHÁ CÂU CHUYỆN <ArrowDown size={17} aria-hidden="true"/>
         </Link>
@@ -40,6 +45,8 @@ export default async function HomePage() {
       </div>
     </section>
 
+    <HomeChapterNav hasLookbook={lookbookProducts.length>0}/>
+
     <section id="our-story" className="home-story" aria-labelledby="story-title">
       <div className="page-shell">
         <div className="home-story-heading" data-cinematic-reveal>
@@ -49,11 +56,12 @@ export default async function HomePage() {
         <div className="home-story-layout">
           <div className="home-story-photo" data-cinematic-reveal role="img" aria-label="Cảm hứng thời trang và lối sống hiện đại">
             <div className="home-story-photo-inner" data-cinematic-story-photo aria-hidden="true" style={content?.story_image_url?{backgroundImage:`url("${content.story_image_url.replace(/[\\"\\\\]/g,"")}")`}:undefined}/>
+            <div className="home-story-photo-inset" aria-hidden="true" style={content?.story_image_url?{backgroundImage:`url("${content.story_image_url.replace(/[\\"\\\\]/g,"")}")`}:undefined}/>
             <span>THE EVERYDAY EDIT / ENJOY LIFE</span>
           </div>
           <div className="home-story-copy" data-cinematic-story-copy data-cinematic-reveal>
             <span className="eyebrow">{content?.story_eyebrow??"MỘT LỐI SỐNG / MỘT CÁ TÍNH"}</span>
-            <h2 id="story-title">{content?.story_title??"Không chỉ là điều bạn mặc."}<br/><em>{content?.story_emphasis??"Mà là cách bạn sống."}</em></h2>
+            <h2 id="story-title"><span className="home-kinetic-line">{content?.story_title??"Không chỉ là điều bạn mặc."}</span><br/><em className="home-kinetic-line">{content?.story_emphasis??"Mà là cách bạn sống."}</em></h2>
             <p>{content?.story_p1??"Phong cách không bắt đầu từ những quy tắc cứng nhắc."}</p>
             <p>{content?.story_p2??"Mỗi món đồ đi cùng bạn theo một cách thật riêng."}</p>
             <Link href="#featured-products" className="text-link">KHÁM PHÁ NHỮNG LỰA CHỌN <ArrowDown size={15} aria-hidden="true"/></Link>
@@ -65,6 +73,14 @@ export default async function HomePage() {
         </div>
       </div>
     </section>
+
+    <aside className="home-brand-statement" aria-label="Thông điệp Enjoy Life" data-cinematic-reveal>
+      <div className="page-shell home-brand-statement-inner">
+        <span className="eyebrow">ENJOY LIFE / OUR MANIFESTO</span>
+        <p>Không cần giống ai.<br/><em>Chỉ cần là chính mình.</em></p>
+        <span className="home-brand-statement-mark" aria-hidden="true">EL / 02</span>
+      </div>
+    </aside>
 
     <section id="featured-products" className="arrivals home-products page-shell" aria-labelledby="featured-title">
       <div className="section-heading" data-cinematic-reveal>
@@ -78,11 +94,13 @@ export default async function HomePage() {
       <LatestEditorialProducts products={products}/>
     </section>
 
+    {lookbookProducts.length>0&&<HomeEditorialLookbook products={lookbookProducts}/>}
+
     <section id="journal" className="home-journal" aria-labelledby="journal-title">
       <div className="page-shell">
         <div className="section-heading" data-cinematic-reveal>
           <div>
-            <span className="eyebrow">03 / ENJOY JOURNAL</span>
+            <span className="eyebrow">04 / ENJOY JOURNAL</span>
             <h2 id="journal-title">Chuyện <em>thời trang.</em></h2>
             <p className="home-section-subtitle">Những góc nhìn về cách mặc, cách sống và cảm hứng mỗi ngày.</p>
           </div>
@@ -98,7 +116,7 @@ export default async function HomePage() {
 
     <section id="contact" className="home-contact" aria-labelledby="contact-title">
       <div className="page-shell home-contact-layout">
-        <div data-cinematic-reveal data-cinematic-contact-title><span className="eyebrow">04 / KẾT NỐI VỚI ENJOY LIFE</span><h2 id="contact-title">Có điều muốn nói?<br/><em>Hãy kết nối.</em></h2></div>
+        <div data-cinematic-reveal data-cinematic-contact-title><span className="eyebrow">05 / KẾT NỐI VỚI ENJOY LIFE</span><h2 id="contact-title">Có điều muốn nói?<br/><em>Hãy kết nối.</em></h2></div>
         <div className="home-contact-details" data-cinematic-reveal>
           <p>Cần tìm hiểu thêm về trang phục, đơn hàng hay các chính sách mua sắm? Hãy để Enjoy Life đồng hành cùng bạn.</p>
           <ContactForm/>
@@ -106,5 +124,6 @@ export default async function HomePage() {
         </div>
       </div>
     </section>
+    <div className="home-closing-signature" aria-hidden="true"><span>ENJOY</span><em>LIFE.</em><small>STAY TRUE TO YOUR STORY — EST. EVERYDAY</small></div>
   </div>;
 }
