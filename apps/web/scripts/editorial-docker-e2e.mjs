@@ -135,7 +135,7 @@ try{
     "hoverLabels:document.querySelectorAll('.latest-editorial-discover').length,"+
     "images:look?.querySelectorAll('.home-lookbook-choice img').length||0"+
     "}})()");
-  const availableLookbook=topFive.filter(p=>p.image_url).slice(0,3);
+  const availableLookbook=catalog.json.items.filter(p=>p.image_url).slice(0,3);
   check(ux.statement&&ux.signature,"Editorial 2.0 sections missing at "+width);
   check(ux.navPosition==="sticky","Homepage chapter navigation must stay sticky at "+width);
   check(ux.chapters===6,"Expected all six navigation chapters at "+width);
