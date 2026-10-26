@@ -47,7 +47,8 @@ export default async function HomePage() {
           <p>KHÔNG CHỈ LÀ TRANG PHỤC, MÀ CÒN LÀ CẢM GIÁC KHI BẠN MẶC NÓ.</p>
         </div>
         <div className="home-story-layout">
-          <div className="home-story-photo" role="img" aria-label="Cảm hứng thời trang và lối sống hiện đại" style={content?.story_image_url?{backgroundImage:`url("${content.story_image_url.replace(/[\\"\\\\]/g,"")}")`}:undefined}>
+          <div className="home-story-photo" data-cinematic-reveal role="img" aria-label="Cảm hứng thời trang và lối sống hiện đại">
+            <div className="home-story-photo-inner" data-cinematic-story-photo aria-hidden="true" style={content?.story_image_url?{backgroundImage:`url("${content.story_image_url.replace(/[\\"\\\\]/g,"")}")`}:undefined}/>
             <span>THE EVERYDAY EDIT / ENJOY LIFE</span>
           </div>
           <div className="home-story-copy" data-cinematic-story-copy data-cinematic-reveal>
