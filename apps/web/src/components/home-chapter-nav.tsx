@@ -16,12 +16,13 @@ export function HomeChapterNav({hasLookbook}:{hasLookbook:boolean}) {
   const entries = chapters.filter(item=>hasLookbook||item.id!=="lookbook");
 
   useEffect(()=>{
+    const observedChapters = chapters.filter(item=>hasLookbook||item.id!=="lookbook");
     let frame=0;
     const update=()=>{
       frame=0;
       const line=window.innerHeight*0.36;
       let current="home-top";
-      for(const chapter of entries) {
+      for(const chapter of observedChapters) {
         const section=document.getElementById(chapter.id);
         if(section&&section.getBoundingClientRect().top<=line) current=chapter.id;
       }
