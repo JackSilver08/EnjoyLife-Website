@@ -131,6 +131,29 @@ try{
    check(r.rects[0].width>r.rects[1].width*1.8,"Mobile hero must span both columns");
    check(r.rects[0].y<r.rects[1].y,"Main product must appear before supporting products");
   }
+  if(width===1440){
+   await until("!!document.querySelector('.home-cinematic.is-cinematic-ready')","cinematic scroll controller");
+   const heroImage=".hero-photo";
+   const startY=await evaluate("parseFloat(document.querySelector('"+heroImage+"').style.getPropertyValue('--cinematic-hero-image-y')) || 0");
+   await evaluate("document.documentElement.style.scrollBehavior='auto';window.scrollTo({top:420,behavior:'instant'});true");
+   await sleep(350);
+   const movedY=await evaluate("parseFloat(document.querySelector('"+heroImage+"').style.getPropertyValue('--cinematic-hero-image-y')) || 0");
+   check(movedY>startY+20,"Hero parallax does not respond to scrolling: "+startY+" -> "+movedY);
+   const storyTop=await evaluate("scrollY+document.querySelector('.home-story').getBoundingClientRect().top");
+   await evaluate("window.scrollTo({top:"+Math.max(0,Math.floor(storyTop)+200)+",behavior:'instant'});true");
+   await until("!!document.querySelector('.home-story-photo-inner')?.style.getPropertyValue('--cinematic-story-photo-y')","story image parallax movement");
+   const productTop=await evaluate("scrollY+document.querySelector('#featured-products').getBoundingClientRect().top");
+   await evaluate("window.scrollTo({top:"+Math.max(0,Math.floor(productTop)-110)+",behavior:'instant'});true");
+   await until("document.querySelectorAll('.latest-editorial-item[data-cinematic-revealed]').length>=1","scroll-triggered product reveal");
+   await command("Emulation.setEmulatedMedia",{features:[{name:"prefers-reduced-motion",value:"reduce"}]});
+   await until("!document.querySelector('.home-cinematic.is-cinematic-ready')","reduced-motion opt out");
+   const accessible=await evaluate("(()=>{const card=document.querySelector('.latest-editorial-item');return {opacity:getComputedStyle(card).opacity,href:card.href}})()");
+   check(accessible.opacity==="1"&&accessible.href.includes("/products/"),"Reduce Motion must keep product links fully visible");
+   await command("Emulation.setEmulatedMedia",{features:[]});
+   await until("!!document.querySelector('.home-cinematic.is-cinematic-ready')","resume cinematic motion");
+   await evaluate("window.scrollTo({top:0,behavior:'instant'});true");
+   console.log("Cinematic parallax Chrome E2E: hero, story, card reveals, Reduce Motion OK");
+  }
   console.log("Editorial layout "+width+"px: OK");
  }
  const detail=await evaluate("document.querySelector('#featured-products .latest-editorial-item').href");
