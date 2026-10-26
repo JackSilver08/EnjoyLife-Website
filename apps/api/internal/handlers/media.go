@@ -2,8 +2,7 @@ package handlers
 
 import (
  "bytes"
- "crypto/sha256"
- "encoding/hex"
+ "context"
  "errors"
  "image"
  _ "image/jpeg"
@@ -45,7 +44,7 @@ func validStoredMediaURL(v string)bool{
  return strings.HasPrefix(v,"/media/")&&safeMediaName.MatchString(strings.TrimPrefix(v,"/media/"))
 }
 func validManagedImageURL(v string)bool{
- return v==""||validStoredMediaURL(v)||strings.HasPrefix(v,"https://images.unsplash.com/")
+ return v==""||validStoredMediaURL(v)||validCloudMediaURL(v)||strings.HasPrefix(v,"https://images.unsplash.com/")
 }
 func(a *App) adminMediaUpload(c *gin.Context){
  actor:=a.requireAdmin(c);if actor==nil{return}
@@ -65,38 +64,31 @@ func(a *App) adminMediaUpload(c *gin.Context){
  if !ok{c.JSON(400,gin.H{"error":"Chỉ hỗ trợ JPG, PNG hoặc WebP hợp lệ (tối đa 8 MB)."});return}
  id,err:=uuid();if err!=nil{serverError(c,err);return}
  filename:=id+ext
- dir:=mediaDir()
- if err=os.MkdirAll(dir,0700);err!=nil{serverError(c,err);return}
- temp,err:=os.CreateTemp(dir,".upload-*")
+ store,ok:=mediaUploadBackend(c);if !ok{return}
+ mediaURL,rollback,err:=persistManagedMedia(c.Request.Context(),store,filename,contents,mime)
  if err!=nil{serverError(c,err);return}
- tmp:=temp.Name();defer os.Remove(tmp)
- if _,err=temp.Write(contents);err!=nil{temp.Close();serverError(c,err);return}
- if err=temp.Close();err!=nil{serverError(c,err);return}
- dest:=filepath.Join(dir,filename)
- if err=os.Rename(tmp,dest);err!=nil{serverError(c,err);return}
  original:=filepath.Base(strings.ReplaceAll(fileHeader.Filename,"\\","/"))
  if len(original)>200{original=original[:200]}
  _,err=a.DB.Exec(c.Request.Context(),
-  `INSERT INTO media_assets(id,filename,original_name,content_type,size_bytes,created_by) VALUES($1,$2,$3,$4,$5,$6)`,
-  id,filename,original,mime,len(contents),actor.ID)
- if err!=nil{os.Remove(dest);serverError(c,err);return}
- // Never write file bytes, admin session, original filename or hashes to logs.
- sum:=sha256.Sum256(contents)
- _=hex.EncodeToString(sum[:]) // future duplicate-content detection; no external exposure
- c.JSON(http.StatusCreated,gin.H{"id":id,"url":"/media/"+filename,"filename":filename,"original_name":original,"content_type":mime,"size_bytes":len(contents)})
+  "INSERT INTO media_assets(id,filename,original_name,content_type,size_bytes,created_by,storage_provider) VALUES($1,$2,$3,$4,$5,$6,$7)",
+  id,filename,original,mime,len(contents),actor.ID,mediaStorageProvider(store))
+ if err!=nil{rollback();serverError(c,err);return}
+ c.JSON(http.StatusCreated,gin.H{"id":id,"url":mediaURL,"filename":filename,"original_name":original,"content_type":mime,"size_bytes":len(contents)})
 }
 func(a *App) adminMediaList(c *gin.Context){
  if a.requireAdmin(c)==nil{return}
- rows,err:=a.DB.Query(c.Request.Context(),`SELECT id::text,filename,original_name,content_type,size_bytes,created_at
+ rows,err:=a.DB.Query(c.Request.Context(),`SELECT id::text,filename,original_name,content_type,size_bytes,created_at,storage_provider
     FROM media_assets ORDER BY created_at DESC,id DESC LIMIT 120`)
  if err!=nil{serverError(c,err);return};defer rows.Close()
  items:=[]gin.H{}
  for rows.Next(){
-  var id,filename,original,mime string
+  var id,filename,original,mime,provider string
   var size int64
   var created time.Time
-  if err=rows.Scan(&id,&filename,&original,&mime,&size,&created);err!=nil{serverError(c,err);return}
-  items=append(items,gin.H{"id":id,"url":"/media/"+filename,"original_name":original,"content_type":mime,"size_bytes":size,"created_at":created})
+  if err=rows.Scan(&id,&filename,&original,&mime,&size,&created,&provider);err!=nil{serverError(c,err);return}
+  assetURL:="/media/"+filename
+  if provider=="supabase"{assetURL=cloudMediaURL(filename)}
+  items=append(items,gin.H{"id":id,"url":assetURL,"original_name":original,"content_type":mime,"size_bytes":size,"created_at":created})
  }
  if err=rows.Err();err!=nil{serverError(c,err);return}
  c.JSON(200,gin.H{"items":items})
@@ -106,13 +98,30 @@ func(a *App) publicMedia(c *gin.Context){
  if !safeMediaName.MatchString(filename){c.Status(404);return}
  path:=filepath.Join(mediaDir(),filename)
  info,err:=os.Stat(path)
- if errors.Is(err,os.ErrNotExist)||info!=nil&&info.IsDir(){c.Status(404);return}
+ if err==nil&&!info.IsDir(){
+  mime:="image/jpeg"
+  if strings.HasSuffix(filename,".png"){mime="image/png"}
+  if strings.HasSuffix(filename,".webp"){mime="image/webp"}
+  c.Header("Content-Type",mime)
+  c.Header("Cache-Control","public, max-age=3600")
+  c.File(path)
+  return
+ }
+ if err!=nil&&!errors.Is(err,os.ErrNotExist){serverError(c,err);return}
+ store,err:=mediaCloudStoreFromEnv()
+ if err!=nil{c.Status(503);return}
+ if store==nil{c.Status(404);return}
+ ctx,cancel:=context.WithTimeout(c.Request.Context(),12*time.Second);defer cancel()
+ req,err:=http.NewRequestWithContext(ctx,http.MethodGet,store.publicURL(filename),nil)
  if err!=nil{serverError(c,err);return}
+ resp,err:=store.client.Do(req)
+ if err!=nil{c.Status(503);return}
+ defer resp.Body.Close()
+ if resp.StatusCode==404{c.Status(404);return}
+ if resp.StatusCode!=200{c.Status(503);return}
  mime:="image/jpeg"
  if strings.HasSuffix(filename,".png"){mime="image/png"}
  if strings.HasSuffix(filename,".webp"){mime="image/webp"}
- c.Header("Content-Type",mime)
- c.Header("Cache-Control","public, max-age=31536000, immutable")
- c.Header("X-Content-Type-Options","nosniff")
- c.File(path)
+ c.Header("Cache-Control","public, max-age=3600")
+ c.DataFromReader(200,resp.ContentLength,mime,resp.Body,nil)
 }

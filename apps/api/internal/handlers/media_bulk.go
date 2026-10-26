@@ -75,12 +75,10 @@ func (a *App) adminMediaBulkZip(c *gin.Context) {
  tx,err:=a.DB.Begin(ctx)
  if err!=nil{serverError(c,err);return}
  defer tx.Rollback(ctx)
- dir:=mediaDir()
- if err=os.MkdirAll(dir,0700);err!=nil{serverError(c,err);return}
- // Media files are only permanent when the metadata transaction commits.
- written:=make([]string,0,len(images))
+ store,ok:=mediaUploadBackend(c);if !ok{return}
+ written:=make([]func(),0,len(images))
  committed:=false
- defer func(){if !committed{for _,p:=range written{_ = os.Remove(p)}}}()
+ defer func(){if !committed{for _,rollback:=range written{rollback()}}}()
  added,skipped:=0,0
  for _,item:=range images {
   f:=item.file
@@ -95,30 +93,24 @@ func (a *App) adminMediaBulkZip(c *gin.Context) {
   if !ok {
    c.JSON(400,gin.H{"error":"Dữ liệu ảnh không hợp lệ: "+item.original});return
   }
-  var existing string
-  err=tx.QueryRow(ctx,`SELECT filename FROM media_assets WHERE original_name=$1 ORDER BY created_at DESC LIMIT 1`,item.original).Scan(&existing)
+  var existing,provider string
+  err=tx.QueryRow(ctx,"SELECT filename,storage_provider FROM media_assets WHERE original_name=$1 ORDER BY created_at DESC,id DESC LIMIT 1",item.original).Scan(&existing,&provider)
   if err==nil{
-   if _,statErr:=os.Stat(filepath.Join(dir,existing));statErr!=nil {
-    c.JSON(409,gin.H{"error":"Ảnh đã đăng ký nhưng thiếu file lưu trữ: "+item.original});return
+   if provider=="supabase"&&store!=nil{
+    found,checkErr:=store.exists(ctx,existing)
+    if checkErr!=nil{serverError(c,checkErr);return}
+    if found{skipped++;continue}
    }
-   skipped++
-   continue
-  }
-  if !errors.Is(err,pgx.ErrNoRows){serverError(c,err);return}
-
-  id,err:=uuid()
-  if err!=nil{serverError(c,err);return}
+   if provider=="local"&&store==nil{
+    if _,statErr:=os.Stat(filepath.Join(mediaDir(),existing));statErr==nil{skipped++;continue}
+   }
+  }else if !errors.Is(err,pgx.ErrNoRows){serverError(c,err);return}
+  id,err:=uuid();if err!=nil{serverError(c,err);return}
   filename:=id+ext
-  tmp,err:=os.CreateTemp(dir,".zip-upload-*")
+  _,rollback,err:=persistManagedMedia(ctx,store,filename,contents,mime)
   if err!=nil{serverError(c,err);return}
-  tempPath:=tmp.Name()
-  if _,err=tmp.Write(contents);err!=nil{tmp.Close();os.Remove(tempPath);serverError(c,err);return}
-  if err=tmp.Close();err!=nil{os.Remove(tempPath);serverError(c,err);return}
-  dst:=filepath.Join(dir,filename)
-  if err=os.Rename(tempPath,dst);err!=nil{os.Remove(tempPath);serverError(c,err);return}
-  written=append(written,dst)
-  if _,err=tx.Exec(ctx,`INSERT INTO media_assets(id,filename,original_name,content_type,size_bytes,created_by)
-   VALUES($1,$2,$3,$4,$5,$6)`,id,filename,item.original,mime,len(contents),actor.ID);err!=nil{
+  written=append(written,rollback)
+  if _,err=tx.Exec(ctx,"INSERT INTO media_assets(id,filename,original_name,content_type,size_bytes,created_by,storage_provider) VALUES($1,$2,$3,$4,$5,$6,$7)",id,filename,item.original,mime,len(contents),actor.ID,mediaStorageProvider(store));err!=nil{
    serverError(c,err);return
   }
   added++

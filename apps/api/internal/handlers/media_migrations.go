@@ -20,6 +20,7 @@ func EnsureMediaSchema(ctx context.Context,db *pgxpool.Pool)error{
     created_by UUID NOT NULL REFERENCES users(id),
     created_at TIMESTAMPTZ NOT NULL DEFAULT now()
   )`,
+  `ALTER TABLE media_assets ADD COLUMN IF NOT EXISTS storage_provider TEXT NOT NULL DEFAULT 'local'`,
   `CREATE TABLE IF NOT EXISTS site_content(
     id INT PRIMARY KEY CHECK(id=1),
     hero_image_url TEXT NOT NULL DEFAULT '',
