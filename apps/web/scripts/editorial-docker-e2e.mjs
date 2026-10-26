@@ -117,6 +117,44 @@ try{
   await until("(()=>{const g=document.querySelector('.latest-editorial-grid');return g&&getComputedStyle(g).display==='grid'&&getComputedStyle(g).gridTemplateColumns.split(' ').length==="+expectedColumns+"})()",
    "editorial stylesheet and grid columns at "+width);
   const r=await evaluate(measure);
+  // UI/UX 2.0 is a read-only homepage enhancement. Preserve real product
+  // links, responsive usability, anchor navigation and correct listed prices.
+  const ux=await evaluate("(()=>{"+
+    "const home=document.querySelector('.home-cinematic');"+
+    "const nav=document.querySelector('.home-chapters');"+
+    "const look=document.querySelector('.home-lookbook');"+
+    "const chosen=[...document.querySelectorAll('.home-lookbook-choice')];"+
+    "return {statement:!!document.querySelector('.home-brand-statement'),"+
+    "signature:!!document.querySelector('.home-closing-signature'),"+
+    "chapters:nav?.querySelectorAll('a').length||0,"+
+    "navPosition:nav?getComputedStyle(nav).position:'',"+
+    "lookbook:!!look,lookCount:chosen.length,"+
+    "lookLink:look?.querySelector('.home-lookbook-cta')?.getAttribute('href'),"+
+    "lookPrice:look?.querySelector('.home-lookbook-price')?.textContent,"+
+    "scrollWidth:document.documentElement.scrollWidth,"+
+    "hoverLabels:document.querySelectorAll('.latest-editorial-discover').length,"+
+    "images:look?.querySelectorAll('.home-lookbook-choice img').length||0"+
+    "}})()");
+  const availableLookbook=catalog.json.items.filter(p=>p.image_url).slice(0,3);
+  check(ux.statement&&ux.signature,"Editorial 2.0 sections missing at "+width);
+  check(ux.navPosition==="sticky","Homepage chapter navigation must stay sticky at "+width);
+  check(ux.chapters===6,"Expected all six navigation chapters at "+width);
+  check(ux.lookbook&&ux.lookCount===availableLookbook.length,"Lookbook must show real product photos at "+width);
+  check(ux.lookLink==="/products/"+availableLookbook[0].slug,"Lookbook CTA changed product detail route at "+width);
+  check(ux.lookPrice?.length>0,"Lookbook must display real product price");
+  if(ux.scrollWidth>width+1){
+    const offenders=await evaluate("(()=>[...document.querySelectorAll('body *')].filter(e=>{const r=e.getBoundingClientRect();return r.right>innerWidth+1&&r.width>0}).slice(0,12).map(e=>({tag:e.tagName,className:typeof e.className==='string'?e.className.slice(0,75):'',right:Math.round(e.getBoundingClientRect().right)})))()");
+    throw Error("Horizontal document overflow at "+width+": "+ux.scrollWidth+" elements="+JSON.stringify(offenders));
+  }
+  check(ux.hoverLabels===5,"Product discover affordance missing at "+width);
+  if(width===1440&&ux.lookCount>1){
+    await until("!!document.querySelector('.home-cinematic.is-cinematic-ready')","UX 2.0 hydration");
+    await evaluate("document.querySelectorAll('.home-lookbook-choice')[1].click();true");
+    await until("document.querySelector('.home-lookbook-cta')?.getAttribute('href')==='/products/"+availableLookbook[1].slug+"'","lookbook switches to second real product");
+    const switched=await evaluate("(()=>{const b=document.querySelectorAll('.home-lookbook-choice');return [b[0].getAttribute('aria-pressed'),b[1].getAttribute('aria-pressed')].join(',')})()");
+    check(switched==="false,true","Lookbook choices must expose selection to assistive technology");
+    console.log("Editorial UX 2.0 Chrome: real-product lookbook selection, nav and links OK");
+  }
   check(r.names===5&&r.prices===5,"Missing titles/prices at "+width);
   check(r.hrefs.every((href,i)=>href==="/products/"+topFive[i].slug),"Product order/link incorrect at "+width+": "+r.hrefs.join(","));
   check(r.rects.every(x=>x.width>95&&x.height>130),"Too small card at "+width+": "+JSON.stringify(r.rects));
