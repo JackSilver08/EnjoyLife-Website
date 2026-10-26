@@ -336,3 +336,21 @@ body:has(.home-cinematic) .footer-v2 .footer-v2-brand p { color: #d4d2c7; }
   .home-cinematic .latest-editorial-discover { transition: none !important; }
   .home-cinematic .home-chapters-links a::after { transition: none !important; }
 }
+
+/* Decor-only overflow guard on 320px screens. CSS overflow:clip does not
+   establish a scrolling box, so sticky chapter navigation still works. */
+.home-cinematic {
+  max-width: 100%;
+  min-width: 0;
+  overflow-x: clip;
+}
+@media (max-width: 380px) {
+  .home-cinematic .home-closing-signature > span,
+  .home-cinematic .home-closing-signature > em {
+    font-size: clamp(39px, 11.5vw, 53px);
+  }
+  .home-cinematic .hero-content h1 {
+    max-width: calc(100vw - 18vw);
+    overflow-wrap: anywhere;
+  }
+}
