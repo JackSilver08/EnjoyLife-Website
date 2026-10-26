@@ -142,7 +142,10 @@ try{
   check(ux.lookbook&&ux.lookCount===availableLookbook.length,"Lookbook must show real product photos at "+width);
   check(ux.lookLink==="/products/"+availableLookbook[0].slug,"Lookbook CTA changed product detail route at "+width);
   check(ux.lookPrice?.length>0,"Lookbook must display real product price");
-  check(ux.scrollWidth<=width+1,"Horizontal document overflow at "+width+": "+ux.scrollWidth);
+  if(ux.scrollWidth>width+1){
+    const offenders=await evaluate("(()=>[...document.querySelectorAll('body *')].filter(e=>{const r=e.getBoundingClientRect();return r.right>innerWidth+1&&r.width>0}).slice(0,12).map(e=>({tag:e.tagName,className:typeof e.className==='string'?e.className.slice(0,75):'',right:Math.round(e.getBoundingClientRect().right)})))()");
+    throw Error("Horizontal document overflow at "+width+": "+ux.scrollWidth+" elements="+JSON.stringify(offenders));
+  }
   check(ux.hoverLabels===5,"Product discover affordance missing at "+width);
   if(width===1440&&ux.lookCount>1){
     await until("!!document.querySelector('.home-cinematic.is-cinematic-ready')","UX 2.0 hydration");
