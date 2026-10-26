@@ -83,14 +83,45 @@ func (a *App) createPayOSLink(c *gin.Context) {
 		serverError(c, err)
 		return
 	}
-	// Unique order constraint prevents multiple links when customer retries.
-	inserted, err := a.DB.Exec(ctx, `INSERT INTO payment_attempts(id,order_id,provider,status,provider_order_code)
- VALUES($1,$2,'PAYOS','CREATING',nextval('payos_order_code_seq')) ON CONFLICT DO NOTHING`, attemptID, id)
-	if err != nil {
-		serverError(c, err)
+	// Each payOS merchant needs unique order codes even when different apps or
+	// databases use the same keys. The old DB sequence collided across Render
+	// and local installs. Preserve existing attempts, and only generate a new
+	// code if this order has no payment attempt yet.
+	created := false
+	found := false
+	for try := 0; try < 5; try++ {
+		orderCode, e := generatePayOSOrderCode()
+		if e != nil {
+			serverError(c, e)
+			return
+		}
+		inserted, e := a.DB.Exec(ctx, `INSERT INTO payment_attempts(id,order_id,provider,status,provider_order_code)
+ VALUES($1,$2,'PAYOS','CREATING',$3) ON CONFLICT DO NOTHING`, attemptID, id, orderCode)
+		if e != nil {
+			serverError(c, e)
+			return
+		}
+		created = inserted.RowsAffected() > 0
+		if created {
+			found = true
+			break
+		}
+		// ON CONFLICT might mean either this order already has an attempt or
+		// the random code collided in this database. Retry only in the latter
+		// case; never create a second attempt for the same order.
+		if e := a.DB.QueryRow(ctx, `SELECT EXISTS(
+ SELECT 1 FROM payment_attempts WHERE order_id=$1 AND provider='PAYOS')`, id).Scan(&found); e != nil {
+			serverError(c, e)
+			return
+		}
+		if found {
+			break
+		}
+	}
+	if !found {
+		c.JSON(http.StatusServiceUnavailable, gin.H{"error": "Chưa cấp được mã giao dịch. Vui lòng thử lại."})
 		return
 	}
-	created := inserted.RowsAffected() > 0
 	var code int64
 	var checkout, qr, state string
 	var updated time.Time
