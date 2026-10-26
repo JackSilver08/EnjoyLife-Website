@@ -18,6 +18,7 @@ export function LatestEditorialProducts({products}:{products:Product[]}){
   {latest.map((product,index)=>{
    const hero=index===0;
    const soldOut=typeof product.available==="number"&&product.available<=0;
+   const alternateImage=product.images?.find(image=>image.url&&image.url!==product.image_url)?.url;
    return <Link key={product.id} href={`/products/${encodeURIComponent(product.slug)}`}
     className={`latest-editorial-item${hero?" latest-editorial-hero":""}`}
     aria-label={`${product.name}, ${money(product.price_vnd)}${soldOut?", hiện hết hàng":""}. Xem chi tiết`}>
@@ -30,6 +31,9 @@ export function LatestEditorialProducts({products}:{products:Product[]}){
       :<div className="latest-editorial-placeholder" aria-label="Sản phẩm chưa có ảnh">
         <span>ENJOY LIFE</span><small>STUDIO EDIT</small>
        </div>}
+     {alternateImage&&product.image_url&&<Image className="latest-editorial-hover-image" src={alternateImage} alt=""
+       fill loading="lazy" sizes="(max-width: 767px) 45vw, (max-width: 1023px) 43vw, 360px"/>}
+     <span className="latest-editorial-discover" aria-hidden="true">XEM CHI TIẾT <ArrowUpRight size={14}/></span>
      {soldOut&&<span className="latest-editorial-sold-out">HẾT HÀNG</span>}
      {hero&&<span className="latest-editorial-photo-index" aria-hidden="true">01 / NEW ARRIVAL</span>}
     </div>
