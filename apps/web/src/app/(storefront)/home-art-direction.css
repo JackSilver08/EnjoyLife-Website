@@ -1,0 +1,152 @@
+/* Enjoy Life — ART ISSUE 03.
+ * Home-only editorial styling; existing CMS images, APIs and store flows are untouched.
+ */
+.home-cinematic{--art-ink:#2d2630;--art-plum:#614457;--art-paper:#f8f3ed;--art-line:#d9cdc6;background:var(--art-paper);color:var(--art-ink)}
+body:has(.home-cinematic) .site-header{background:#f8f3ed;border-bottom-color:#e6dbd3}
+body:has(.home-cinematic) .site-header .brand{color:#2d2630}
+body:has(.home-cinematic) .site-header .nav-links a:hover{color:#614457}
+/* A magazine spread, with the CMS hero image in a full-bleed photographic frame. */
+.home-cinematic .hero-editorial{height:min(790px,calc(100svh - 82px));min-height:690px;background:var(--art-paper);color:var(--art-ink);isolation:isolate}
+.home-cinematic .hero-editorial::before{content:"";position:absolute;left:-16%;top:-30%;width:64%;aspect-ratio:1;border-radius:50%;background:radial-gradient(circle,#f2e2e0,transparent 72%);pointer-events:none}
+.home-cinematic .hero-art-frame{position:absolute;inset:38px 4.25% 54px 52%;overflow:hidden;background:#d4c3be;isolation:isolate}
+.home-cinematic .hero-art-frame::after{content:"";position:absolute;inset:0;background:linear-gradient(0deg,rgba(28,18,25,.34),transparent 35%);pointer-events:none;z-index:1}
+.home-cinematic .hero-art-frame .hero-photo,.home-cinematic.is-cinematic-ready .hero-art-frame .hero-photo{position:absolute;inset:-12% -5%;background-position:center 36%}
+.home-cinematic .hero-scrim{background:none;pointer-events:none}
+.home-cinematic .hero-cinematic-atmosphere{background:radial-gradient(ellipse at 24% 70%,rgba(189,136,154,.13),transparent 50%);mix-blend-mode:normal;pointer-events:none}
+.home-cinematic .hero-art-caption{position:absolute;z-index:2;left:24px;bottom:22px;right:24px;color:#fffaf5;display:flex;justify-content:space-between;gap:15px;font-size:10px;font-weight:650;letter-spacing:.16em;text-shadow:0 1px 12px #21151b55}
+.home-cinematic .hero-topline{top:26px;color:#2d2630;font-size:9px;letter-spacing:.18em}
+.home-cinematic .hero-topline span:last-child{color:#806b73}
+.home-cinematic .hero-cinematic-rail{color:#614457;right:1.2%;top:30%}
+.home-cinematic .hero-content{left:6.4%;top:53%;width:44%;max-width:620px;color:#2d2630}
+.home-cinematic .hero-edition{display:inline-block;margin-bottom:clamp(18px,3vw,36px);border:1px solid #a68890;border-radius:100%;padding:9px 15px;color:#614457;font-size:10px;font-weight:750;letter-spacing:.15em}
+.home-cinematic .hero-content>p{font-size:10px;letter-spacing:.19em;line-height:1.7;color:#66535e;margin-bottom:19px}
+.home-cinematic .hero-content h1{margin:0 0 38px;font:400 clamp(67px,7.5vw,128px)/.95 Georgia,"Times New Roman",serif;letter-spacing:-.085em;max-width:9ch;text-wrap:balance}
+.home-cinematic .hero-content h1 em{color:#614457;font-style:italic}
+.home-cinematic .hero-actions{display:flex;gap:20px;align-items:center;flex-wrap:wrap}
+.home-cinematic .hero-actions .button-ivory{background:#2d2630;color:#fffaf5;min-height:55px;border:1px solid #2d2630;gap:18px;padding:0 23px;font-size:10px}
+.home-cinematic .hero-actions .button-ivory:hover{background:#614457;border-color:#614457}
+.home-cinematic .hero-shop-link{min-height:48px;display:inline-flex;align-items:center;gap:9px;border-bottom:1px solid #2d2630;font-size:10px;font-weight:750;letter-spacing:.12em;transition:color .2s,border-color .2s}
+.home-cinematic .hero-shop-link:hover{color:#614457;border-color:#614457}
+.home-cinematic .hero-bottom{bottom:23px;color:#65545d;font-size:9px}
+.home-cinematic .hero-bottom a{min-height:30px}
+.home-cinematic .hero-stamp{position:absolute;z-index:5;right:calc(48% - 53px);bottom:100px;width:106px;height:106px;border-radius:50%;display:grid;place-items:center;text-align:center;background:#e7c7bf;color:#2d2630;border:1px solid #f8f3ed;box-shadow:0 9px 28px #30232a29;font:italic 17px/1.1 Georgia,serif;transform:rotate(-13deg);pointer-events:none}
+.home-cinematic .hero-stamp small{display:block;font:700 8px/1.4 Arial,sans-serif;letter-spacing:.13em;margin-top:4px}
+.home-cinematic .home-chapters{top:0;background:#fbf7f2f2;border-block:1px solid #e4d8d0}
+.home-cinematic .home-chapters-links a.is-active,.home-cinematic .home-chapters-links a:hover{color:#614457}
+.home-cinematic .home-chapters-links a::after{background:#614457}
+.home-cinematic .home-chapters-links a:focus-visible{outline-color:#614457}
+/* Decorative typographic ribbon, motion disabled when requested. */
+.home-cinematic .home-art-ribbon{overflow:hidden;padding:19px 0 15px;background:#e8d5d3;border-bottom:1px solid #dcc0bf;color:#624655}
+.home-cinematic .home-art-ribbon-track{display:flex;align-items:center;width:max-content;gap:36px;animation:enjoy-art-ribbon 32s linear infinite;font:italic clamp(21px,2.7vw,38px)/1 Georgia,serif;letter-spacing:-.025em}
+.home-cinematic .home-art-ribbon-track span{white-space:nowrap}
+.home-cinematic .home-art-ribbon-track svg{flex:none;opacity:.65}
+@keyframes enjoy-art-ribbon{to{transform:translateX(-50%)}}
+/* Layered photographs and gallery captions in the brand story. */
+.home-cinematic .home-story{margin-top:0;border-radius:0;box-shadow:none;background:#f8f3ed;padding-top:clamp(100px,12vw,185px)}
+.home-cinematic .home-story::before{display:none}
+.home-cinematic .home-story-heading{border-top:1px solid #d9cdc6;padding-top:19px;margin-bottom:clamp(37px,5vw,70px)}
+.home-cinematic .home-story-heading p{color:#7b6670}
+.home-cinematic .home-story-photo{min-height:clamp(460px,52vw,680px);outline:1px solid #d6cbc3;outline-offset:14px}
+.home-cinematic .home-story-photo::before{content:"A STUDY IN EVERYDAY BEAUTY";position:absolute;z-index:3;left:18px;top:20px;color:#fff;font-size:9px;font-weight:700;letter-spacing:.15em;text-shadow:0 1px 10px #0008}
+.home-cinematic .home-story-photo-inset{right:-7%;bottom:-5%;width:38%;height:38%;border:10px solid #f8f3ed;box-shadow:0 14px 50px #44343e30}
+.home-cinematic .home-story-copy h2{font:400 clamp(56px,6.1vw,96px)/1.06 Georgia,serif;letter-spacing:-.068em}
+.home-cinematic .home-story-copy h2 em{color:#614457}
+.home-cinematic .home-story-copy p{color:#655b5d;max-width:490px}
+.home-cinematic .home-story-copy .text-link{border-color:#614457}
+.home-cinematic .home-story-transition{border-color:#d9cdc6;color:#745967}
+/* A full-page manifesto between storytelling and shopping. */
+.home-cinematic .home-brand-statement{background:#342833;color:#fff8f3}
+.home-cinematic .home-brand-statement::before{content:"BE YOURSELF";color:#ffffff09;font-size:clamp(150px,23vw,390px);top:-14%;left:-5%;letter-spacing:-.11em}
+.home-cinematic .home-brand-statement-inner{min-height:460px;display:flex;flex-direction:column;justify-content:center;padding-top:100px;padding-bottom:115px}
+.home-cinematic .home-brand-statement .eyebrow{color:#eed2d6}
+.home-cinematic .home-brand-statement p{font:400 clamp(56px,7.5vw,117px)/1.03 Georgia,serif;letter-spacing:-.075em}
+.home-cinematic .home-brand-statement p em{color:#e9bdc4}
+.home-cinematic .home-brand-statement-mark{color:#dfbac4}
+/* The existing five newest API products become an asymmetrical exhibition. */
+.home-cinematic .home-products{background:#f8f3ed;padding-block:clamp(100px,11vw,170px)}
+.home-cinematic .home-products .section-heading{position:relative;padding-bottom:23px;border-bottom:1px solid #d9cdc6}
+.home-cinematic .home-products .section-heading h2,.home-cinematic .home-journal .section-heading h2{font-size:clamp(56px,7vw,106px)}
+.home-cinematic .home-products .section-heading h2 em,.home-cinematic .home-journal .section-heading h2 em{color:#614457}
+.home-cinematic .home-section-subtitle{color:#70656a}
+.home-cinematic .latest-editorial-grid{gap:clamp(13px,1.8vw,26px)}
+.home-cinematic .latest-editorial-photo{background:#eadedb}
+.home-cinematic .latest-editorial-item:nth-child(3n) .latest-editorial-photo{background:#e9e1db}
+.home-cinematic .latest-editorial-item:nth-child(3n + 2) .latest-editorial-photo{background:#e1e0db}
+.home-cinematic .latest-editorial-photo-index{color:#523b4d;letter-spacing:.21em}
+.home-cinematic .latest-editorial-hero .latest-editorial-photo{background:#e1d4d1}
+.home-cinematic .latest-editorial-hero .latest-editorial-info{background:linear-gradient(0deg,#282029e6,#28202973 60%,transparent)}
+.home-cinematic .latest-editorial-info{padding-top:18px}
+.home-cinematic .latest-editorial-copy h3{font-family:Georgia,serif}
+.home-cinematic .latest-editorial-discover{color:#2d2630;background:#fffaf5}
+.home-cinematic .latest-editorial-item:focus-visible{outline-color:#614457}
+/* Lookbook keeps the selector and links to real product pages. */
+.home-cinematic .home-lookbook{background:#ede0dc;color:#2d2630}
+.home-cinematic .home-lookbook-heading h2 em{color:#614457}
+.home-cinematic .home-lookbook-stage-photo{background:#d9c7c4}
+.home-cinematic .home-lookbook-stage-label,.home-cinematic .home-lookbook-stage-index{color:#4f3745}
+.home-cinematic .home-lookbook-details h3{font-family:Georgia,serif}
+.home-cinematic .home-lookbook-cta{background:#2d2630}
+.home-cinematic .home-lookbook-cta:hover{background:#614457}
+.home-cinematic .home-lookbook-choice.is-active{border-color:#614457}
+.home-cinematic .home-lookbook-cta:focus-visible,.home-cinematic .home-lookbook-choice:focus-visible{outline-color:#614457}
+/* Journal and contact are styled, never reimplemented. */
+.home-cinematic .home-journal{background:#f1eae4;padding-block:clamp(100px,11vw,170px)}
+.home-cinematic .home-journal .section-heading{padding-bottom:25px;border-bottom:1px solid #dacdc7}
+.home-cinematic .home-contact{background:#352a34}
+.home-cinematic .home-contact::before{border-color:#f2d4dc22;box-shadow:0 0 0 90px #f2d4dc05,0 0 0 210px #f2d4dc04}
+.home-cinematic .home-contact h2{font-family:Georgia,serif;font-size:clamp(64px,7vw,108px)}
+.home-cinematic .home-contact h2 em{color:#e4bcc4}
+.home-cinematic .home-contact-details>p{color:#e2d5db}
+.home-cinematic .home-closing-signature{background:#f8f3ed;color:#2d2630}
+.home-cinematic .home-closing-signature>em{color:#614457}
+body:has(.home-cinematic) .site-footer.footer-v2{background:#2c222d;border-top-color:#4d3b4b}
+@media(max-width:1100px){
+.home-cinematic .hero-art-frame{left:50%}
+.home-cinematic .hero-content{left:5.5%;width:45%}
+.home-cinematic .hero-content h1{font-size:clamp(63px,7.3vw,100px)}
+.home-cinematic .hero-stamp{right:calc(50% - 35px);width:80px;height:80px;font-size:14px}
+.home-cinematic .home-story-photo-inset{right:-4%}
+}
+@media(max-width:767px){
+.home-cinematic .hero-editorial{height:auto;min-height:785px}
+.home-cinematic .hero-art-frame{top:62px;left:18px;right:18px;bottom:47%}
+.home-cinematic .hero-art-frame .hero-photo,.home-cinematic.is-cinematic-ready .hero-art-frame .hero-photo{inset:-8% -4%;background-position:center 30%}
+.home-cinematic .hero-art-caption{left:15px;right:15px;bottom:14px;font-size:8px}
+.home-cinematic .hero-topline{top:18px;left:18px;right:18px;font-size:8px}
+.home-cinematic .hero-topline span:last-child{display:none}
+.home-cinematic .hero-content{left:18px;right:18px;top:56%;width:auto;max-width:none;transform:none}
+.home-cinematic.is-cinematic-ready .hero-content{transform:none;opacity:1;will-change:auto}
+.home-cinematic .hero-edition{margin-bottom:12px;padding:6px 12px;font-size:8px}
+.home-cinematic .hero-content>p{font-size:9px;margin-bottom:12px;letter-spacing:.12em}
+.home-cinematic .hero-content h1{font-size:clamp(56px,12vw,82px);margin:0 0 20px;max-width:none;line-height:.94}
+.home-cinematic .hero-actions{gap:12px}
+.home-cinematic .hero-actions .button-ivory{min-height:48px;padding:0 14px;font-size:9px}
+.home-cinematic .hero-shop-link{font-size:9px;min-height:44px}
+.home-cinematic .hero-bottom{bottom:13px;left:18px;right:18px}
+.home-cinematic .hero-bottom span{display:none}
+.home-cinematic .hero-stamp{right:27px;top:34%;bottom:auto;width:72px;height:72px;font-size:13px}
+.home-cinematic .home-chapters{top:0}
+.home-cinematic .home-art-ribbon{padding-block:14px 12px}
+.home-cinematic .home-story{padding-top:78px}
+.home-cinematic .home-story-photo{outline-offset:7px;min-height:400px}
+.home-cinematic .home-story-photo-inset{border-width:6px;right:0;bottom:-2%}
+.home-cinematic .home-story-copy{padding-top:15px}
+.home-cinematic .home-story-copy h2{font-size:clamp(48px,9vw,76px)}
+.home-cinematic .home-brand-statement-inner{min-height:355px}
+.home-cinematic .home-brand-statement p{font-size:clamp(46px,9vw,70px)}
+.home-cinematic .home-products{padding-block:85px}
+.home-cinematic .home-products .section-heading h2,.home-cinematic .home-journal .section-heading h2{font-size:clamp(51px,10vw,78px)}
+.home-cinematic .home-contact h2{font-size:clamp(51px,10vw,78px)}
+}
+@media(max-width:420px){
+.home-cinematic .hero-editorial{min-height:756px}
+.home-cinematic .hero-art-frame{bottom:49%}
+.home-cinematic .hero-content{top:53.5%}
+.home-cinematic .hero-content h1{font-size:clamp(47px,11.3vw,57px)}
+.home-cinematic .hero-actions .button-ivory{min-height:44px;padding-inline:11px}
+.home-cinematic .hero-stamp{top:32%}
+}
+@media(prefers-reduced-motion:reduce){
+.home-cinematic .home-art-ribbon-track{animation:none}
+.home-cinematic .hero-actions .button-ivory,.home-cinematic .hero-shop-link{transition:none}
+}
