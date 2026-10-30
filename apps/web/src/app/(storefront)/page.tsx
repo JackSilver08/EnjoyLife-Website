@@ -11,6 +11,7 @@ import { HomeChapterNav } from "@/components/home-chapter-nav";
 import { HomeEditorialLookbook } from "@/components/home-editorial-lookbook";
 import "./home-editorial-ux.css";
 import "./home-cinematic.css";
+import "./home-art-direction.css";
 
 export default async function HomePage() {
   const [products, journal, content] = await Promise.all([
@@ -24,7 +25,10 @@ export default async function HomePage() {
   return <div className="home-cinematic">
     <HomeCinematicMotion/>
     <section id="home-top" className="hero-editorial" aria-label="Chiến dịch thời trang Enjoy Life">
-      <div className="hero-photo" data-cinematic-hero-photo role="img" aria-label="Hình ảnh thời trang đường phố" style={content?.hero_image_url?{backgroundImage:`url("${content.hero_image_url.replace(/[\\"\\\\]/g,"")}")`}:undefined}/>
+      <div className="hero-art-frame">
+  <div className="hero-photo" data-cinematic-hero-photo role="img" aria-label="Hình ảnh thời trang đường phố" style={content?.hero_image_url?{backgroundImage:`url("${content.hero_image_url.replace(/[\\"\\\\]/g,"")}")`}:undefined}/>
+        <div className="hero-art-caption" aria-hidden="true"><span>ENJOY LIFE / A PERSONAL EDITION</span><span>01 — 05</span></div>
+      </div>
       <div className="hero-scrim"/>
       <div className="hero-cinematic-atmosphere" data-cinematic-hero-atmosphere aria-hidden="true"/>
       <span className="hero-cinematic-rail" aria-hidden="true">ENJOY / THE EVERYDAY / 2026</span>
@@ -33,12 +37,15 @@ export default async function HomePage() {
         <span>ENJOY LIFE / EDITORIAL</span>
       </div>
       <div className="hero-content" data-cinematic-hero-copy>
+        <span className="hero-edition">THE ART OF BEING YOU — VOL. 03</span>
         <p>{content?.hero_eyebrow??"PHONG CÁCH ĐƯỢC ĐỊNH NGHĨA BỞI BẠN"}</p>
         <h1><span className="home-kinetic-line">{content?.hero_title??"Sống theo"}</span><br/><em className="home-kinetic-line">{content?.hero_emphasis??"nhịp riêng."}</em></h1>
-        <Link href="#our-story" className="button-ivory">
-          KHÁM PHÁ CÂU CHUYỆN <ArrowDown size={17} aria-hidden="true"/>
-        </Link>
+        <div className="hero-actions">
+          <Link href="#our-story" className="button-ivory">KHÁM PHÁ CÂU CHUYỆN <ArrowDown size={17} aria-hidden="true"/></Link>
+          <Link href="/shop" className="hero-shop-link">XEM BỘ SƯU TẬP <ArrowUpRight size={16} aria-hidden="true"/></Link>
+        </div>
       </div>
+      <span className="hero-stamp" aria-hidden="true">wear your<br/>own story<small>ENJOY LIFE</small></span>
       <div className="hero-bottom">
         <span>ENJOY THE EVERYDAY.</span>
         <Link href="#our-story" aria-label="Cuộn xuống câu chuyện Enjoy Life">CUỘN ĐỂ KHÁM PHÁ <ArrowDown size={13} aria-hidden="true"/></Link>
@@ -46,6 +53,7 @@ export default async function HomePage() {
     </section>
 
     <HomeChapterNav hasLookbook={lookbookProducts.length>0}/>
+    <div className="home-art-ribbon" aria-hidden="true"><div className="home-art-ribbon-track">{Array.from({length:4},(_,index)=><span key={index}>The art of being yourself &nbsp; ✳ &nbsp; Everyday, your way &nbsp; ✳ &nbsp;</span>)}</div></div>
 
     <section id="our-story" className="home-story" aria-labelledby="story-title">
       <div className="page-shell">
