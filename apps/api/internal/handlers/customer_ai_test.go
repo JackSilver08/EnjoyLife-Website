@@ -14,6 +14,7 @@ import (
 
 func TestCustomerAIResponsesAndDiagnostics(t *testing.T){
  var rounds atomic.Int32
+ var scopeChecks atomic.Int32
  mock:=httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter,r *http.Request){
   if r.URL.Path!="/v1/responses"||r.Method!="POST"||r.Header.Get("Authorization")!="Bearer fake-test-api-key"{
    t.Errorf("unexpected request path/auth/method");w.WriteHeader(400);return
@@ -24,10 +25,18 @@ func TestCustomerAIResponsesAndDiagnostics(t *testing.T){
   if _,ok:=body["reasoning"];ok{t.Error("unsupported reasoning param for gpt-4.1-mini")}
   if body["store"]!=false{t.Error("store must be false")}
   if body["max_output_tokens"]==nil{t.Error("missing output cap")}
+  w.Header().Set("Content-Type","application/json")
+  if _,classifying:=body["text"];classifying{
+   scopeChecks.Add(1)
+   if _,hasTools:=body["tools"];hasTools{t.Error("classifier must not receive product tools")}
+   _=json.NewEncoder(w).Encode(map[string]any{"status":"completed","output":[]any{
+    map[string]any{"type":"message","content":[]any{map[string]any{"type":"output_text","text":`{"in_scope":true}`}}},
+   }})
+   return
+  }
   for _,tool:=range body["tools"].([]any){
    if tool.(map[string]any)["strict"]!=false{t.Error("optional search fields require strict:false")}
   }
-  w.Header().Set("Content-Type","application/json")
   if rounds.Add(1)==1{
    _=json.NewEncoder(w).Encode(map[string]any{"status":"completed","output":[]any{map[string]any{
     "type":"function_call","call_id":"call-policy-1","name":"get_store_policies","arguments":"{}",
@@ -51,7 +60,7 @@ func TestCustomerAIResponsesAndDiagnostics(t *testing.T){
  request:=httptest.NewRequest(http.MethodPost,"/api/v1/ai/customer",strings.NewReader(`{"message":"Chính sách thanh toán thế nào?","history":[]}`))
  request.Header.Set("Content-Type","application/json")
  rec:=httptest.NewRecorder();r.ServeHTTP(rec,request)
- if rec.Code!=200||!strings.Contains(rec.Body.String(),"COD")||rounds.Load()!=2{
+ if rec.Code!=200||!strings.Contains(rec.Body.String(),"COD")||rounds.Load()!=2||scopeChecks.Load()!=1{
   t.Fatalf("Responses function roundtrip failed %d: %s (rounds %d)",rec.Code,rec.Body.String(),rounds.Load())
  }
 }

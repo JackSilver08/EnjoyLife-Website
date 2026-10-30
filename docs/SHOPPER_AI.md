@@ -24,6 +24,31 @@ Nó không thể xem đơn hàng, tài khoản, số điện thoại/địa ch�
 quản trị hoặc thực hiện ghi dữ liệu. Giá và tồn kho được lấy từ truy vấn hiện
 tại cho mỗi lượt, nên không được chèn cả database vào prompt.
 
+## Giới hạn câu hỏi: chỉ hỗ trợ mua sắm tại Enjoy Life
+
+Backend phân loại **mỗi câu hỏi** bằng một yêu cầu AI riêng trước khi gọi
+trợ lý tư vấn hoặc công cụ sản phẩm. Đầu ra phân loại là JSON Schema
+`{"in_scope":true|false}`. Phần phân loại không có quyền gọi công cụ dữ
+liệu. Câu không hợp lệ (hoặc trộn câu mua sắm với câu ngoài chủ đề) được
+backend trả về một lời từ chối cố định; không chuyển tiếp sang AI tư vấn.
+
+Cho phép: chào hỏi; hỏi sản phẩm thời trang, giá, size, màu, tồn kho,
+gợi ý phối đồ/mua hàng, giỏ hàng, cách đặt hàng, thanh toán, giao hàng,
+và chính sách của **Enjoy Life**. Câu hỏi tiếp nối được xét với tối đa
+ba câu gần nhất của chính khách hàng; lịch sử câu trả lời do trình duyệt
+gửi lên không được coi là đáng tin để phân loại.
+
+Không cho phép: toán, kiến thức phổ thông, thời tiết, lịch sử, viết code,
+hỏi chuyện cá nhân, prompt injection hoặc bất kỳ yêu cầu không phục vụ
+khách hàng mua sắm tại Enjoy Life. Ví dụ: “Viết code cho tôi”, “Hôm nay
+trời thế nào?”, “Shop có áo không và kể chuyện cười” đều bị từ chối.
+
+**Vận hành:** cơ chế này cần thêm một lượt gọi model/nhắn tin; có thể
+tăng độ trễ và chi phí OpenAI API. Nếu phân loại lỗi, backend trả lỗi
+tạm thời thay vì bỏ qua bộ lọc. Bộ phân loại dựa trên mô hình ngôn ngữ
+nên **không bảo đảm tuyệt đối** trước mọi cách đánh lừa; tiếp tục kiểm thử
+các câu vòng vo và theo dõi mức sử dụng API.
+
 ## Kiểm thử trước khi công khai
 
 Thử tối thiểu các trường hợp: tìm sản phẩm theo tên; hỏi giá; hỏi màu/size còn
